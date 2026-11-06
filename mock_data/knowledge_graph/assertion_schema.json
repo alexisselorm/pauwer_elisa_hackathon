@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ContextAssertion",
+  "type": "object",
+  "required": [
+    "assertion_id",
+    "subject_entity_id",
+    "topic",
+    "statement",
+    "valid_from",
+    "valid_to",
+    "source_type",
+    "source_ref",
+    "confidence",
+    "status"
+  ],
+  "properties": {
+    "assertion_id": {
+      "type": "string"
+    },
+    "subject_entity_id": {
+      "type": "string",
+      "description": "bound graph entity (see entities.jsonl)"
+    },
+    "topic": {
+      "type": "string"
+    },
+    "statement": {
+      "type": "string"
+    },
+    "valid_from": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "valid_to": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time",
+      "description": "null = still believed true"
+    },
+    "competing_versions": {
+      "type": "array"
+    },
+    "source_type": {
+      "enum": [
+        "teams_message",
+        "email",
+        "pdf",
+        "confluence",
+        "xlsx",
+        "jira",
+        "itsm"
+      ]
+    },
+    "source_ref": {
+      "type": "string"
+    },
+    "confidence": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "status": {
+      "enum": [
+        "believed_true",
+        "superseded",
+        "disputed",
+        "expired",
+        "unverified"
+      ]
+    },
+    "supersedes": {
+      "type": "string"
+    },
+    "contradicts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

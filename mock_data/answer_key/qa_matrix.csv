@@ -1,0 +1,22 @@
+id,kind,in_documentation,n_sources,question
+QA-001,metric,False,0,How many transport nodes use the Gen1 hardware generation?
+QA-002,fact,False,0,Which city hosts transmission node TRN-042?
+QA-010,procedure,True,3,What should you do when an interface stays UP with normal optics and zero traffic counters after an SFP replacement on an older unit?
+QA-011,scope,True,1,Which hardware generations are affected by the forwarding-state stall after an SFP swap?
+QA-012,access,True,2,"How do you get into the Kemi transport room, and who has access?"
+QA-013,energy,True,1,What is the maximum allowed BESS depth of discharge and SOC band now?
+QA-014,config,True,1,What MTU do the core links use?
+QA-015,procedure,True,2,"Who is allowed to reset a KMAX-4K microwave radio, and what must be done first?"
+QA-016,data quality,True,1,Why do the DC2 grid power readings spike to more than twice the IT power?
+QA-017,data quality,True,1,Was there a scheduled cause for the DC1 power spikes in September 2026?
+QA-018,procedure,True,1,What happens to Kafka DLQ messages on the training event topic?
+QA-019,fact,True,1,What is the SFP module model used on port 1/1/3 of TRN-042?
+QA-030,procedure,False,0,Which exact Nokia firmware version fixes the forwarding-state stall?
+QA-031,procedure,False,0,What is the cabling repair procedure after a rodent-damaged duct?
+QA-032,estimate,False,0,How long does a TNC-1X chassis replacement typically take on site?
+QA-033,design,False,0,Which RF channel plan should be used for a new KMAX-4K hop in Sodankylä?
+QA-034,process,False,0,Who approves an emergency change at night during the sales freeze?
+QA-035,procedure,False,0,What is the preferred swap-and-repair procedure for a fibre connector on a co-located chain (e.g. Järvinen chain)?
+QA-036,planning,False,0,What BESS aFRR revenue expectation should be used in the 2027 plan?
+QA-037,process,False,0,Which vendor escalation path is used for a 7750 SR power-supply fault on a weekend?
+QA-038,data quality,False,0,What is the accepted error margin when validating DC energy billing data?

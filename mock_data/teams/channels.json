@@ -1,0 +1,190 @@
+[
+  {
+    "channel_id": "chan-noc-transport",
+    "name": "NOC-Transport",
+    "team": "Network Operations",
+    "topic": "Transport operations, field escalations",
+    "members": [
+      {
+        "name": "Erkki Expert",
+        "upn": "erkki.expert@volga.example",
+        "role": "Principal Network Expert"
+      },
+      {
+        "name": "Aino Korhonen",
+        "upn": "aino.korhonen@volga.example",
+        "role": "Transport Engineer"
+      },
+      {
+        "name": "Veikko Vikkelä",
+        "upn": "veikko.vikkela@volga.example",
+        "role": "Field Engineer"
+      },
+      {
+        "name": "Pekka Hämäläinen",
+        "upn": "pekka.hamalainen@volga.example",
+        "role": "Senior Field Technician"
+      },
+      {
+        "name": "Mikko Mäkinen",
+        "upn": "mikko.makinen@volga.example",
+        "role": "Core Engineer"
+      },
+      {
+        "name": "Emilia Lehtinen",
+        "upn": "emilia.lehtinen@volga.example",
+        "role": "Network Architect"
+      }
+    ]
+  },
+  {
+    "channel_id": "chan-field-ops",
+    "name": "Field-Ops-FI",
+    "team": "Field Operations",
+    "topic": "Field engineers on site, travel and access",
+    "members": [
+      {
+        "name": "Veikko Vikkelä",
+        "upn": "veikko.vikkela@volga.example",
+        "role": "Field Engineer"
+      },
+      {
+        "name": "Pekka Hämäläinen",
+        "upn": "pekka.hamalainen@volga.example",
+        "role": "Senior Field Technician"
+      },
+      {
+        "name": "Heikki Lehtonen",
+        "upn": "heikki.lehtonen@volga.example",
+        "role": "Contractor Coordinator"
+      },
+      {
+        "name": "Juhani Virtanen",
+        "upn": "juhani.virtanen@volga.example",
+        "role": "Access Engineer"
+      },
+      {
+        "name": "Liisa Nieminen",
+        "upn": "liisa.nieminen@volga.example",
+        "role": "Facilities Manager"
+      }
+    ]
+  },
+  {
+    "channel_id": "chan-sre-infra",
+    "name": "SRE-Infra",
+    "team": "SRE",
+    "topic": "Datacentre & platform reliability",
+    "members": [
+      {
+        "name": "Sanna Laine",
+        "upn": "sanna.laine@volga.example",
+        "role": "Site Reliability Engineer"
+      },
+      {
+        "name": "Riikka Koskinen",
+        "upn": "riikka.koskinen@volga.example",
+        "role": "Platform Engineer"
+      },
+      {
+        "name": "Olga Saarinen",
+        "upn": "olga.saarinen@volga.example",
+        "role": "Energy Analytics Lead"
+      },
+      {
+        "name": "Liisa Nieminen",
+        "upn": "liisa.nieminen@volga.example",
+        "role": "Facilities Manager"
+      },
+      {
+        "name": "Mikko Mäkinen",
+        "upn": "mikko.makinen@volga.example",
+        "role": "Core Engineer"
+      }
+    ]
+  },
+  {
+    "channel_id": "chan-access-north",
+    "name": "Access-North",
+    "team": "Network Operations",
+    "topic": "Rovaniemi / Kemi / Ivalo access network",
+    "members": [
+      {
+        "name": "Pekka Hämäläinen",
+        "upn": "pekka.hamalainen@volga.example",
+        "role": "Senior Field Technician"
+      },
+      {
+        "name": "Heikki Lehtonen",
+        "upn": "heikki.lehtonen@volga.example",
+        "role": "Contractor Coordinator"
+      },
+      {
+        "name": "Juhani Virtanen",
+        "upn": "juhani.virtanen@volga.example",
+        "role": "Access Engineer"
+      },
+      {
+        "name": "Veikko Vikkelä",
+        "upn": "veikko.vikkela@volga.example",
+        "role": "Field Engineer"
+      }
+    ]
+  },
+  {
+    "channel_id": "chan-energy",
+    "name": "Energy-Procurement",
+    "team": "Energy",
+    "topic": "Electricity contracts, Fingrid, BESS",
+    "members": [
+      {
+        "name": "Olga Saarinen",
+        "upn": "olga.saarinen@volga.example",
+        "role": "Energy Analytics Lead"
+      },
+      {
+        "name": "Liisa Nieminen",
+        "upn": "liisa.nieminen@volga.example",
+        "role": "Facilities Manager"
+      },
+      {
+        "name": "Markku Järvinen",
+        "upn": "markku.jarvinen@volga.example",
+        "role": "Service Manager"
+      },
+      {
+        "name": "Sanna Laine",
+        "upn": "sanna.laine@volga.example",
+        "role": "Site Reliability Engineer"
+      }
+    ]
+  },
+  {
+    "channel_id": "chan-services",
+    "name": "Service-Ops",
+    "team": "Service Operations",
+    "topic": "Service manager escalations & handoffs",
+    "members": [
+      {
+        "name": "Markku Järvinen",
+        "upn": "markku.jarvinen@volga.example",
+        "role": "Service Manager"
+      },
+      {
+        "name": "Emilia Lehtinen",
+        "upn": "emilia.lehtinen@volga.example",
+        "role": "Network Architect"
+      },
+      {
+        "name": "Timo Heikkinen",
+        "upn": "timo.heikkinen@volga.example",
+        "role": "Security Lead"
+      },
+      {
+        "name": "Sanna Laine",
+        "upn": "sanna.laine@volga.example",
+        "role": "Site Reliability Engineer"
+      }
+    ]
+  }
+]

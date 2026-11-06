@@ -1,0 +1,6 @@
+bundle_id,name,owner,description,traffic_class,latency_budget_ms,valid_from
+INT-001,volga_train_frontend,Volga ML Platform,Training job frontend / dataset streaming,gold,12,2024-01-01
+INT-002,volga_train_collcomm,Volga ML Platform,All-reduce / all-gather between GPU islands,platinum,5,2024-01-01
+INT-003,volga_checkpoint_egress,Volga ML Platform,Checkpoint + trace export to object store,silver,40,2024-01-01
+INT-004,volga_batch_inference,Volga Inference,Nightly batch inference over customer corpora,silver,30,2025-03-01
+INT-005,volga_backup_replication,Volga SRE,DC-to-DC backup/checkpoint replication,bronze,120,2025-06-01

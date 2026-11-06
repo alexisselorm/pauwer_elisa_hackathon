@@ -1,0 +1,1018 @@
+[
+  {
+    "node_id": "CR-001",
+    "status": "active",
+    "model": "7750 SR-14s",
+    "vendor": "Nokia",
+    "firmware": "23.10.R3",
+    "role": [
+      "Backbone",
+      "Maintenance domain"
+    ],
+    "site": "Helsinki core hall",
+    "commissioned": "2020-06-01",
+    "generation": null
+  },
+  {
+    "node_id": "CR-002",
+    "status": "active",
+    "model": "7750 SR-14s",
+    "vendor": "Nokia",
+    "firmware": "23.10.R3",
+    "role": [
+      "Backbone",
+      "Maintenance domain"
+    ],
+    "site": "Espoo core hall",
+    "commissioned": "2021-09-22",
+    "generation": null
+  },
+  {
+    "node_id": "CR-003",
+    "status": "active",
+    "model": "7750 SR-14s",
+    "vendor": "Nokia",
+    "firmware": "23.10.R3",
+    "role": [
+      "Backbone",
+      "Maintenance domain"
+    ],
+    "site": "Tampere core hall",
+    "commissioned": "2021-09-22",
+    "generation": null
+  },
+  {
+    "node_id": "CR-004",
+    "status": "active",
+    "model": "7750 SR-14s",
+    "vendor": "Nokia",
+    "firmware": "24.3.R1",
+    "role": [
+      "Backbone",
+      "Maintenance domain"
+    ],
+    "site": "Turku core hall",
+    "commissioned": "2020-06-01",
+    "generation": null
+  },
+  {
+    "node_id": "CR-005",
+    "status": "active",
+    "model": "7750 SR-14s",
+    "vendor": "Nokia",
+    "firmware": "23.10.R4",
+    "role": [
+      "Backbone",
+      "Maintenance domain"
+    ],
+    "site": "Oulu core hall",
+    "commissioned": "2019-03-14",
+    "generation": null
+  },
+  {
+    "node_id": "CR-006",
+    "status": "active",
+    "model": "7750 SR-14s",
+    "vendor": "Nokia",
+    "firmware": "23.10.R4",
+    "role": [
+      "Backbone",
+      "Maintenance domain"
+    ],
+    "site": "Rovaniemi core hall",
+    "commissioned": "2019-03-14",
+    "generation": null
+  },
+  {
+    "node_id": "TRN-001",
+    "status": "active",
+    "model": "TNC-2X",
+    "vendor": "Nokia",
+    "firmware": "v8.2.1",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Helsinki transport room",
+    "commissioned": "2022-03-07",
+    "generation": "Gen2"
+  },
+  {
+    "node_id": "TRN-002",
+    "status": "active",
+    "model": "TNC-3X",
+    "vendor": "Nokia",
+    "firmware": "v9.0.2",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Espoo transport room",
+    "commissioned": "2024-01-15",
+    "generation": "Gen3"
+  },
+  {
+    "node_id": "TRN-003",
+    "status": "active",
+    "model": "TNC-3X",
+    "vendor": "Nokia",
+    "firmware": "v9.0.2",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Tampere transport room",
+    "commissioned": "2024-09-03",
+    "generation": "Gen3"
+  },
+  {
+    "node_id": "TRN-004",
+    "status": "decommissioning",
+    "model": "TNC-1X",
+    "vendor": "Nokia",
+    "firmware": "v6.1.4",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Turku transport room",
+    "commissioned": "2019-02-20",
+    "generation": "Gen1"
+  },
+  {
+    "node_id": "TRN-005",
+    "status": "decommissioning",
+    "model": "TNC-1X",
+    "vendor": "Nokia",
+    "firmware": "v6.1.4",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Oulu transport room",
+    "commissioned": "2019-08-30",
+    "generation": "Gen1"
+  },
+  {
+    "node_id": "TRN-006",
+    "status": "active",
+    "model": "TNC-3X",
+    "vendor": "Nokia",
+    "firmware": "v9.0.2",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Rovaniemi transport room",
+    "commissioned": "2025-02-26",
+    "generation": "Gen3"
+  },
+  {
+    "node_id": "TRN-042",
+    "status": "active",
+    "model": "TNC-1X",
+    "vendor": "Nokia",
+    "firmware": "v6.1.4",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Kemi transport room",
+    "commissioned": "2019-04-18",
+    "generation": "Gen1"
+  },
+  {
+    "node_id": "TRN-007",
+    "status": "decommissioning",
+    "model": "TNC-1X",
+    "vendor": "Nokia",
+    "firmware": "v6.1.4",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Vantaa transport room",
+    "commissioned": "2019-02-20",
+    "generation": "Gen1"
+  },
+  {
+    "node_id": "TRN-008",
+    "status": "active",
+    "model": "TNC-3X",
+    "vendor": "Nokia",
+    "firmware": "v9.0.2",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Jyväskylä transport room",
+    "commissioned": "2024-09-03",
+    "generation": "Gen3"
+  },
+  {
+    "node_id": "TRN-009",
+    "status": "active",
+    "model": "TNC-3X",
+    "vendor": "Nokia",
+    "firmware": "v9.0.2",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Kuopio transport room",
+    "commissioned": "2025-02-26",
+    "generation": "Gen3"
+  },
+  {
+    "node_id": "TRN-010",
+    "status": "active",
+    "model": "TNC-2X",
+    "vendor": "Nokia",
+    "firmware": "v8.2.1",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Lahti transport room",
+    "commissioned": "2022-11-18",
+    "generation": "Gen2"
+  },
+  {
+    "node_id": "TRN-011",
+    "status": "active",
+    "model": "TNC-2X",
+    "vendor": "Nokia",
+    "firmware": "v8.2.1",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Ivalo transport room",
+    "commissioned": "2022-03-07",
+    "generation": "Gen2"
+  },
+  {
+    "node_id": "TRN-012",
+    "status": "active",
+    "model": "TNC-2X",
+    "vendor": "Nokia",
+    "firmware": "v8.2.1",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Joensuu transport room",
+    "commissioned": "2022-11-18",
+    "generation": "Gen2"
+  },
+  {
+    "node_id": "TRN-013",
+    "status": "active",
+    "model": "TNC-1X",
+    "vendor": "Nokia",
+    "firmware": "v6.1.4",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Vaasa transport room",
+    "commissioned": "2019-02-20",
+    "generation": "Gen1"
+  },
+  {
+    "node_id": "TRN-014",
+    "status": "active",
+    "model": "TNC-1X",
+    "vendor": "Nokia",
+    "firmware": "v6.1.4",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Seinäjoki transport room",
+    "commissioned": "2019-02-20",
+    "generation": "Gen1"
+  },
+  {
+    "node_id": "TRN-015",
+    "status": "active",
+    "model": "TNC-3X",
+    "vendor": "Nokia",
+    "firmware": "v9.0.2",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Kajaani transport room",
+    "commissioned": "2024-09-03",
+    "generation": "Gen3"
+  },
+  {
+    "node_id": "TRN-016",
+    "status": "active",
+    "model": "TNC-2X",
+    "vendor": "Nokia",
+    "firmware": "v8.2.1",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Mikkeli transport room",
+    "commissioned": "2022-11-18",
+    "generation": "Gen2"
+  },
+  {
+    "node_id": "TRN-017",
+    "status": "active",
+    "model": "TNC-1X",
+    "vendor": "Nokia",
+    "firmware": "v6.1.4",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Pori transport room",
+    "commissioned": "2019-08-30",
+    "generation": "Gen1"
+  },
+  {
+    "node_id": "TRN-018",
+    "status": "active",
+    "model": "TNC-1X",
+    "vendor": "Nokia",
+    "firmware": "v6.1.4",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Kokkola transport room",
+    "commissioned": "2019-08-30",
+    "generation": "Gen1"
+  },
+  {
+    "node_id": "TRN-019",
+    "status": "active",
+    "model": "TNC-1X",
+    "vendor": "Nokia",
+    "firmware": "v6.1.4",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Lappeenranta transport room",
+    "commissioned": "2018-05-11",
+    "generation": "Gen1"
+  },
+  {
+    "node_id": "TRN-020",
+    "status": "active",
+    "model": "TNC-2X",
+    "vendor": "Nokia",
+    "firmware": "v8.2.1",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Hämeenlinna transport room",
+    "commissioned": "2022-03-07",
+    "generation": "Gen2"
+  },
+  {
+    "node_id": "TRN-021",
+    "status": "active",
+    "model": "TNC-2X",
+    "vendor": "Nokia",
+    "firmware": "v8.2.1",
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "site": "Sodankylä transport room",
+    "commissioned": "2022-11-18",
+    "generation": "Gen2"
+  },
+  {
+    "node_id": "ACC-001",
+    "status": "active",
+    "model": "KMAX-4H",
+    "vendor": "Mitsubishi",
+    "firmware": "13.0.R1",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Helsinki hotspot 1",
+    "commissioned": "2019-04-05",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-002",
+    "status": "active",
+    "model": "KMAX-4H",
+    "vendor": "Mitsubishi",
+    "firmware": "v9.1.1",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Helsinki hotspot 2",
+    "commissioned": "2019-09-05",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-003",
+    "status": "active",
+    "model": "7250 IXR-e",
+    "vendor": "Nokia",
+    "firmware": "13.0.R1",
+    "role": [
+      "Access"
+    ],
+    "site": "Helsinki hotspot 3",
+    "commissioned": "2019-04-17",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-004",
+    "status": "active",
+    "model": "7250 IXR-e",
+    "vendor": "Nokia",
+    "firmware": "v10.0.3",
+    "role": [
+      "Access"
+    ],
+    "site": "Helsinki hotspot 4",
+    "commissioned": "2019-03-23",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-005",
+    "status": "active",
+    "model": "KMAX-4H",
+    "vendor": "Mitsubishi",
+    "firmware": "v9.1.1",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Helsinki hotspot 5",
+    "commissioned": "2019-06-05",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-006",
+    "status": "active",
+    "model": "7250 IXR-e",
+    "vendor": "Nokia",
+    "firmware": "v8.0.2",
+    "role": [
+      "Access"
+    ],
+    "site": "Helsinki hotspot 6",
+    "commissioned": "2019-11-05",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-007",
+    "status": "active",
+    "model": "KMAX-4K",
+    "vendor": "Mitsubishi",
+    "firmware": "v9.1.1",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Espoo hotspot 1",
+    "commissioned": "2019-06-05",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-008",
+    "status": "active",
+    "model": "7250 IXR-e",
+    "vendor": "Nokia",
+    "firmware": "v10.0.3",
+    "role": [
+      "Access"
+    ],
+    "site": "Espoo hotspot 2",
+    "commissioned": "2019-06-23",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-009",
+    "status": "active",
+    "model": "7250 IXR-s",
+    "vendor": "Nokia",
+    "firmware": "v10.0.3",
+    "role": [
+      "Access"
+    ],
+    "site": "Espoo hotspot 3",
+    "commissioned": "2019-03-05",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-010",
+    "status": "active",
+    "model": "7250 IXR-s",
+    "vendor": "Nokia",
+    "firmware": "v9.1.1",
+    "role": [
+      "Access"
+    ],
+    "site": "Vantaa hotspot 1",
+    "commissioned": "2019-02-05",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-011",
+    "status": "active",
+    "model": "7250 IXR-e",
+    "vendor": "Nokia",
+    "firmware": "13.0.R1",
+    "role": [
+      "Access"
+    ],
+    "site": "Vantaa hotspot 2",
+    "commissioned": "2019-12-23",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-012",
+    "status": "active",
+    "model": "KMAX-4H",
+    "vendor": "Mitsubishi",
+    "firmware": "v8.0.2",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Vantaa hotspot 3",
+    "commissioned": "2019-10-17",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-013",
+    "status": "active",
+    "model": "KMAX-4K",
+    "vendor": "Mitsubishi",
+    "firmware": "v9.1.1",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Vantaa hotspot 4",
+    "commissioned": "2019-10-05",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-014",
+    "status": "active",
+    "model": "7250 IXR-e",
+    "vendor": "Nokia",
+    "firmware": "v10.0.3",
+    "role": [
+      "Access"
+    ],
+    "site": "Tampere hotspot 1",
+    "commissioned": "2019-05-23",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-015",
+    "status": "active",
+    "model": "KMAX-4H",
+    "vendor": "Mitsubishi",
+    "firmware": "v10.0.3",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Tampere hotspot 2",
+    "commissioned": "2019-03-23",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-016",
+    "status": "active",
+    "model": "KMAX-4K",
+    "vendor": "Mitsubishi",
+    "firmware": "v8.0.2",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Tampere hotspot 3",
+    "commissioned": "2019-10-23",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-017",
+    "status": "active",
+    "model": "7250 IXR-e",
+    "vendor": "Nokia",
+    "firmware": "13.0.R1",
+    "role": [
+      "Access"
+    ],
+    "site": "Tampere hotspot 4",
+    "commissioned": "2019-07-05",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-018",
+    "status": "active",
+    "model": "7250 IXR-s",
+    "vendor": "Nokia",
+    "firmware": "13.0.R1",
+    "role": [
+      "Access"
+    ],
+    "site": "Turku hotspot 1",
+    "commissioned": "2019-10-17",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-019",
+    "status": "active",
+    "model": "KMAX-4H",
+    "vendor": "Mitsubishi",
+    "firmware": "13.0.R1",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Turku hotspot 2",
+    "commissioned": "2019-02-17",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-020",
+    "status": "active",
+    "model": "KMAX-4K",
+    "vendor": "Mitsubishi",
+    "firmware": "v8.0.2",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Turku hotspot 3",
+    "commissioned": "2019-04-23",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-021",
+    "status": "active",
+    "model": "7250 IXR-s",
+    "vendor": "Nokia",
+    "firmware": "v10.0.3",
+    "role": [
+      "Access"
+    ],
+    "site": "Oulu hotspot 1",
+    "commissioned": "2019-02-05",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-022",
+    "status": "active",
+    "model": "KMAX-4H",
+    "vendor": "Mitsubishi",
+    "firmware": "v9.1.1",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Oulu hotspot 2",
+    "commissioned": "2019-07-17",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-023",
+    "status": "active",
+    "model": "7250 IXR-e",
+    "vendor": "Nokia",
+    "firmware": "v8.0.2",
+    "role": [
+      "Access"
+    ],
+    "site": "Oulu hotspot 3",
+    "commissioned": "2019-04-05",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-024",
+    "status": "active",
+    "model": "KMAX-4H",
+    "vendor": "Mitsubishi",
+    "firmware": "13.0.R1",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Jyväskylä hotspot 1",
+    "commissioned": "2019-02-17",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-025",
+    "status": "active",
+    "model": "7250 IXR-e",
+    "vendor": "Nokia",
+    "firmware": "v8.0.2",
+    "role": [
+      "Access"
+    ],
+    "site": "Jyväskylä hotspot 2",
+    "commissioned": "2019-02-05",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-026",
+    "status": "active",
+    "model": "7250 IXR-s",
+    "vendor": "Nokia",
+    "firmware": "v9.1.1",
+    "role": [
+      "Access"
+    ],
+    "site": "Kuopio hotspot 1",
+    "commissioned": "2019-10-05",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-027",
+    "status": "active",
+    "model": "7250 IXR-s",
+    "vendor": "Nokia",
+    "firmware": "13.0.R1",
+    "role": [
+      "Access"
+    ],
+    "site": "Kuopio hotspot 2",
+    "commissioned": "2019-08-17",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-028",
+    "status": "active",
+    "model": "7250 IXR-s",
+    "vendor": "Nokia",
+    "firmware": "v10.0.3",
+    "role": [
+      "Access"
+    ],
+    "site": "Lahti hotspot 1",
+    "commissioned": "2019-09-23",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-029",
+    "status": "active",
+    "model": "KMAX-4K",
+    "vendor": "Mitsubishi",
+    "firmware": "v10.0.3",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Lahti hotspot 2",
+    "commissioned": "2019-07-17",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-030",
+    "status": "active",
+    "model": "7250 IXR-s",
+    "vendor": "Nokia",
+    "firmware": "v8.0.2",
+    "role": [
+      "Access"
+    ],
+    "site": "Rovaniemi hotspot 1",
+    "commissioned": "2019-01-23",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-031",
+    "status": "active",
+    "model": "KMAX-4H",
+    "vendor": "Mitsubishi",
+    "firmware": "v9.1.1",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Rovaniemi hotspot 2",
+    "commissioned": "2019-12-23",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-032",
+    "status": "active",
+    "model": "7250 IXR-e",
+    "vendor": "Nokia",
+    "firmware": "v8.0.2",
+    "role": [
+      "Access"
+    ],
+    "site": "Kemi hotspot 1",
+    "commissioned": "2019-01-05",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-033",
+    "status": "active",
+    "model": "7250 IXR-s",
+    "vendor": "Nokia",
+    "firmware": "v10.0.3",
+    "role": [
+      "Access"
+    ],
+    "site": "Kemi hotspot 2",
+    "commissioned": "2019-10-23",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-034",
+    "status": "active",
+    "model": "7250 IXR-s",
+    "vendor": "Nokia",
+    "firmware": "v8.0.2",
+    "role": [
+      "Access"
+    ],
+    "site": "Ivalo hotspot 1",
+    "commissioned": "2019-02-23",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-035",
+    "status": "active",
+    "model": "KMAX-4H",
+    "vendor": "Mitsubishi",
+    "firmware": "13.0.R1",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Joensuu hotspot 1",
+    "commissioned": "2019-01-23",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-036",
+    "status": "active",
+    "model": "KMAX-4K",
+    "vendor": "Mitsubishi",
+    "firmware": "13.0.R1",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Joensuu hotspot 2",
+    "commissioned": "2019-12-17",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-037",
+    "status": "active",
+    "model": "7250 IXR-e",
+    "vendor": "Nokia",
+    "firmware": "v10.0.3",
+    "role": [
+      "Access"
+    ],
+    "site": "Vaasa hotspot 1",
+    "commissioned": "2019-08-05",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-038",
+    "status": "active",
+    "model": "7250 IXR-s",
+    "vendor": "Nokia",
+    "firmware": "v9.1.1",
+    "role": [
+      "Access"
+    ],
+    "site": "Vaasa hotspot 2",
+    "commissioned": "2019-05-05",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-039",
+    "status": "active",
+    "model": "KMAX-4K",
+    "vendor": "Mitsubishi",
+    "firmware": "v10.0.3",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Seinäjoki hotspot 1",
+    "commissioned": "2019-05-17",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-040",
+    "status": "active",
+    "model": "KMAX-4K",
+    "vendor": "Mitsubishi",
+    "firmware": "13.0.R1",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Kajaani hotspot 1",
+    "commissioned": "2019-03-23",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-041",
+    "status": "active",
+    "model": "KMAX-4H",
+    "vendor": "Mitsubishi",
+    "firmware": "v9.1.1",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Mikkeli hotspot 1",
+    "commissioned": "2019-07-23",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-042",
+    "status": "active",
+    "model": "7250 IXR-e",
+    "vendor": "Nokia",
+    "firmware": "v8.0.2",
+    "role": [
+      "Access"
+    ],
+    "site": "Pori hotspot 1",
+    "commissioned": "2019-12-23",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-043",
+    "status": "active",
+    "model": "KMAX-4K",
+    "vendor": "Mitsubishi",
+    "firmware": "v9.1.1",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Pori hotspot 2",
+    "commissioned": "2019-03-23",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-044",
+    "status": "active",
+    "model": "7250 IXR-e",
+    "vendor": "Nokia",
+    "firmware": "v9.1.1",
+    "role": [
+      "Access"
+    ],
+    "site": "Kokkola hotspot 1",
+    "commissioned": "2019-09-23",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-045",
+    "status": "active",
+    "model": "7250 IXR-e",
+    "vendor": "Nokia",
+    "firmware": "v8.0.2",
+    "role": [
+      "Access"
+    ],
+    "site": "Lappeenranta hotspot 1",
+    "commissioned": "2019-11-17",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-046",
+    "status": "active",
+    "model": "7250 IXR-e",
+    "vendor": "Nokia",
+    "firmware": "13.0.R1",
+    "role": [
+      "Access"
+    ],
+    "site": "Lappeenranta hotspot 2",
+    "commissioned": "2019-08-05",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-047",
+    "status": "active",
+    "model": "KMAX-4K",
+    "vendor": "Mitsubishi",
+    "firmware": "v8.0.2",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Hämeenlinna hotspot 1",
+    "commissioned": "2019-08-23",
+    "generation": null
+  },
+  {
+    "node_id": "ACC-048",
+    "status": "active",
+    "model": "KMAX-4K",
+    "vendor": "Mitsubishi",
+    "firmware": "13.0.R1",
+    "role": [
+      "Microwave"
+    ],
+    "site": "Sodankylä hotspot 1",
+    "commissioned": "2019-10-23",
+    "generation": null
+  }
+]

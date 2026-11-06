@@ -1,0 +1,48 @@
+alias_surface,canonical_entity
+older units,the old units
+older transmission units,the old units
+older units (2019),the old units
+Gen1 units,the old units
+the old TNC-1X,the old units
+TNC-1X,the old units
+the Kemi box,the old units
+TRN-042,the old units
+barrier,bit-barrier
+portti,bit-barrier
+the gate,bit-barrier
+the boom at the road,bit-barrier
+private road gate,bit-barrier
+gate at Kemi,bit-barrier
+TRN node,transmission node
+ROADM,transmission node
+optical transport unit,transmission node
+TN,transmission node
+line side,transmission node
+the node,transmission node
+SFP+,SFP
+optical module,SFP
+transceiver,SFP
+the module,SFP
+10G optic,SFP
+forwarding plane state,forwarding state
+FIB state,forwarding state
+silent blackhole,forwarding state
+green-but-dark,forwarding state
+meter,the power meter
+PDU meter,the power meter
+electricity meter,the power meter
+the kWh meter,the power meter
+TRE,Tampere DC
+DC2,Tampere DC
+FI-TRE-DC2,Tampere DC
+the secondary site,Tampere DC
+HEL,Helsinki DC1
+DC1,Helsinki DC1
+FI-HEL-DC1,Helsinki DC1
+the primary,Helsinki DC1
+hardware_class,hardware model
+hw,hardware model
+HWC,hardware model
+device model,hardware model
+tnc2_roadm,hardware model
+TNC-2X,hardware model

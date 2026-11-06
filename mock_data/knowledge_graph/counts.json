@@ -1,0 +1,21 @@
+{
+  "entities": 170,
+  "assertions": 29,
+  "by_status": {
+    "believed_true": 18,
+    "disputed": 3,
+    "superseded": 8
+  },
+  "by_topic": {
+    "access_keys": 3,
+    "bess_arbitrage": 4,
+    "dlq_mem_quota": 2,
+    "forwarding_state_after_sfp_swap": 11,
+    "gpu_maintenance_spikes": 1,
+    "maintenance_freeze": 1,
+    "meter_swap": 1,
+    "mtu_change": 3,
+    "mw_throughput": 2,
+    "sfp_replacement": 1
+  }
+}

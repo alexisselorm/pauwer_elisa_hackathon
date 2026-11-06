@@ -1,0 +1,64 @@
+[
+  {
+    "id": "CONFLICT-001",
+    "assertions": [
+      "ASR-0012",
+      "ASR-0013"
+    ],
+    "topic": "mw_throughput",
+    "summary": "Conflicting instructions for KMAX-4K RF alarm: power-cycle (Heikki) vs. never power-cycle (Juhani). Both unresolved as of the data snapshot.",
+    "resolution_hint": "Recency and role seniority both favour Juhani (Network Expert / architect endorsement by Emilia). Treat the power-cycle as unsafe and escalate.",
+    "severity": "high",
+    "kind": "disagreement"
+  },
+  {
+    "id": "CONFLICT-002",
+    "assertions": [
+      "ASR-0001",
+      {
+        "assertion_id": "ASR-0020",
+        "subject_entity_id": "TRN-003",
+        "about_entity_kind": "node",
+        "layer": "context_layer",
+        "topic": "forwarding_state_after_sfp_swap",
+        "statement": "On TRN-003 (TNC-3X) the 'bounce the port' recipe failed; replacing the SFP fixed it.",
+        "qualifiers": {
+          "observed_model": "TNC-3X",
+          "resolution": "replace_again"
+        },
+        "valid_from": "2026-07-14T09:30:00Z",
+        "valid_from_iid": 27494,
+        "valid_to": null,
+        "valid_to_iid": null,
+        "recorded_at": "2026-07-14T09:30:00Z",
+        "source_type": "teams_message",
+        "source_ref": "7069813661917",
+        "source_detail": "NOC-Transport TRN-003",
+        "asserted_by": "aino",
+        "confidence": "medium",
+        "status": "disputed",
+        "supersedes": null,
+        "contradicts": [
+          "ASR-0001"
+        ]
+      }
+    ],
+    "topic": "forwarding_state_after_sfp_swap",
+    "summary": "The bounce recipe failed on a TNC-3X node; SFP replacement was needed. Either the known issue does not always apply, or the root cause was a faulty SFP. Unresolved.",
+    "resolution_hint": "Model-scoped exception (TNC-3X) vs. a genuinely faulty SFP; needs a follow-up test the data does not contain.",
+    "severity": "medium",
+    "kind": "exception_to_rule"
+  },
+  {
+    "id": "CONFLICT-003",
+    "assertions": [
+      "ASR-0023",
+      "ASR-0024"
+    ],
+    "topic": "access_keys",
+    "summary": "Two access instructions disagree: the padlock key is (per Teams) on Pekka's keyring, but the gate was replaced by a code lock (per email).",
+    "resolution_hint": "The later email wins by recency; the old Teams knowledge is a trap for a field agent dispatched to Kemi after 2026-08.",
+    "severity": "high",
+    "kind": "outdated_vs_new"
+  }
+]

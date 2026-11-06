@@ -1,0 +1,437 @@
+serial,asset_id,model,vendor,status,location,date,condition
+NH10W5KKZW,CR-001,7750 SR-14s,Nokia,installed,Helsinki core hall,2020-06-01,in_warranty
+NHTLP4HE2W,CR-002,7750 SR-14s,Nokia,installed,Espoo core hall,2021-09-22,in_warranty
+NHA60Z87R7,CR-003,7750 SR-14s,Nokia,installed,Tampere core hall,2021-09-22,in_warranty
+NH057Z48W2,CR-004,7750 SR-14s,Nokia,installed,Turku core hall,2020-06-01,in_warranty
+NHTYLD0X1L,CR-005,7750 SR-14s,Nokia,installed,Oulu core hall,2019-03-14,in_warranty
+NH3J5YALPF,CR-006,7750 SR-14s,Nokia,installed,Rovaniemi core hall,2019-03-14,in_warranty
+NOKTNC2XAH97LC,TRN-001,TNC-2X,Nokia,installed,Helsinki transport room,2022-03-07,in_warranty
+NOKTNC3XK2UQ0Z,TRN-002,TNC-3X,Nokia,installed,Espoo transport room,2024-01-15,in_warranty
+NOKTNC3X76TDNE,TRN-003,TNC-3X,Nokia,installed,Tampere transport room,2024-09-03,in_warranty
+NOKTNC1XG4988F,TRN-004,TNC-1X,Nokia,installed,Turku transport room,2019-02-20,in_warranty
+NOKTNC1XFU82ZE,TRN-005,TNC-1X,Nokia,installed,Oulu transport room,2019-08-30,in_warranty
+NOKTNC3XBARAD2,TRN-006,TNC-3X,Nokia,installed,Rovaniemi transport room,2025-02-26,in_warranty
+NOKTNC1XLBSAZF,TRN-042,TNC-1X,Nokia,installed,Kemi transport room,2019-04-18,in_warranty
+NOKTNC1X5GYG74,TRN-007,TNC-1X,Nokia,installed,Vantaa transport room,2019-02-20,in_warranty
+NOKTNC3X4T4J75,TRN-008,TNC-3X,Nokia,installed,Jyväskylä transport room,2024-09-03,in_warranty
+NOKTNC3XK3NUL2,TRN-009,TNC-3X,Nokia,installed,Kuopio transport room,2025-02-26,in_warranty
+NOKTNC2XSCU947,TRN-010,TNC-2X,Nokia,installed,Lahti transport room,2022-11-18,in_warranty
+NOKTNC2X8C872M,TRN-011,TNC-2X,Nokia,installed,Ivalo transport room,2022-03-07,in_warranty
+NOKTNC2X99VZP1,TRN-012,TNC-2X,Nokia,installed,Joensuu transport room,2022-11-18,in_warranty
+NOKTNC1X92WLVS,TRN-013,TNC-1X,Nokia,installed,Vaasa transport room,2019-02-20,in_warranty
+NOKTNC1XURUDZZ,TRN-014,TNC-1X,Nokia,installed,Seinäjoki transport room,2019-02-20,in_warranty
+NOKTNC3X49VGNB,TRN-015,TNC-3X,Nokia,installed,Kajaani transport room,2024-09-03,in_warranty
+NOKTNC2XZKWSPA,TRN-016,TNC-2X,Nokia,installed,Mikkeli transport room,2022-11-18,in_warranty
+NOKTNC1XHH1Q73,TRN-017,TNC-1X,Nokia,installed,Pori transport room,2019-08-30,in_warranty
+NOKTNC1XHZSHAJ,TRN-018,TNC-1X,Nokia,installed,Kokkola transport room,2019-08-30,in_warranty
+NOKTNC1XE92H1C,TRN-019,TNC-1X,Nokia,installed,Lappeenranta transport room,2018-05-11,in_warranty
+NOKTNC2XF9E2XB,TRN-020,TNC-2X,Nokia,installed,Hämeenlinna transport room,2022-03-07,in_warranty
+NOKTNC2X9WAABH,TRN-021,TNC-2X,Nokia,installed,Sodankylä transport room,2022-11-18,in_warranty
+62S8REQE4,ACC-001,KMAX-4H,Mitsubishi,installed,Helsinki hotspot 1,2019-04-05,out_of_warranty
+YR9D1330N,ACC-002,KMAX-4H,Mitsubishi,installed,Helsinki hotspot 2,2019-09-05,out_of_warranty
+QH3FD2XQV,ACC-003,7250 IXR-e,Nokia,installed,Helsinki hotspot 3,2019-04-17,out_of_warranty
+94WBNV2AA,ACC-004,7250 IXR-e,Nokia,installed,Helsinki hotspot 4,2019-03-23,out_of_warranty
+J6ELML0NB,ACC-005,KMAX-4H,Mitsubishi,installed,Helsinki hotspot 5,2019-06-05,out_of_warranty
+79VJTDU31,ACC-006,7250 IXR-e,Nokia,installed,Helsinki hotspot 6,2019-11-05,out_of_warranty
+9GU5YRGWY,ACC-007,KMAX-4K,Mitsubishi,installed,Espoo hotspot 1,2019-06-05,out_of_warranty
+1CZRH7AZH,ACC-008,7250 IXR-e,Nokia,installed,Espoo hotspot 2,2019-06-23,out_of_warranty
+1AKPHSV1G,ACC-009,7250 IXR-s,Nokia,installed,Espoo hotspot 3,2019-03-05,out_of_warranty
+B6PB0CFCH,ACC-010,7250 IXR-s,Nokia,installed,Vantaa hotspot 1,2019-02-05,out_of_warranty
+C4GYBM4WS,ACC-011,7250 IXR-e,Nokia,installed,Vantaa hotspot 2,2019-12-23,out_of_warranty
+H2VSGPMDA,ACC-012,KMAX-4H,Mitsubishi,installed,Vantaa hotspot 3,2019-10-17,out_of_warranty
+SA2CSF0A4,ACC-013,KMAX-4K,Mitsubishi,installed,Vantaa hotspot 4,2019-10-05,out_of_warranty
+QN6F0R2YA,ACC-014,7250 IXR-e,Nokia,installed,Tampere hotspot 1,2019-05-23,out_of_warranty
+Z0L0BUB1R,ACC-015,KMAX-4H,Mitsubishi,installed,Tampere hotspot 2,2019-03-23,out_of_warranty
+E9TXADW53,ACC-016,KMAX-4K,Mitsubishi,installed,Tampere hotspot 3,2019-10-23,out_of_warranty
+S97WK46WL,ACC-017,7250 IXR-e,Nokia,installed,Tampere hotspot 4,2019-07-05,out_of_warranty
+HY94R8TCS,ACC-018,7250 IXR-s,Nokia,installed,Turku hotspot 1,2019-10-17,out_of_warranty
+01NU337JV,ACC-019,KMAX-4H,Mitsubishi,installed,Turku hotspot 2,2019-02-17,out_of_warranty
+TT56WMBM1,ACC-020,KMAX-4K,Mitsubishi,installed,Turku hotspot 3,2019-04-23,out_of_warranty
+3QRXK2Y2H,ACC-021,7250 IXR-s,Nokia,installed,Oulu hotspot 1,2019-02-05,out_of_warranty
+70D7BR0ZX,ACC-022,KMAX-4H,Mitsubishi,installed,Oulu hotspot 2,2019-07-17,out_of_warranty
+R7ADNHRGZ,ACC-023,7250 IXR-e,Nokia,installed,Oulu hotspot 3,2019-04-05,out_of_warranty
+ENQGWYQEK,ACC-024,KMAX-4H,Mitsubishi,installed,Jyväskylä hotspot 1,2019-02-17,out_of_warranty
+GY0EPA4MH,ACC-025,7250 IXR-e,Nokia,installed,Jyväskylä hotspot 2,2019-02-05,out_of_warranty
+Y8T30JG52,ACC-026,7250 IXR-s,Nokia,installed,Kuopio hotspot 1,2019-10-05,out_of_warranty
+353Y8KKWZ,ACC-027,7250 IXR-s,Nokia,installed,Kuopio hotspot 2,2019-08-17,out_of_warranty
+94QW1AQTP,ACC-028,7250 IXR-s,Nokia,installed,Lahti hotspot 1,2019-09-23,out_of_warranty
+WRLAULX7Y,ACC-029,KMAX-4K,Mitsubishi,installed,Lahti hotspot 2,2019-07-17,out_of_warranty
+C7ABBYS3B,ACC-030,7250 IXR-s,Nokia,installed,Rovaniemi hotspot 1,2019-01-23,out_of_warranty
+CJ27EDJDS,ACC-031,KMAX-4H,Mitsubishi,installed,Rovaniemi hotspot 2,2019-12-23,out_of_warranty
+5YLKFVNXR,ACC-032,7250 IXR-e,Nokia,installed,Kemi hotspot 1,2019-01-05,out_of_warranty
+UC6S6SVF6,ACC-033,7250 IXR-s,Nokia,installed,Kemi hotspot 2,2019-10-23,out_of_warranty
+8PT4E1SNQ,ACC-034,7250 IXR-s,Nokia,installed,Ivalo hotspot 1,2019-02-23,out_of_warranty
+Z361F5AB9,ACC-035,KMAX-4H,Mitsubishi,installed,Joensuu hotspot 1,2019-01-23,out_of_warranty
+HQW35R5D4,ACC-036,KMAX-4K,Mitsubishi,installed,Joensuu hotspot 2,2019-12-17,out_of_warranty
+L5CLCR82Q,ACC-037,7250 IXR-e,Nokia,installed,Vaasa hotspot 1,2019-08-05,out_of_warranty
+ANZVAF04V,ACC-038,7250 IXR-s,Nokia,installed,Vaasa hotspot 2,2019-05-05,out_of_warranty
+ACB76J0QU,ACC-039,KMAX-4K,Mitsubishi,installed,Seinäjoki hotspot 1,2019-05-17,out_of_warranty
+S07Y37YGY,ACC-040,KMAX-4K,Mitsubishi,installed,Kajaani hotspot 1,2019-03-23,out_of_warranty
+Q04S0NNRG,ACC-041,KMAX-4H,Mitsubishi,installed,Mikkeli hotspot 1,2019-07-23,out_of_warranty
+JE8H1HQRD,ACC-042,7250 IXR-e,Nokia,installed,Pori hotspot 1,2019-12-23,out_of_warranty
+JCQTMPZT7,ACC-043,KMAX-4K,Mitsubishi,installed,Pori hotspot 2,2019-03-23,out_of_warranty
+8E2L4ZTNN,ACC-044,7250 IXR-e,Nokia,installed,Kokkola hotspot 1,2019-09-23,out_of_warranty
+R209AP691,ACC-045,7250 IXR-e,Nokia,installed,Lappeenranta hotspot 1,2019-11-17,out_of_warranty
+H3P5M8M4C,ACC-046,7250 IXR-e,Nokia,installed,Lappeenranta hotspot 2,2019-08-05,out_of_warranty
+0VJ2JW9KH,ACC-047,KMAX-4K,Mitsubishi,installed,Hämeenlinna hotspot 1,2019-08-23,out_of_warranty
+32SR6L1Y6,ACC-048,KMAX-4K,Mitsubishi,installed,Sodankylä hotspot 1,2019-10-23,out_of_warranty
+SPDCA0856E,SPARE-00000,SFP-10G-8421,Nokia,spare_in_stock,Helsinki central,2024-06-17,refurb
+SPDA37707F,SPARE-00001,SFP-10G-8421,Nokia,consumed,Tampere central,2024-09-18,refurb
+SP1E5F3B2B,SPARE-00002,PSU-1200,Nokia,consumed,Tampere central,2024-02-24,new
+SP5AAC6F35,SPARE-00003,CH-1X-2,Nokia,spare_in_stock,Kemi warehouse,2024-03-11,new
+SP8FCCCA99,SPARE-00004,SFP-25G-2102,Mitsubishi,spare_in_stock,Kemi warehouse,2024-02-24,refurb
+SP424E02F3,SPARE-00005,SFP-100G-3300,Mitsubishi,consumed,Tampere central,2024-02-12,new
+SP39235C68,SPARE-00006,SFP-100G-3300,Mitsubishi,spare_in_stock,Rovaniemi depot,2024-04-22,new
+SP104E1579,SPARE-00007,KMAX-4K-RF,Mitsubishi,spare_in_stock,Helsinki central,2024-12-17,refurb
+SP10742BCD,SPARE-00008,KMAX-4K-RF,Mitsubishi,spare_in_stock,Kemi warehouse,2024-01-11,new
+SP392A0B5D,SPARE-00009,SFP-100G-3300,Nokia,on_order,Helsinki central,2024-03-11,new
+SP90452B7E,SPARE-00010,SFP-25G-2102,Nokia,consumed,Tampere central,2024-04-24,refurb
+SPE5D5A1BD,SPARE-00011,KMAX-4K-RF,Mitsubishi,consumed,Rovaniemi depot,2024-02-13,refurb
+SPF1414B80,SPARE-00012,PSU-1200,Mitsubishi,spare_in_stock,Rovaniemi depot,2024-03-26,refurb
+SPFE31EC88,SPARE-00013,SFP-10G-8421,Nokia,spare_in_stock,Rovaniemi depot,2024-05-26,refurb
+SPDB375F2B,SPARE-00014,PSU-1200,Nokia,spare_in_stock,Helsinki central,2024-07-27,refurb
+SP8297CDB2,SPARE-00015,SFP-25G-2102,Mitsubishi,spare_in_stock,Tampere central,2024-01-28,refurb
+SP37A5D73D,SPARE-00016,CH-1X-2,Nokia,spare_in_stock,Helsinki central,2024-03-17,new
+SP4FD6679C,SPARE-00017,SFP-25G-2102,Nokia,spare_in_stock,Helsinki central,2024-08-26,new
+SPD9DC457B,SPARE-00018,PSU-1200,Nokia,spare_in_stock,Helsinki central,2024-01-22,refurb
+SP63436761,SPARE-00019,SFP-100G-3300,Mitsubishi,on_order,Helsinki central,2024-07-15,refurb
+SP33B08B92,SPARE-00020,PSU-1200,Nokia,on_order,Helsinki central,2024-06-25,refurb
+SP4C7269E6,SPARE-00021,PSU-1200,Nokia,on_order,Kemi warehouse,2024-07-16,new
+SP63E59349,SPARE-00022,KMAX-4K-RF,Nokia,spare_in_stock,Tampere central,2024-04-16,new
+SPE592BE3F,SPARE-00023,SFP-25G-2102,Mitsubishi,consumed,Tampere central,2024-11-24,refurb
+SP8F6C3A9C,SPARE-00024,SFP-25G-2102,Mitsubishi,spare_in_stock,Rovaniemi depot,2024-03-20,refurb
+SP986E616C,SPARE-00025,SFP-100G-3300,Nokia,spare_in_stock,Helsinki central,2024-09-26,new
+SP968798AC,SPARE-00026,CH-1X-2,Mitsubishi,consumed,Kemi warehouse,2024-01-17,refurb
+SP6799F473,SPARE-00027,SFP-25G-2102,Nokia,spare_in_stock,Tampere central,2024-02-16,refurb
+SPBEA515C4,SPARE-00028,CH-1X-2,Mitsubishi,spare_in_stock,Tampere central,2024-05-23,new
+SPF3420809,SPARE-00029,SFP-25G-2102,Nokia,on_order,Tampere central,2024-08-16,new
+SP7D20CF7E,SPARE-00030,PSU-1200,Nokia,on_order,Kemi warehouse,2024-03-17,refurb
+SP0BCA48B2,SPARE-00031,KMAX-4K-RF,Nokia,spare_in_stock,Kemi warehouse,2024-11-12,refurb
+SPA4093CC8,SPARE-00032,CH-1X-2,Nokia,spare_in_stock,Rovaniemi depot,2024-06-24,new
+SP07902E07,SPARE-00033,KMAX-4K-RF,Nokia,on_order,Tampere central,2024-03-22,refurb
+SP0846C67A,SPARE-00034,SFP-25G-2102,Mitsubishi,spare_in_stock,Tampere central,2024-08-19,new
+SPA48CCA9A,SPARE-00035,SFP-25G-2102,Nokia,spare_in_stock,Tampere central,2024-11-22,new
+SP879BFBD9,SPARE-00036,SFP-25G-2102,Nokia,spare_in_stock,Tampere central,2024-11-17,refurb
+SP97A16EFF,SPARE-00037,PSU-1200,Mitsubishi,consumed,Helsinki central,2024-05-23,refurb
+SP466D941E,SPARE-00038,SFP-100G-3300,Mitsubishi,spare_in_stock,Tampere central,2024-11-22,new
+SP87023CEC,SPARE-00039,SFP-100G-3300,Nokia,spare_in_stock,Rovaniemi depot,2024-04-14,new
+SP846DD451,SPARE-00040,KMAX-4K-RF,Mitsubishi,spare_in_stock,Helsinki central,2024-05-11,refurb
+SP8DDA21DB,SPARE-00041,PSU-1200,Mitsubishi,on_order,Kemi warehouse,2024-10-14,new
+SP0CA54589,SPARE-00042,SFP-10G-8421,Mitsubishi,on_order,Rovaniemi depot,2024-10-28,new
+SP34A459C4,SPARE-00043,SFP-10G-8421,Mitsubishi,spare_in_stock,Helsinki central,2024-08-22,new
+SP96A462B4,SPARE-00044,SFP-25G-2102,Nokia,spare_in_stock,Tampere central,2024-04-17,new
+SPFB5C10FE,SPARE-00045,SFP-10G-8421,Nokia,spare_in_stock,Tampere central,2024-09-12,refurb
+SPD9965AE8,SPARE-00046,CH-1X-2,Mitsubishi,spare_in_stock,Tampere central,2024-04-28,refurb
+SP10A76614,SPARE-00047,KMAX-4K-RF,Nokia,spare_in_stock,Helsinki central,2024-12-25,refurb
+SPEEA36658,SPARE-00048,SFP-25G-2102,Nokia,spare_in_stock,Helsinki central,2024-06-22,refurb
+SP51FB543C,SPARE-00049,KMAX-4K-RF,Mitsubishi,spare_in_stock,Rovaniemi depot,2024-04-24,refurb
+SPC3A59A15,SPARE-00050,SFP-10G-8421,Nokia,on_order,Helsinki central,2024-09-18,refurb
+SP90BC6C5D,SPARE-00051,SFP-100G-3300,Mitsubishi,spare_in_stock,Tampere central,2024-12-10,new
+SP68BF251E,SPARE-00052,PSU-1200,Mitsubishi,on_order,Rovaniemi depot,2024-05-12,new
+SPDB6466E7,SPARE-00053,SFP-25G-2102,Nokia,spare_in_stock,Tampere central,2024-07-16,refurb
+SP5CD3349E,SPARE-00054,SFP-10G-8421,Nokia,consumed,Kemi warehouse,2024-05-27,new
+SPE99374CE,SPARE-00055,SFP-100G-3300,Nokia,spare_in_stock,Helsinki central,2024-09-19,new
+SP75D3F578,SPARE-00056,PSU-1200,Mitsubishi,spare_in_stock,Tampere central,2024-03-22,new
+SP5B3F2A81,SPARE-00057,SFP-10G-8421,Mitsubishi,spare_in_stock,Helsinki central,2024-12-13,refurb
+SP0E457BD6,SPARE-00058,SFP-25G-2102,Mitsubishi,on_order,Kemi warehouse,2024-09-24,new
+SPE8146008,SPARE-00059,SFP-25G-2102,Mitsubishi,consumed,Kemi warehouse,2024-02-15,new
+SP154F7E75,SPARE-00060,SFP-10G-8421,Nokia,on_order,Helsinki central,2024-05-22,refurb
+SPC0B2C954,SPARE-00061,SFP-10G-8421,Mitsubishi,on_order,Rovaniemi depot,2024-06-15,refurb
+SP5EFA3B5B,SPARE-00062,SFP-100G-3300,Nokia,spare_in_stock,Kemi warehouse,2024-03-21,new
+SP4AA0FF8C,SPARE-00063,CH-1X-2,Mitsubishi,spare_in_stock,Helsinki central,2024-02-26,new
+SP8140F3CE,SPARE-00064,SFP-10G-8421,Nokia,consumed,Tampere central,2024-12-28,refurb
+SP5705EEDD,SPARE-00065,PSU-1200,Nokia,spare_in_stock,Tampere central,2024-01-16,refurb
+SPCB370505,SPARE-00066,CH-1X-2,Mitsubishi,on_order,Helsinki central,2024-09-16,new
+SP179787FE,SPARE-00067,KMAX-4K-RF,Mitsubishi,spare_in_stock,Kemi warehouse,2024-06-22,refurb
+SP37252897,SPARE-00068,SFP-100G-3300,Mitsubishi,spare_in_stock,Tampere central,2024-11-11,refurb
+SP9B5FDBE3,SPARE-00069,CH-1X-2,Mitsubishi,consumed,Kemi warehouse,2024-02-14,new
+SP1D2FFAEA,SPARE-00070,KMAX-4K-RF,Mitsubishi,consumed,Tampere central,2024-08-23,refurb
+SP94F0CAA4,SPARE-00071,PSU-1200,Nokia,consumed,Kemi warehouse,2024-09-17,new
+SP97E21EA2,SPARE-00072,SFP-100G-3300,Mitsubishi,consumed,Rovaniemi depot,2024-09-28,refurb
+SP1491C0C8,SPARE-00073,SFP-25G-2102,Nokia,on_order,Helsinki central,2024-11-18,refurb
+SP9A9E643F,SPARE-00074,SFP-100G-3300,Nokia,on_order,Rovaniemi depot,2024-08-11,new
+SP0B826D09,SPARE-00075,PSU-1200,Nokia,on_order,Kemi warehouse,2024-11-14,refurb
+SPED7B3BE0,SPARE-00076,PSU-1200,Mitsubishi,spare_in_stock,Tampere central,2024-01-15,refurb
+SP34C5CAAA,SPARE-00077,SFP-25G-2102,Mitsubishi,spare_in_stock,Kemi warehouse,2024-11-16,new
+SPEFF93AA4,SPARE-00078,SFP-10G-8421,Nokia,on_order,Tampere central,2024-01-16,refurb
+SP763BB149,SPARE-00079,SFP-25G-2102,Nokia,consumed,Rovaniemi depot,2024-03-16,new
+SP0CCC6F4A,SPARE-00080,SFP-25G-2102,Nokia,on_order,Helsinki central,2024-05-28,refurb
+SPD9D0251B,SPARE-00081,SFP-10G-8421,Nokia,spare_in_stock,Tampere central,2024-10-17,refurb
+SP4B26D530,SPARE-00082,PSU-1200,Mitsubishi,consumed,Helsinki central,2024-09-26,new
+SP311F0DA2,SPARE-00083,SFP-25G-2102,Mitsubishi,spare_in_stock,Rovaniemi depot,2024-04-17,refurb
+SPFC9EF63C,SPARE-00084,KMAX-4K-RF,Mitsubishi,consumed,Rovaniemi depot,2024-05-26,new
+SP7334C5D6,SPARE-00085,PSU-1200,Nokia,spare_in_stock,Tampere central,2024-09-19,refurb
+SPE2E7C03B,SPARE-00086,SFP-25G-2102,Mitsubishi,consumed,Helsinki central,2024-05-17,new
+SPCA4B2806,SPARE-00087,SFP-100G-3300,Nokia,consumed,Rovaniemi depot,2024-06-23,new
+SP01F2F1C6,SPARE-00088,SFP-100G-3300,Nokia,on_order,Tampere central,2024-03-12,refurb
+SPC6393286,SPARE-00089,PSU-1200,Mitsubishi,consumed,Tampere central,2024-08-26,new
+SP0BBD4BCB,SPARE-00090,PSU-1200,Mitsubishi,on_order,Rovaniemi depot,2024-10-10,new
+SP2C2F3C3E,SPARE-00091,SFP-100G-3300,Nokia,consumed,Kemi warehouse,2024-06-17,refurb
+SP9C157E65,SPARE-00092,CH-1X-2,Mitsubishi,spare_in_stock,Helsinki central,2024-10-20,new
+SP7BA0204A,SPARE-00093,CH-1X-2,Nokia,spare_in_stock,Rovaniemi depot,2024-12-17,new
+SPE7770968,SPARE-00094,SFP-100G-3300,Nokia,on_order,Tampere central,2024-11-12,new
+SP4E49DA14,SPARE-00095,SFP-100G-3300,Nokia,consumed,Kemi warehouse,2024-09-12,refurb
+SPC74D4D34,SPARE-00096,SFP-25G-2102,Nokia,on_order,Kemi warehouse,2024-06-12,new
+SP6419CEA4,SPARE-00097,KMAX-4K-RF,Mitsubishi,on_order,Helsinki central,2024-02-10,refurb
+SP368C6BBD,SPARE-00098,KMAX-4K-RF,Nokia,on_order,Rovaniemi depot,2024-11-19,refurb
+SP5AA80948,SPARE-00099,KMAX-4K-RF,Nokia,spare_in_stock,Tampere central,2024-02-24,refurb
+SPDE563C04,SPARE-00100,PSU-1200,Nokia,on_order,Kemi warehouse,2024-01-11,refurb
+SP33BD71E1,SPARE-00101,CH-1X-2,Mitsubishi,consumed,Kemi warehouse,2024-06-23,refurb
+SP3B46F0E6,SPARE-00102,SFP-100G-3300,Mitsubishi,spare_in_stock,Rovaniemi depot,2024-05-15,refurb
+SPB94873FB,SPARE-00103,PSU-1200,Nokia,on_order,Tampere central,2024-05-28,refurb
+SP6884372D,SPARE-00104,KMAX-4K-RF,Mitsubishi,spare_in_stock,Kemi warehouse,2024-11-21,new
+SP55F7B274,SPARE-00105,SFP-10G-8421,Nokia,spare_in_stock,Kemi warehouse,2024-06-22,new
+SP4C77002B,SPARE-00106,SFP-10G-8421,Mitsubishi,consumed,Helsinki central,2024-11-10,new
+SP052B34A7,SPARE-00107,SFP-100G-3300,Mitsubishi,consumed,Tampere central,2024-06-14,new
+SPBA2368DD,SPARE-00108,SFP-25G-2102,Mitsubishi,consumed,Kemi warehouse,2024-04-26,refurb
+SP0B5B7A91,SPARE-00109,SFP-10G-8421,Mitsubishi,on_order,Rovaniemi depot,2024-08-13,new
+SP33740724,SPARE-00110,SFP-25G-2102,Nokia,spare_in_stock,Kemi warehouse,2024-08-10,new
+SP12C16061,SPARE-00111,KMAX-4K-RF,Mitsubishi,on_order,Kemi warehouse,2024-03-25,refurb
+SPB301EC33,SPARE-00112,SFP-100G-3300,Nokia,consumed,Tampere central,2024-09-17,new
+SP5C6829CB,SPARE-00113,SFP-100G-3300,Mitsubishi,on_order,Rovaniemi depot,2024-11-24,new
+SP4BF8283A,SPARE-00114,SFP-10G-8421,Nokia,on_order,Rovaniemi depot,2024-11-19,refurb
+SP80036138,SPARE-00115,SFP-100G-3300,Mitsubishi,consumed,Helsinki central,2024-01-18,refurb
+SP933A0FC3,SPARE-00116,KMAX-4K-RF,Nokia,consumed,Rovaniemi depot,2024-12-26,new
+SPCBA439B7,SPARE-00117,CH-1X-2,Nokia,spare_in_stock,Rovaniemi depot,2024-10-20,refurb
+SP51222FB9,SPARE-00118,CH-1X-2,Mitsubishi,spare_in_stock,Tampere central,2024-03-19,refurb
+SP8E2F8DFB,SPARE-00119,KMAX-4K-RF,Mitsubishi,on_order,Tampere central,2024-10-22,new
+SPEFAFBCBB,SPARE-00120,SFP-100G-3300,Mitsubishi,spare_in_stock,Tampere central,2024-10-13,new
+SP3806CF3F,SPARE-00121,SFP-25G-2102,Mitsubishi,consumed,Kemi warehouse,2024-05-19,new
+SP8E6F0410,SPARE-00122,SFP-25G-2102,Nokia,consumed,Rovaniemi depot,2024-08-19,refurb
+SPE0108EBC,SPARE-00123,PSU-1200,Nokia,spare_in_stock,Kemi warehouse,2024-04-23,new
+SP87B3C6B6,SPARE-00124,SFP-100G-3300,Nokia,spare_in_stock,Helsinki central,2024-10-15,refurb
+SP7B9C8D1B,SPARE-00125,KMAX-4K-RF,Mitsubishi,consumed,Tampere central,2024-12-15,refurb
+SP1B7AD830,SPARE-00126,PSU-1200,Mitsubishi,spare_in_stock,Kemi warehouse,2024-06-21,refurb
+SP3CA99484,SPARE-00127,CH-1X-2,Nokia,spare_in_stock,Kemi warehouse,2024-12-23,refurb
+SP3966E558,SPARE-00128,SFP-100G-3300,Mitsubishi,on_order,Tampere central,2024-06-21,new
+SPAAF2764E,SPARE-00129,SFP-25G-2102,Mitsubishi,consumed,Helsinki central,2024-02-12,refurb
+SP152A13B0,SPARE-00130,SFP-10G-8421,Nokia,consumed,Helsinki central,2024-03-15,new
+SP677770DA,SPARE-00131,SFP-25G-2102,Nokia,spare_in_stock,Helsinki central,2024-08-19,new
+SP902D9E9D,SPARE-00132,KMAX-4K-RF,Nokia,spare_in_stock,Helsinki central,2024-07-22,new
+SPB31E2131,SPARE-00133,CH-1X-2,Mitsubishi,spare_in_stock,Tampere central,2024-10-19,refurb
+SP683365D3,SPARE-00134,SFP-25G-2102,Mitsubishi,spare_in_stock,Helsinki central,2024-05-13,refurb
+SP3C0E931F,SPARE-00135,SFP-10G-8421,Nokia,spare_in_stock,Tampere central,2024-05-18,refurb
+SPCAB9DDF8,SPARE-00136,PSU-1200,Nokia,spare_in_stock,Kemi warehouse,2024-11-27,new
+SPF76E1871,SPARE-00137,CH-1X-2,Nokia,consumed,Kemi warehouse,2024-06-21,new
+SP138A7C89,SPARE-00138,KMAX-4K-RF,Nokia,on_order,Tampere central,2024-10-24,new
+SPE813895C,SPARE-00139,PSU-1200,Mitsubishi,consumed,Tampere central,2024-09-19,new
+SPB477726E,SPARE-00140,SFP-10G-8421,Nokia,on_order,Kemi warehouse,2024-06-11,refurb
+SPE4EC69F0,SPARE-00141,SFP-10G-8421,Nokia,spare_in_stock,Tampere central,2024-08-16,refurb
+SP7A0FFA6A,SPARE-00142,KMAX-4K-RF,Mitsubishi,spare_in_stock,Kemi warehouse,2024-10-18,refurb
+SP0F4EE939,SPARE-00143,PSU-1200,Mitsubishi,spare_in_stock,Kemi warehouse,2024-08-26,refurb
+SP533B37A4,SPARE-00144,CH-1X-2,Mitsubishi,spare_in_stock,Helsinki central,2024-01-21,refurb
+SP8EF54D71,SPARE-00145,SFP-10G-8421,Nokia,on_order,Rovaniemi depot,2024-04-19,refurb
+SPDDA1937F,SPARE-00146,SFP-10G-8421,Mitsubishi,consumed,Rovaniemi depot,2024-02-17,refurb
+SP8630B3D1,SPARE-00147,KMAX-4K-RF,Nokia,on_order,Kemi warehouse,2024-12-14,new
+SP6D5AE9DA,SPARE-00148,SFP-10G-8421,Mitsubishi,consumed,Kemi warehouse,2024-10-20,new
+SP73E0EEC0,SPARE-00149,KMAX-4K-RF,Mitsubishi,on_order,Helsinki central,2024-04-17,new
+SPD9DA873F,SPARE-00150,CH-1X-2,Mitsubishi,spare_in_stock,Kemi warehouse,2024-10-11,new
+SP4DB1E069,SPARE-00151,CH-1X-2,Mitsubishi,spare_in_stock,Helsinki central,2024-06-23,refurb
+SP91B4A0B8,SPARE-00152,KMAX-4K-RF,Nokia,consumed,Rovaniemi depot,2024-11-25,refurb
+SP259ACE40,SPARE-00153,SFP-100G-3300,Mitsubishi,on_order,Tampere central,2024-03-15,new
+SP825BC545,SPARE-00154,CH-1X-2,Nokia,spare_in_stock,Rovaniemi depot,2024-06-17,new
+SP715CCD4D,SPARE-00155,CH-1X-2,Nokia,spare_in_stock,Helsinki central,2024-07-17,new
+SP0D06AB20,SPARE-00156,CH-1X-2,Nokia,consumed,Helsinki central,2024-05-25,refurb
+SP05AC02A5,SPARE-00157,KMAX-4K-RF,Nokia,spare_in_stock,Rovaniemi depot,2024-01-13,new
+SP19E9558E,SPARE-00158,SFP-25G-2102,Nokia,spare_in_stock,Helsinki central,2024-01-26,refurb
+SP1E531814,SPARE-00159,SFP-10G-8421,Nokia,spare_in_stock,Helsinki central,2024-12-18,new
+SP0515BCF9,SPARE-00160,SFP-100G-3300,Nokia,spare_in_stock,Rovaniemi depot,2024-06-27,new
+SP657CB1FB,SPARE-00161,KMAX-4K-RF,Nokia,spare_in_stock,Helsinki central,2024-05-28,refurb
+SPB749656F,SPARE-00162,CH-1X-2,Mitsubishi,on_order,Kemi warehouse,2024-10-26,refurb
+SP01394D96,SPARE-00163,KMAX-4K-RF,Mitsubishi,consumed,Helsinki central,2024-03-14,refurb
+SPFE7C6A0C,SPARE-00164,SFP-100G-3300,Nokia,spare_in_stock,Tampere central,2024-03-23,new
+SP2B4222F1,SPARE-00165,PSU-1200,Mitsubishi,on_order,Kemi warehouse,2024-10-25,new
+SPB0FBDE46,SPARE-00166,SFP-100G-3300,Nokia,on_order,Helsinki central,2024-11-27,new
+SPC0AE6D29,SPARE-00167,CH-1X-2,Mitsubishi,spare_in_stock,Rovaniemi depot,2024-04-15,new
+SPB6D7D0C9,SPARE-00168,PSU-1200,Nokia,spare_in_stock,Helsinki central,2024-10-18,new
+SPF251095A,SPARE-00169,CH-1X-2,Nokia,spare_in_stock,Kemi warehouse,2024-08-23,refurb
+SP5F5E53D1,SPARE-00170,KMAX-4K-RF,Mitsubishi,spare_in_stock,Kemi warehouse,2024-01-11,new
+SP5E4C4876,SPARE-00171,PSU-1200,Nokia,spare_in_stock,Kemi warehouse,2024-03-14,new
+SPAF1F5AE6,SPARE-00172,SFP-100G-3300,Mitsubishi,spare_in_stock,Rovaniemi depot,2024-06-22,refurb
+SPF6EF1871,SPARE-00173,PSU-1200,Nokia,spare_in_stock,Rovaniemi depot,2024-06-28,new
+SP35BB98EA,SPARE-00174,SFP-100G-3300,Mitsubishi,spare_in_stock,Helsinki central,2024-03-13,refurb
+SP342BE70A,SPARE-00175,CH-1X-2,Nokia,spare_in_stock,Tampere central,2024-01-23,new
+SP9B5EEC04,SPARE-00176,CH-1X-2,Nokia,consumed,Rovaniemi depot,2024-05-24,new
+SP768A51F3,SPARE-00177,SFP-100G-3300,Mitsubishi,spare_in_stock,Rovaniemi depot,2024-10-27,refurb
+SP1ED16649,SPARE-00178,CH-1X-2,Mitsubishi,on_order,Helsinki central,2024-12-20,refurb
+SP0A84A080,SPARE-00179,SFP-10G-8421,Mitsubishi,on_order,Rovaniemi depot,2024-07-26,new
+SPA54628E7,SPARE-00180,SFP-10G-8421,Mitsubishi,spare_in_stock,Rovaniemi depot,2024-05-20,new
+SPF46EC488,SPARE-00181,KMAX-4K-RF,Nokia,on_order,Rovaniemi depot,2024-09-23,refurb
+SPA704F132,SPARE-00182,SFP-25G-2102,Nokia,consumed,Tampere central,2024-07-10,refurb
+SP9CE37639,SPARE-00183,SFP-25G-2102,Nokia,spare_in_stock,Rovaniemi depot,2024-10-17,new
+SP085D5690,SPARE-00184,SFP-100G-3300,Nokia,on_order,Rovaniemi depot,2024-10-23,new
+SPBC1F7C17,SPARE-00185,SFP-10G-8421,Mitsubishi,spare_in_stock,Tampere central,2024-08-18,new
+SP3741E808,SPARE-00186,KMAX-4K-RF,Mitsubishi,consumed,Helsinki central,2024-04-26,refurb
+SP500AB95D,SPARE-00187,CH-1X-2,Mitsubishi,consumed,Helsinki central,2024-10-19,refurb
+SP7E719BA4,SPARE-00188,KMAX-4K-RF,Mitsubishi,on_order,Helsinki central,2024-09-16,new
+SP25FEF529,SPARE-00189,SFP-10G-8421,Nokia,spare_in_stock,Rovaniemi depot,2024-10-24,new
+SP0D3D4F52,SPARE-00190,CH-1X-2,Nokia,spare_in_stock,Kemi warehouse,2024-12-26,new
+SP310E8D15,SPARE-00191,KMAX-4K-RF,Nokia,spare_in_stock,Kemi warehouse,2024-09-13,refurb
+SPAFAC6F2F,SPARE-00192,SFP-10G-8421,Mitsubishi,spare_in_stock,Helsinki central,2024-10-10,new
+SPCE5CF096,SPARE-00193,PSU-1200,Nokia,on_order,Kemi warehouse,2024-02-10,refurb
+SP97048455,SPARE-00194,CH-1X-2,Nokia,on_order,Kemi warehouse,2024-11-15,refurb
+SP8DFDE53C,SPARE-00195,SFP-25G-2102,Nokia,spare_in_stock,Tampere central,2024-03-12,refurb
+SP0501185E,SPARE-00196,SFP-10G-8421,Nokia,consumed,Helsinki central,2024-07-25,new
+SPAB20EB6C,SPARE-00197,SFP-25G-2102,Nokia,spare_in_stock,Tampere central,2024-02-18,refurb
+SPB963FFD0,SPARE-00198,SFP-10G-8421,Mitsubishi,consumed,Helsinki central,2024-09-11,refurb
+SP069A9F61,SPARE-00199,SFP-25G-2102,Mitsubishi,on_order,Rovaniemi depot,2024-04-21,refurb
+SP29FFAF93,SPARE-00200,SFP-25G-2102,Mitsubishi,spare_in_stock,Rovaniemi depot,2024-04-18,new
+SP52951518,SPARE-00201,SFP-25G-2102,Mitsubishi,on_order,Tampere central,2024-06-20,new
+SP833024F2,SPARE-00202,SFP-100G-3300,Mitsubishi,spare_in_stock,Tampere central,2024-08-23,new
+SPDCF55A16,SPARE-00203,KMAX-4K-RF,Nokia,spare_in_stock,Rovaniemi depot,2024-08-22,new
+SP454C26A9,SPARE-00204,KMAX-4K-RF,Mitsubishi,spare_in_stock,Tampere central,2024-08-12,new
+SP520D5FD0,SPARE-00205,CH-1X-2,Mitsubishi,spare_in_stock,Helsinki central,2024-11-10,new
+SP3525C6B6,SPARE-00206,SFP-10G-8421,Nokia,consumed,Helsinki central,2024-04-21,refurb
+SP2F3C6E6B,SPARE-00207,KMAX-4K-RF,Mitsubishi,spare_in_stock,Helsinki central,2024-09-16,refurb
+SP58638FF4,SPARE-00208,SFP-10G-8421,Mitsubishi,on_order,Kemi warehouse,2024-04-18,refurb
+SP3DCA7298,SPARE-00209,PSU-1200,Mitsubishi,on_order,Tampere central,2024-10-15,refurb
+SPFD94F89C,SPARE-00210,PSU-1200,Nokia,spare_in_stock,Kemi warehouse,2024-10-19,new
+SPAE21E887,SPARE-00211,CH-1X-2,Nokia,spare_in_stock,Kemi warehouse,2024-04-10,new
+SPB86E1E12,SPARE-00212,SFP-25G-2102,Mitsubishi,spare_in_stock,Helsinki central,2024-10-20,new
+SP1F6293A2,SPARE-00213,PSU-1200,Mitsubishi,spare_in_stock,Tampere central,2024-01-13,refurb
+SPD53EA172,SPARE-00214,PSU-1200,Mitsubishi,spare_in_stock,Rovaniemi depot,2024-11-26,refurb
+SP225D4A86,SPARE-00215,PSU-1200,Nokia,consumed,Tampere central,2024-04-13,new
+SP1C622286,SPARE-00216,SFP-100G-3300,Mitsubishi,spare_in_stock,Helsinki central,2024-08-16,new
+SP461F898B,SPARE-00217,SFP-25G-2102,Nokia,on_order,Rovaniemi depot,2024-12-21,refurb
+SP84010013,SPARE-00218,SFP-100G-3300,Nokia,spare_in_stock,Rovaniemi depot,2024-09-18,refurb
+SP7BE3B6E1,SPARE-00219,CH-1X-2,Mitsubishi,on_order,Tampere central,2024-11-24,refurb
+SPA143D1A3,SPARE-00220,SFP-10G-8421,Nokia,spare_in_stock,Kemi warehouse,2024-01-21,refurb
+SPF7ABC3A3,SPARE-00221,SFP-10G-8421,Nokia,spare_in_stock,Rovaniemi depot,2024-05-19,refurb
+SP16226835,SPARE-00222,SFP-10G-8421,Mitsubishi,spare_in_stock,Rovaniemi depot,2024-03-23,new
+SP5513CF19,SPARE-00223,KMAX-4K-RF,Nokia,on_order,Tampere central,2024-01-14,refurb
+SP9394C2D2,SPARE-00224,KMAX-4K-RF,Nokia,spare_in_stock,Rovaniemi depot,2024-07-14,refurb
+SPA5B680C0,SPARE-00225,SFP-25G-2102,Nokia,spare_in_stock,Helsinki central,2024-06-25,refurb
+SP2C631925,SPARE-00226,SFP-100G-3300,Nokia,spare_in_stock,Tampere central,2024-11-26,new
+SP10253397,SPARE-00227,SFP-10G-8421,Mitsubishi,on_order,Kemi warehouse,2024-12-28,refurb
+SP1DA6B6EF,SPARE-00228,PSU-1200,Nokia,spare_in_stock,Rovaniemi depot,2024-10-24,refurb
+SP1907FB84,SPARE-00229,SFP-100G-3300,Nokia,on_order,Rovaniemi depot,2024-07-10,new
+SP43F0EDC2,SPARE-00230,SFP-100G-3300,Mitsubishi,spare_in_stock,Tampere central,2024-06-19,new
+SPDD1C3E0E,SPARE-00231,SFP-25G-2102,Mitsubishi,spare_in_stock,Kemi warehouse,2024-05-21,refurb
+SP6FFB5A88,SPARE-00232,SFP-25G-2102,Mitsubishi,spare_in_stock,Kemi warehouse,2024-07-16,refurb
+SP8D20EC19,SPARE-00233,SFP-10G-8421,Nokia,spare_in_stock,Helsinki central,2024-08-11,refurb
+SP82687A6E,SPARE-00234,SFP-100G-3300,Nokia,on_order,Kemi warehouse,2024-06-10,new
+SPE9155E90,SPARE-00235,PSU-1200,Nokia,consumed,Kemi warehouse,2024-01-12,new
+SP0A3FB80E,SPARE-00236,SFP-100G-3300,Mitsubishi,on_order,Helsinki central,2024-12-27,new
+SP0D4A5C59,SPARE-00237,PSU-1200,Nokia,consumed,Rovaniemi depot,2024-12-13,refurb
+SPA04DF271,SPARE-00238,SFP-10G-8421,Nokia,spare_in_stock,Kemi warehouse,2024-06-14,new
+SP77A975DE,SPARE-00239,SFP-100G-3300,Mitsubishi,spare_in_stock,Rovaniemi depot,2024-03-22,refurb
+SPCAF39B46,SPARE-00240,CH-1X-2,Nokia,spare_in_stock,Rovaniemi depot,2024-08-27,new
+SPAB073737,SPARE-00241,SFP-100G-3300,Nokia,consumed,Kemi warehouse,2024-05-24,new
+SP7C901B5E,SPARE-00242,SFP-25G-2102,Nokia,on_order,Helsinki central,2024-08-18,new
+SPEFB7148F,SPARE-00243,SFP-100G-3300,Mitsubishi,on_order,Helsinki central,2024-07-25,new
+SP6CA45BD6,SPARE-00244,KMAX-4K-RF,Mitsubishi,spare_in_stock,Tampere central,2024-11-25,refurb
+SP6A315497,SPARE-00245,PSU-1200,Mitsubishi,on_order,Rovaniemi depot,2024-11-25,new
+SP41AF9E6C,SPARE-00246,CH-1X-2,Nokia,spare_in_stock,Helsinki central,2024-12-22,refurb
+SP0C7905D3,SPARE-00247,SFP-10G-8421,Mitsubishi,on_order,Kemi warehouse,2024-08-15,new
+SP449FB0DA,SPARE-00248,PSU-1200,Nokia,consumed,Kemi warehouse,2024-06-10,refurb
+SP1CD5969A,SPARE-00249,SFP-100G-3300,Mitsubishi,on_order,Helsinki central,2024-06-16,new
+SP0820E775,SPARE-00250,SFP-25G-2102,Mitsubishi,spare_in_stock,Helsinki central,2024-07-28,refurb
+SP8AD185E0,SPARE-00251,PSU-1200,Mitsubishi,consumed,Rovaniemi depot,2024-01-23,refurb
+SP35884ECB,SPARE-00252,SFP-10G-8421,Nokia,spare_in_stock,Helsinki central,2024-08-14,new
+SP33A73E7D,SPARE-00253,SFP-25G-2102,Mitsubishi,consumed,Kemi warehouse,2024-04-26,new
+SP60B84ED5,SPARE-00254,CH-1X-2,Nokia,spare_in_stock,Kemi warehouse,2024-09-11,refurb
+SPB35BC7E7,SPARE-00255,SFP-100G-3300,Mitsubishi,spare_in_stock,Kemi warehouse,2024-08-21,new
+SP715661E8,SPARE-00256,SFP-100G-3300,Mitsubishi,on_order,Tampere central,2024-01-17,refurb
+SP74EFADD0,SPARE-00257,SFP-10G-8421,Nokia,spare_in_stock,Kemi warehouse,2024-09-21,refurb
+SPB95B2AC8,SPARE-00258,CH-1X-2,Nokia,on_order,Tampere central,2024-05-22,refurb
+SPB9B96F94,SPARE-00259,CH-1X-2,Mitsubishi,on_order,Tampere central,2024-07-18,new
+SP560F52EE,SPARE-00260,KMAX-4K-RF,Nokia,spare_in_stock,Tampere central,2024-12-13,refurb
+SPA8EA8A2A,SPARE-00261,SFP-25G-2102,Nokia,spare_in_stock,Helsinki central,2024-07-14,refurb
+SP71729DF9,SPARE-00262,SFP-10G-8421,Nokia,consumed,Rovaniemi depot,2024-07-28,new
+SPD442E360,SPARE-00263,SFP-100G-3300,Mitsubishi,on_order,Rovaniemi depot,2024-09-18,refurb
+SPCD879851,SPARE-00264,CH-1X-2,Mitsubishi,on_order,Kemi warehouse,2024-12-25,new
+SPF23750EC,SPARE-00265,SFP-25G-2102,Nokia,consumed,Tampere central,2024-03-18,new
+SP26B524B1,SPARE-00266,SFP-25G-2102,Mitsubishi,on_order,Helsinki central,2024-11-21,refurb
+SP708600A1,SPARE-00267,CH-1X-2,Mitsubishi,spare_in_stock,Kemi warehouse,2024-09-11,refurb
+SP763FBDA0,SPARE-00268,SFP-10G-8421,Mitsubishi,spare_in_stock,Helsinki central,2024-02-19,refurb
+SP2191E5B7,SPARE-00269,SFP-100G-3300,Mitsubishi,spare_in_stock,Kemi warehouse,2024-03-25,new
+SPE1D6041F,SPARE-00270,CH-1X-2,Nokia,spare_in_stock,Helsinki central,2024-09-28,refurb
+SPD0E0B74C,SPARE-00271,PSU-1200,Mitsubishi,spare_in_stock,Helsinki central,2024-11-14,new
+SP2273129C,SPARE-00272,KMAX-4K-RF,Nokia,spare_in_stock,Kemi warehouse,2024-04-23,refurb
+SP088C9E37,SPARE-00273,PSU-1200,Nokia,consumed,Rovaniemi depot,2024-10-27,refurb
+SPB244E7E2,SPARE-00274,PSU-1200,Mitsubishi,spare_in_stock,Rovaniemi depot,2024-05-21,refurb
+SPB97A9E5B,SPARE-00275,CH-1X-2,Nokia,spare_in_stock,Rovaniemi depot,2024-01-28,new
+SPA9FE9CD9,SPARE-00276,CH-1X-2,Nokia,on_order,Tampere central,2024-08-17,refurb
+SP425AC4AE,SPARE-00277,PSU-1200,Nokia,spare_in_stock,Tampere central,2024-02-12,refurb
+SPDAE31B0C,SPARE-00278,KMAX-4K-RF,Mitsubishi,spare_in_stock,Helsinki central,2024-03-23,new
+SP58DC3C65,SPARE-00279,CH-1X-2,Mitsubishi,spare_in_stock,Helsinki central,2024-07-27,refurb
+SPA905B516,SPARE-00280,PSU-1200,Nokia,spare_in_stock,Helsinki central,2024-01-25,refurb
+SP2102E281,SPARE-00281,SFP-10G-8421,Nokia,on_order,Tampere central,2024-12-11,refurb
+SPE0A171C8,SPARE-00282,CH-1X-2,Mitsubishi,spare_in_stock,Rovaniemi depot,2024-04-24,new
+SP7E32FEE5,SPARE-00283,SFP-100G-3300,Nokia,on_order,Helsinki central,2024-04-24,refurb
+SP3310C78D,SPARE-00284,KMAX-4K-RF,Nokia,consumed,Tampere central,2024-01-28,new
+SP45773DB0,SPARE-00285,KMAX-4K-RF,Mitsubishi,spare_in_stock,Tampere central,2024-07-11,new
+SPBFA27FC0,SPARE-00286,SFP-100G-3300,Mitsubishi,spare_in_stock,Rovaniemi depot,2024-12-14,new
+SPE61AD1B6,SPARE-00287,SFP-10G-8421,Nokia,spare_in_stock,Rovaniemi depot,2024-06-18,refurb
+SPB55A485F,SPARE-00288,PSU-1200,Nokia,spare_in_stock,Helsinki central,2024-02-19,new
+SP430D9B53,SPARE-00289,SFP-25G-2102,Mitsubishi,consumed,Kemi warehouse,2024-06-25,refurb
+SP742EFD2C,SPARE-00290,PSU-1200,Mitsubishi,consumed,Rovaniemi depot,2024-03-22,new
+SP1134F5E1,SPARE-00291,KMAX-4K-RF,Mitsubishi,spare_in_stock,Helsinki central,2024-06-10,new
+SPC2DD4F86,SPARE-00292,PSU-1200,Nokia,on_order,Rovaniemi depot,2024-10-19,refurb
+SP55A15714,SPARE-00293,SFP-100G-3300,Mitsubishi,spare_in_stock,Rovaniemi depot,2024-07-21,refurb
+SPEFB8B835,SPARE-00294,KMAX-4K-RF,Mitsubishi,consumed,Rovaniemi depot,2024-11-23,new
+SP3D89B273,SPARE-00295,CH-1X-2,Nokia,on_order,Tampere central,2024-06-28,new
+SP832A8BD4,SPARE-00296,SFP-10G-8421,Nokia,consumed,Helsinki central,2024-12-19,refurb
+SPB7587619,SPARE-00297,PSU-1200,Mitsubishi,spare_in_stock,Tampere central,2024-12-18,refurb
+SP3FCF0BDD,SPARE-00298,PSU-1200,Nokia,consumed,Rovaniemi depot,2024-12-23,new
+SP37B8DC8F,SPARE-00299,KMAX-4K-RF,Nokia,on_order,Kemi warehouse,2024-03-11,refurb
+SP83EF7FCB,SPARE-00300,KMAX-4K-RF,Mitsubishi,consumed,Kemi warehouse,2024-02-15,refurb
+SP20D9694D,SPARE-00301,SFP-100G-3300,Nokia,consumed,Helsinki central,2024-07-27,refurb
+SPDD6522BF,SPARE-00302,SFP-10G-8421,Mitsubishi,consumed,Helsinki central,2024-08-16,refurb
+SPE687E29F,SPARE-00303,SFP-25G-2102,Nokia,consumed,Helsinki central,2024-02-26,refurb
+SPBE55529A,SPARE-00304,CH-1X-2,Nokia,on_order,Rovaniemi depot,2024-07-15,new
+SP8DAA3443,SPARE-00305,SFP-25G-2102,Nokia,on_order,Tampere central,2024-12-26,new
+SPCBB1776C,SPARE-00306,SFP-25G-2102,Mitsubishi,spare_in_stock,Helsinki central,2024-08-15,new
+SP6F3F6BB8,SPARE-00307,SFP-10G-8421,Mitsubishi,spare_in_stock,Tampere central,2024-11-25,new
+SP9D50CFAC,SPARE-00308,CH-1X-2,Mitsubishi,on_order,Kemi warehouse,2024-12-20,new
+SPB9F3319D,SPARE-00309,SFP-25G-2102,Mitsubishi,spare_in_stock,Helsinki central,2024-12-13,new
+SP04D3920B,SPARE-00310,CH-1X-2,Nokia,spare_in_stock,Kemi warehouse,2024-08-14,new
+SP63F494E2,SPARE-00311,CH-1X-2,Mitsubishi,consumed,Rovaniemi depot,2024-10-16,refurb
+SPAA08AD56,SPARE-00312,SFP-10G-8421,Nokia,spare_in_stock,Tampere central,2024-11-19,refurb
+SPCD02C7BD,SPARE-00313,SFP-25G-2102,Mitsubishi,spare_in_stock,Rovaniemi depot,2024-08-17,new
+SP0E78CB3B,SPARE-00314,PSU-1200,Mitsubishi,on_order,Rovaniemi depot,2024-11-26,refurb
+SP136644BA,SPARE-00315,SFP-100G-3300,Nokia,on_order,Kemi warehouse,2024-12-17,refurb
+SPBD9A6ECA,SPARE-00316,PSU-1200,Nokia,spare_in_stock,Kemi warehouse,2024-07-24,new
+SPAC84CA32,SPARE-00317,SFP-25G-2102,Mitsubishi,spare_in_stock,Helsinki central,2024-07-19,refurb
+SPD75E041C,SPARE-00318,PSU-1200,Mitsubishi,consumed,Rovaniemi depot,2024-04-15,refurb
+SP97202857,SPARE-00319,SFP-100G-3300,Nokia,spare_in_stock,Rovaniemi depot,2024-07-19,new
+SP1FEA449E,SPARE-00320,SFP-25G-2102,Mitsubishi,consumed,Tampere central,2024-04-11,new
+SP4CB02CA4,SPARE-00321,SFP-10G-8421,Nokia,spare_in_stock,Kemi warehouse,2024-03-10,new
+SPB527C332,SPARE-00322,SFP-10G-8421,Nokia,consumed,Helsinki central,2024-10-23,refurb
+SPD1C18150,SPARE-00323,PSU-1200,Nokia,consumed,Kemi warehouse,2024-03-13,refurb
+SPDD86B28F,SPARE-00324,SFP-25G-2102,Nokia,consumed,Helsinki central,2024-08-18,new
+SPDEF5102C,SPARE-00325,CH-1X-2,Mitsubishi,spare_in_stock,Kemi warehouse,2024-12-27,new
+SP83785B1A,SPARE-00326,KMAX-4K-RF,Nokia,on_order,Tampere central,2024-10-28,refurb
+SPB899B76D,SPARE-00327,CH-1X-2,Nokia,spare_in_stock,Helsinki central,2024-12-10,refurb
+SP7316BABE,SPARE-00328,SFP-25G-2102,Nokia,spare_in_stock,Helsinki central,2024-12-10,new
+SP4CD08BF1,SPARE-00329,SFP-25G-2102,Nokia,spare_in_stock,Tampere central,2024-06-15,refurb
+SPA11BAC3B,SPARE-00330,SFP-100G-3300,Mitsubishi,spare_in_stock,Helsinki central,2024-08-23,new
+SPF6118F2E,SPARE-00331,CH-1X-2,Nokia,spare_in_stock,Helsinki central,2024-01-16,new
+SP5E74B453,SPARE-00332,KMAX-4K-RF,Mitsubishi,spare_in_stock,Rovaniemi depot,2024-01-22,new
+SP30B58563,SPARE-00333,CH-1X-2,Nokia,spare_in_stock,Rovaniemi depot,2024-07-23,new
+SPAAC9F5C6,SPARE-00334,SFP-10G-8421,Nokia,consumed,Rovaniemi depot,2024-05-15,new
+SP0BBBF37A,SPARE-00335,CH-1X-2,Nokia,spare_in_stock,Rovaniemi depot,2024-07-10,refurb
+SP55AD0031,SPARE-00336,CH-1X-2,Mitsubishi,spare_in_stock,Tampere central,2024-04-21,new
+SPCE6C3426,SPARE-00337,KMAX-4K-RF,Mitsubishi,consumed,Rovaniemi depot,2024-03-28,new
+SP22A63F94,SPARE-00338,SFP-100G-3300,Nokia,consumed,Kemi warehouse,2024-12-23,new
+SPA875FD63,SPARE-00339,SFP-25G-2102,Nokia,consumed,Helsinki central,2024-02-28,refurb
+SP363EAA20,SPARE-00340,CH-1X-2,Mitsubishi,spare_in_stock,Helsinki central,2024-12-13,new
+SPE07D9E05,SPARE-00341,SFP-25G-2102,Nokia,consumed,Kemi warehouse,2024-08-19,new
+SP0CE31FEE,SPARE-00342,SFP-10G-8421,Nokia,spare_in_stock,Rovaniemi depot,2024-04-10,refurb
+SP6D374708,SPARE-00343,KMAX-4K-RF,Mitsubishi,consumed,Tampere central,2024-11-23,refurb
+SP44DEE125,SPARE-00344,CH-1X-2,Nokia,spare_in_stock,Helsinki central,2024-09-13,refurb
+SP215BDF06,SPARE-00345,PSU-1200,Nokia,on_order,Tampere central,2024-03-18,refurb
+SP935B424A,SPARE-00346,CH-1X-2,Mitsubishi,consumed,Helsinki central,2024-08-26,refurb
+SP5C5D2045,SPARE-00347,CH-1X-2,Mitsubishi,consumed,Kemi warehouse,2024-09-11,refurb
+SP6E562601,SPARE-00348,PSU-1200,Nokia,on_order,Rovaniemi depot,2024-05-23,refurb
+SP7C949368,SPARE-00349,SFP-10G-8421,Nokia,spare_in_stock,Helsinki central,2024-02-12,refurb
+SP6F0B8C1C,SPARE-00350,KMAX-4K-RF,Mitsubishi,consumed,Helsinki central,2024-07-15,new
+SP8C74853A,SPARE-00351,SFP-100G-3300,Nokia,spare_in_stock,Kemi warehouse,2024-06-17,refurb
+SPFFC4B7F5,SPARE-00352,KMAX-4K-RF,Mitsubishi,spare_in_stock,Tampere central,2024-12-23,new
+SPA0E9F888,SPARE-00353,SFP-100G-3300,Nokia,spare_in_stock,Tampere central,2024-05-16,refurb
+SP2D22DB7F,SPARE-00354,SFP-25G-2102,Nokia,on_order,Rovaniemi depot,2024-01-11,refurb
+SP091A0EA1,SPARE-00355,CH-1X-2,Nokia,consumed,Tampere central,2024-06-21,refurb
+SP553D6835,SPARE-00356,KMAX-4K-RF,Mitsubishi,consumed,Rovaniemi depot,2024-05-26,refurb
+SP46CA681F,SPARE-00357,SFP-100G-3300,Nokia,spare_in_stock,Helsinki central,2024-06-25,new
+SP2A6B3DF7,SPARE-00358,SFP-100G-3300,Nokia,spare_in_stock,Rovaniemi depot,2024-03-28,new
+SPBC6E960F,SPARE-00359,SFP-100G-3300,Mitsubishi,on_order,Helsinki central,2024-11-13,new

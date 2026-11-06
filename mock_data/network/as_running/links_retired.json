@@ -1,0 +1,11 @@
+[
+  {
+    "link_id": "LINK-TRN-012-MW-UP",
+    "end_a": "TRN-012",
+    "end_b": "CR-006",
+    "capacity_gbps": 10,
+    "media": "microwave",
+    "retired_at": "2024-04-11",
+    "superseded_by": "LINK-TRN-012-CR-006"
+  }
+]

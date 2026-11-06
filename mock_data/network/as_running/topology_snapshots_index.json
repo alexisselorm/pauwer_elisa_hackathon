@@ -1,0 +1,13 @@
+[
+  {
+    "snapshot": "2025-10-01",
+    "node_count": 76,
+    "link_count": 76,
+    "note": "topology is a point-in-time graph; see physical_node_snapshots"
+  },
+  {
+    "snapshot": "2026-11-06",
+    "node_count": 76,
+    "link_count": 76
+  }
+]

@@ -1,0 +1,78 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 7 0 R /F2 8 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 1009 >>
+stream
+BT /F2 13 Tf 72 790 Td (Transmission upgrade notes - personal) Tj ET
+BT /F1 10 Tf 72 760 Td (Transmission upgrade notes - personal) Tj ET
+BT /F1 9 Tf 12 TL 72 730 Td
+(TRN upgrade / Gen1 \(TNC-1X\) notes - kept in my drawer, so sue me.) Tj T*
+() Tj T*
+(After an optical module swap on the old units \(Gen1, 2019\) the port can show) Tj T*
+(UP with normal RX and cleared alarms but forward nothing. Seen 4x: TRN-042,) Tj T*
+(TRN-051\(B?deleted\), Kemi, Ivalo side. Bounce the port. Do NOT swap the module) Tj T*
+(again.) Tj T*
+() Tj T*
+(Newer boxes \(Gen2/3 and the 7250 access switches\) do not do this in my) Tj T*
+(experience. Upgraded units: 2023-11 rollout to v6.1.4 made it much rarer.) Tj T*
+() Tj T*
+(Also: the Kemi transport room is behind the private road gate. The new) Tj T*
+(police-code box has the padlock key. Previously Pekka had the key on his) Tj T*
+(keyring. Ring Markku in service ops first if you do not know the site.) Tj T*
+ET
+BT /F1 8 Tf 72 40 Td (Page 1 of 2 - scanned 2019-11-12) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 7 0 R /F2 8 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 546 >>
+stream
+BT /F2 13 Tf 72 790 Td (Transmission upgrade notes - personal) Tj ET
+BT /F1 10 Tf 72 760 Td (Transmission upgrade notes - personal) Tj ET
+BT /F1 9 Tf 12 TL 72 730 Td
+(Transmission upgrade notes - personal \(page 2\)) Tj T*
+() Tj T*
+(Gen1 box 2019-04-18 manufactured. Lab note: manually re-inserting the optical) Tj T*
+(module did not clear the forwarding issue in 2/4 cases; a port bounce cleared) Tj T*
+(it in 4/4. Possible supplier bug in the forwarding table update path.) Tj T*
+ET
+BT /F1 8 Tf 72 40 Td (Page 2 of 2 - scanned 2019-11-12) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+8 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+9 0 obj
+<< /Title (Transmission upgrade notes - personal) /Author (Erkki Expert) /Creator (Canon iR-ADV C5535 III) /Producer (Canon iR-ADV C5535 III) /CreationDate (D:20191112090000Z) >>
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000127 00000 n 
+0000000263 00000 n 
+0000001324 00000 n 
+0000001460 00000 n 
+0000002057 00000 n 
+0000002154 00000 n 
+0000002256 00000 n 
+trailer
+<< /Size 10 /Root 1 0 R /Info 9 0 R /ID [<10279585e98d183463f01fbabd15c4a3> <10279585e98d183463f01fbabd15c4a3>] >>
+startxref
+2450
+%%EOF

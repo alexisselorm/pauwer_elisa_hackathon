@@ -1,0 +1,33 @@
+[
+  {
+    "id": "INSIGHT-001",
+    "title": "DC2 meter spikes are metering artefacts",
+    "needs_layers": [
+      "telemetry",
+      "context"
+    ],
+    "derivation": "Rows where grid_power_mw / it_power_mw > 1.6 must be excluded from customer reporting; the context assertion gives the reason and the action.",
+    "assertion": "ASR-0022"
+  },
+  {
+    "id": "INSIGHT-002",
+    "title": "Utilisation dips on maintained sites are planned",
+    "needs_layers": [
+      "telemetry",
+      "events",
+      "context"
+    ],
+    "derivation": "Sudden GPU utilisation drops on a site with an open maintenance window (device_events) are expected; suppress capacity alerts.",
+    "assertion": null
+  },
+  {
+    "id": "INSIGHT-003",
+    "title": "DC1 September spikes are planned meter-swap artefacts",
+    "needs_layers": [
+      "telemetry",
+      "context"
+    ],
+    "derivation": "Telemetry spikes on FI-HEL-DC1 around 2026-09-02 match the meter-swap notice window; exclude them instead of alerting.",
+    "assertion": "ASR-0027"
+  }
+]

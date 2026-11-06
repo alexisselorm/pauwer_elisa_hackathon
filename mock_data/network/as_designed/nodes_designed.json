@@ -1,0 +1,612 @@
+[
+  {
+    "node_id": "CR-001",
+    "layer": "core",
+    "type": "IP backbone router",
+    "vendor": "Nokia",
+    "model": "7750 SR-14s",
+    "site": "Helsinki",
+    "region": "Helsinki",
+    "lat": 60.17,
+    "lon": 24.94,
+    "design_role": [
+      "Backbone",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Backbone",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 9600
+  },
+  {
+    "node_id": "CR-002",
+    "layer": "core",
+    "type": "IP backbone router",
+    "vendor": "Nokia",
+    "model": "7750 SR-14s",
+    "site": "Espoo",
+    "region": "Espoo",
+    "lat": 60.21,
+    "lon": 24.66,
+    "design_role": [
+      "Backbone",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Backbone",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 9600
+  },
+  {
+    "node_id": "CR-003",
+    "layer": "core",
+    "type": "IP backbone router",
+    "vendor": "Nokia",
+    "model": "7750 SR-14s",
+    "site": "Tampere",
+    "region": "Tampere",
+    "lat": 61.5,
+    "lon": 23.79,
+    "design_role": [
+      "Backbone",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Backbone",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 9600
+  },
+  {
+    "node_id": "CR-004",
+    "layer": "core",
+    "type": "IP backbone router",
+    "vendor": "Nokia",
+    "model": "7750 SR-14s",
+    "site": "Turku",
+    "region": "Turku",
+    "lat": 60.45,
+    "lon": 22.27,
+    "design_role": [
+      "Backbone",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Backbone",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 9600
+  },
+  {
+    "node_id": "CR-005",
+    "layer": "core",
+    "type": "IP backbone router",
+    "vendor": "Nokia",
+    "model": "7750 SR-14s",
+    "site": "Oulu",
+    "region": "Oulu",
+    "lat": 65.01,
+    "lon": 25.47,
+    "design_role": [
+      "Backbone",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Backbone",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 9600
+  },
+  {
+    "node_id": "CR-006",
+    "layer": "core",
+    "type": "IP backbone router",
+    "vendor": "Nokia",
+    "model": "7750 SR-14s",
+    "site": "Rovaniemi",
+    "region": "Rovaniemi",
+    "lat": 66.5,
+    "lon": 25.73,
+    "design_role": [
+      "Backbone",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Backbone",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 9600
+  },
+  {
+    "node_id": "TRN-001",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-2X",
+    "site": "Helsinki",
+    "region": "Helsinki",
+    "lat": 60.1417,
+    "lon": 24.9712,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 200,
+    "access_capacity_gbps": 600
+  },
+  {
+    "node_id": "TRN-002",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-3X",
+    "site": "Espoo",
+    "region": "Espoo",
+    "lat": 60.1821,
+    "lon": 24.6977,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 400,
+    "access_capacity_gbps": 300
+  },
+  {
+    "node_id": "TRN-003",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-3X",
+    "site": "Tampere",
+    "region": "Tampere",
+    "lat": 61.5313,
+    "lon": 23.8103,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 400,
+    "access_capacity_gbps": 400
+  },
+  {
+    "node_id": "TRN-004",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-1X",
+    "site": "Turku",
+    "region": "Turku",
+    "lat": 60.4718,
+    "lon": 22.2978,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 200,
+    "access_capacity_gbps": 300
+  },
+  {
+    "node_id": "TRN-005",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-1X",
+    "site": "Oulu",
+    "region": "Oulu",
+    "lat": 65.0089,
+    "lon": 25.442,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 200,
+    "access_capacity_gbps": 300
+  },
+  {
+    "node_id": "TRN-006",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-3X",
+    "site": "Rovaniemi",
+    "region": "Rovaniemi",
+    "lat": 66.5492,
+    "lon": 25.731,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 400,
+    "access_capacity_gbps": 200
+  },
+  {
+    "node_id": "TRN-042",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-1X",
+    "site": "Kemi",
+    "region": "Kemi",
+    "lat": 65.7709,
+    "lon": 24.6072,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 200,
+    "access_capacity_gbps": 200
+  },
+  {
+    "node_id": "TRN-007",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-1X",
+    "site": "Vantaa",
+    "region": "Vantaa",
+    "lat": 60.2653,
+    "lon": 25.0521,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 200,
+    "access_capacity_gbps": 400
+  },
+  {
+    "node_id": "TRN-008",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-3X",
+    "site": "Jyväskylä",
+    "region": "Jyväskylä",
+    "lat": 62.2276,
+    "lon": 25.7883,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 400,
+    "access_capacity_gbps": 200
+  },
+  {
+    "node_id": "TRN-009",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-3X",
+    "site": "Kuopio",
+    "region": "Kuopio",
+    "lat": 62.8945,
+    "lon": 27.6931,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 400,
+    "access_capacity_gbps": 200
+  },
+  {
+    "node_id": "TRN-010",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-2X",
+    "site": "Lahti",
+    "region": "Lahti",
+    "lat": 60.9896,
+    "lon": 25.6673,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 200,
+    "access_capacity_gbps": 200
+  },
+  {
+    "node_id": "TRN-011",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-2X",
+    "site": "Ivalo",
+    "region": "Ivalo",
+    "lat": 68.6164,
+    "lon": 27.5132,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 200,
+    "access_capacity_gbps": 100
+  },
+  {
+    "node_id": "TRN-012",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-2X",
+    "site": "Joensuu",
+    "region": "Joensuu",
+    "lat": 62.6171,
+    "lon": 29.789,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 200,
+    "access_capacity_gbps": 200
+  },
+  {
+    "node_id": "TRN-013",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-1X",
+    "site": "Vaasa",
+    "region": "Vaasa",
+    "lat": 63.0529,
+    "lon": 21.6014,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 200,
+    "access_capacity_gbps": 200
+  },
+  {
+    "node_id": "TRN-014",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-1X",
+    "site": "Seinäjoki",
+    "region": "Seinäjoki",
+    "lat": 62.7652,
+    "lon": 22.805,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 200,
+    "access_capacity_gbps": 100
+  },
+  {
+    "node_id": "TRN-015",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-3X",
+    "site": "Kajaani",
+    "region": "Kajaani",
+    "lat": 64.1886,
+    "lon": 27.6895,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 400,
+    "access_capacity_gbps": 100
+  },
+  {
+    "node_id": "TRN-016",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-2X",
+    "site": "Mikkeli",
+    "region": "Mikkeli",
+    "lat": 61.7146,
+    "lon": 27.2246,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 200,
+    "access_capacity_gbps": 100
+  },
+  {
+    "node_id": "TRN-017",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-1X",
+    "site": "Pori",
+    "region": "Pori",
+    "lat": 61.5212,
+    "lon": 21.7612,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 200,
+    "access_capacity_gbps": 200
+  },
+  {
+    "node_id": "TRN-018",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-1X",
+    "site": "Kokkola",
+    "region": "Kokkola",
+    "lat": 63.8026,
+    "lon": 23.1405,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 200,
+    "access_capacity_gbps": 100
+  },
+  {
+    "node_id": "TRN-019",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-1X",
+    "site": "Lappeenranta",
+    "region": "Lappeenranta",
+    "lat": 61.0888,
+    "lon": 28.1436,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 200,
+    "access_capacity_gbps": 200
+  },
+  {
+    "node_id": "TRN-020",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-2X",
+    "site": "Hämeenlinna",
+    "region": "Hämeenlinna",
+    "lat": 61.0372,
+    "lon": 24.4819,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 200,
+    "access_capacity_gbps": 100
+  },
+  {
+    "node_id": "TRN-021",
+    "layer": "transport",
+    "type": "optical transport unit",
+    "vendor": "Nokia",
+    "model": "TNC-2X",
+    "site": "Sodankylä",
+    "region": "Sodankylä",
+    "lat": 67.4006,
+    "lon": 26.5639,
+    "design_role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "role": [
+      "Transmission",
+      "Maintenance domain"
+    ],
+    "commissioned": null,
+    "design_capacity_gbps": 200,
+    "access_capacity_gbps": 100
+  }
+]

@@ -1,0 +1,70 @@
+{
+  "channel_id": "chan-energy",
+  "name": "Energy-Procurement",
+  "team": "Energy",
+  "topic": "Electricity contracts, Fingrid, BESS",
+  "members": [
+    {
+      "name": "Olga Saarinen",
+      "upn": "olga.saarinen@volga.example",
+      "team": "Energy",
+      "role": "Energy Analytics Lead",
+      "city": "Tampere",
+      "teams_id": "u-1014",
+      "aliases": [
+        "Olga"
+      ]
+    },
+    {
+      "name": "Liisa Nieminen",
+      "upn": "liisa.nieminen@volga.example",
+      "team": "Facilities",
+      "role": "Facilities Manager",
+      "city": "Tampere",
+      "teams_id": "u-1006",
+      "aliases": [
+        "Liisa"
+      ]
+    },
+    {
+      "name": "Markku Järvinen",
+      "upn": "markku.jarvinen@volga.example",
+      "team": "NOC-Services",
+      "role": "Service Manager",
+      "city": "Helsinki",
+      "teams_id": "u-1011",
+      "aliases": [
+        "Markku"
+      ]
+    },
+    {
+      "name": "Sanna Laine",
+      "upn": "sanna.laine@volga.example",
+      "team": "SRE",
+      "role": "Site Reliability Engineer",
+      "city": "Helsinki",
+      "teams_id": "u-1008",
+      "aliases": [
+        "Sanna"
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "message_id": "5074814649936",
+      "conversation_id": "19:1d1f648e7f1f824c9599a26b@thread.v2",
+      "channel_id": "chan-energy",
+      "created_at": "2025-11-04T12:00:00Z",
+      "created_iid": 3312,
+      "author_name": "Olga Saarinen",
+      "author_email": "olga.saarinen@volga.example",
+      "role": "Energy Analytics Lead",
+      "text": "Reminder: keep the DC1/DC2 BESS at 80% SOC for the winter because of the Fingrid capacity market. Charge cheap hours, do not discharge above 60% depth.",
+      "mentions": [],
+      "attachments": [],
+      "reactions": [],
+      "edited": false,
+      "topic": "Electricity contracts, Fingrid, BESS"
+    }
+  ]
+}

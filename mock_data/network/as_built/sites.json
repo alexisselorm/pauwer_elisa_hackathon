@@ -1,0 +1,46 @@
+[
+  {
+    "code": "FI-HEL-DC1",
+    "name": "Helsinki DC1 (Pitäjänmäki)",
+    "city": "Helsinki",
+    "lat": 60.2205,
+    "lon": 24.8606,
+    "role": "primary",
+    "grid_power_mw": 78.0,
+    "racks": 168,
+    "gpu_nodes": 220
+  },
+  {
+    "code": "FI-TRE-DC2",
+    "name": "Tampere DC2",
+    "city": "Tampere",
+    "lat": 61.4978,
+    "lon": 23.761,
+    "role": "secondary",
+    "grid_power_mw": 46.0,
+    "racks": 92,
+    "gpu_nodes": 115
+  },
+  {
+    "code": "FI-OUL-DC3",
+    "name": "Oulu DC3",
+    "city": "Oulu",
+    "lat": 65.0121,
+    "lon": 25.4651,
+    "role": "tertiary",
+    "grid_power_mw": 22.0,
+    "racks": 44,
+    "gpu_nodes": 52
+  },
+  {
+    "code": "FI-KEM-DC4",
+    "name": "Kemi DC4 (cold storage)",
+    "city": "Kemi",
+    "lat": 65.7364,
+    "lon": 24.5637,
+    "role": "cold_storage",
+    "grid_power_mw": 9.0,
+    "racks": 16,
+    "gpu_nodes": 0
+  }
+]

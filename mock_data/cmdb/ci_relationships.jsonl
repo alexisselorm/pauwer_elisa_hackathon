@@ -1,0 +1,74 @@
+{"source": "TRN-001", "target": "ACC-001", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "ACC-001", "target": "ACC-002", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "ACC-002", "target": "ACC-003", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "ACC-003", "target": "ACC-004", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "ACC-004", "target": "ACC-005", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "ACC-005", "target": "ACC-006", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-002", "target": "ACC-007", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "ACC-007", "target": "ACC-008", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "ACC-008", "target": "ACC-009", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-007", "target": "ACC-010", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "ACC-010", "target": "ACC-011", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "ACC-011", "target": "ACC-012", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "ACC-012", "target": "ACC-013", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-003", "target": "ACC-014", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "ACC-014", "target": "ACC-015", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "ACC-015", "target": "ACC-016", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "ACC-016", "target": "ACC-017", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-004", "target": "ACC-018", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "ACC-018", "target": "ACC-019", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "ACC-019", "target": "ACC-020", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-005", "target": "ACC-021", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-005", "target": "ACC-022", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-005", "target": "ACC-023", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-008", "target": "ACC-024", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-008", "target": "ACC-025", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-009", "target": "ACC-026", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-009", "target": "ACC-027", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-010", "target": "ACC-028", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-010", "target": "ACC-029", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-006", "target": "ACC-030", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-006", "target": "ACC-031", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-042", "target": "ACC-032", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-042", "target": "ACC-033", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-011", "target": "ACC-034", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-012", "target": "ACC-035", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-012", "target": "ACC-036", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-013", "target": "ACC-037", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-013", "target": "ACC-038", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-014", "target": "ACC-039", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-015", "target": "ACC-040", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-016", "target": "ACC-041", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-017", "target": "ACC-042", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-017", "target": "ACC-043", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-018", "target": "ACC-044", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-019", "target": "ACC-045", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-019", "target": "ACC-046", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-020", "target": "ACC-047", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "TRN-021", "target": "ACC-048", "type": "contains", "discovered_by": "Site Discovery"}
+{"source": "CR-001", "target": "TRN-001", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-001", "target": "TRN-002", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-003", "target": "TRN-003", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-003", "target": "TRN-004", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-003", "target": "TRN-005", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-003", "target": "TRN-006", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-003", "target": "TRN-042", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-003", "target": "TRN-007", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-003", "target": "TRN-008", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-003", "target": "TRN-009", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-003", "target": "TRN-010", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-003", "target": "TRN-011", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-003", "target": "TRN-012", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-003", "target": "TRN-013", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-003", "target": "TRN-014", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-003", "target": "TRN-015", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-003", "target": "TRN-016", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-003", "target": "TRN-017", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-003", "target": "TRN-018", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-003", "target": "TRN-019", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-003", "target": "TRN-020", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "CR-003", "target": "TRN-021", "type": "connects_to", "discovered_by": "service_mapping"}
+{"source": "FI-HEL-DC1", "target": "CR-001", "type": "powered_by", "discovered_by": "manual"}
+{"source": "FI-TRE-DC2", "target": "CR-003", "type": "powered_by", "discovered_by": "manual"}
+{"source": "FI-OUL-DC3", "target": "CR-005", "type": "powered_by", "discovered_by": "manual"}
+{"source": "FI-KEM-DC4", "target": "CR-005", "type": "powered_by", "discovered_by": "manual"}

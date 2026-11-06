@@ -1,0 +1,272 @@
+{
+  "tenant": "volga.example",
+  "source": "REACH-Freelancer + Onni export (synthetic)",
+  "riders": [
+    {
+      "driver_id": "DRV-001",
+      "name": "Onni Aalto",
+      "districts": [
+        "East-FI"
+      ],
+      "seat_capacity": 12,
+      "cargo_capacity_kg": 220,
+      "has_boomlift_ticket": false,
+      "assigned_to": "REACH",
+      "availability_this_month": 0.9,
+      "vulnerability": "low_volume_flag"
+    },
+    {
+      "driver_id": "DRV-002",
+      "name": "Kalle Virtanen",
+      "districts": [
+        "West-FI"
+      ],
+      "seat_capacity": 6,
+      "cargo_capacity_kg": 160,
+      "has_boomlift_ticket": false,
+      "assigned_to": "REACH",
+      "availability_this_month": 0.72,
+      "vulnerability": "low_volume_flag"
+    },
+    {
+      "driver_id": "DRV-003",
+      "name": "Sami Lahtinen",
+      "districts": [
+        "South-FI"
+      ],
+      "seat_capacity": 8,
+      "cargo_capacity_kg": 120,
+      "has_boomlift_ticket": true,
+      "assigned_to": "Onni",
+      "availability_this_month": 0.65,
+      "vulnerability": "contract_ending_soon"
+    },
+    {
+      "driver_id": "DRV-004",
+      "name": "Tuomas Mäkinen",
+      "districts": [
+        "North-FI"
+      ],
+      "seat_capacity": 12,
+      "cargo_capacity_kg": 220,
+      "has_boomlift_ticket": true,
+      "assigned_to": "Onni",
+      "availability_this_month": 0.79,
+      "vulnerability": "low_volume_flag"
+    },
+    {
+      "driver_id": "DRV-005",
+      "name": "Ville Nieminen",
+      "districts": [
+        "Central-FI"
+      ],
+      "seat_capacity": 16,
+      "cargo_capacity_kg": 220,
+      "has_boomlift_ticket": false,
+      "assigned_to": "Onni",
+      "availability_this_month": 0.96,
+      "vulnerability": "none"
+    },
+    {
+      "driver_id": "DRV-006",
+      "name": "Reino Kettunen",
+      "districts": [
+        "Central-FI",
+        "East-FI"
+      ],
+      "seat_capacity": 6,
+      "cargo_capacity_kg": 120,
+      "has_boomlift_ticket": true,
+      "assigned_to": "Onni",
+      "availability_this_month": 0.62,
+      "vulnerability": "low_volume_flag"
+    },
+    {
+      "driver_id": "DRV-007",
+      "name": "Pentti Karjalainen",
+      "districts": [
+        "Central-FI",
+        "North-FI"
+      ],
+      "seat_capacity": 8,
+      "cargo_capacity_kg": 160,
+      "has_boomlift_ticket": false,
+      "assigned_to": "REACH",
+      "availability_this_month": 0.58,
+      "vulnerability": "low_volume_flag"
+    },
+    {
+      "driver_id": "DRV-008",
+      "name": "Olli Hakala",
+      "districts": [
+        "East-FI"
+      ],
+      "seat_capacity": 16,
+      "cargo_capacity_kg": 160,
+      "has_boomlift_ticket": false,
+      "assigned_to": "Onni",
+      "availability_this_month": 0.46,
+      "vulnerability": "cities_adjusting_fees"
+    },
+    {
+      "driver_id": "DRV-009",
+      "name": "Juha Rantanen",
+      "districts": [
+        "East-FI",
+        "West-FI"
+      ],
+      "seat_capacity": 8,
+      "cargo_capacity_kg": 160,
+      "has_boomlift_ticket": true,
+      "assigned_to": "Onni",
+      "availability_this_month": 0.51,
+      "vulnerability": "cities_adjusting_fees"
+    },
+    {
+      "driver_id": "DRV-010",
+      "name": "Matti Lindholm",
+      "districts": [
+        "South-FI",
+        "West-FI"
+      ],
+      "seat_capacity": 12,
+      "cargo_capacity_kg": 120,
+      "has_boomlift_ticket": false,
+      "assigned_to": "Onni",
+      "availability_this_month": 0.62,
+      "vulnerability": "none"
+    },
+    {
+      "driver_id": "DRV-011",
+      "name": "Jouko Savolainen",
+      "districts": [
+        "Central-FI",
+        "East-FI"
+      ],
+      "seat_capacity": 8,
+      "cargo_capacity_kg": 120,
+      "has_boomlift_ticket": true,
+      "assigned_to": "Onni",
+      "availability_this_month": 0.77,
+      "vulnerability": "contract_ending_soon"
+    },
+    {
+      "driver_id": "DRV-012",
+      "name": "Arto Nurmi",
+      "districts": [
+        "East-FI"
+      ],
+      "seat_capacity": 12,
+      "cargo_capacity_kg": 220,
+      "has_boomlift_ticket": true,
+      "assigned_to": "REACH",
+      "availability_this_month": 0.83,
+      "vulnerability": "none"
+    },
+    {
+      "driver_id": "DRV-013",
+      "name": "Harri Räsänen",
+      "districts": [
+        "Central-FI"
+      ],
+      "seat_capacity": 16,
+      "cargo_capacity_kg": 160,
+      "has_boomlift_ticket": false,
+      "assigned_to": "Onni",
+      "availability_this_month": 0.83,
+      "vulnerability": "low_volume_flag"
+    },
+    {
+      "driver_id": "DRV-014",
+      "name": "Ilpo Aho",
+      "districts": [
+        "North-FI"
+      ],
+      "seat_capacity": 8,
+      "cargo_capacity_kg": 120,
+      "has_boomlift_ticket": true,
+      "assigned_to": "REACH",
+      "availability_this_month": 0.63,
+      "vulnerability": "contract_ending_soon"
+    },
+    {
+      "driver_id": "DRV-015",
+      "name": "Timo Backman",
+      "districts": [
+        "West-FI"
+      ],
+      "seat_capacity": 12,
+      "cargo_capacity_kg": 120,
+      "has_boomlift_ticket": false,
+      "assigned_to": "Onni",
+      "availability_this_month": 0.92,
+      "vulnerability": "low_volume_flag"
+    },
+    {
+      "driver_id": "DRV-016",
+      "name": "Pekka Rantala",
+      "districts": [
+        "Central-FI",
+        "East-FI"
+      ],
+      "seat_capacity": 8,
+      "cargo_capacity_kg": 120,
+      "has_boomlift_ticket": true,
+      "assigned_to": "Onni",
+      "availability_this_month": 0.54,
+      "vulnerability": "none"
+    },
+    {
+      "driver_id": "DRV-017",
+      "name": "Vesa Kinnunen",
+      "districts": [
+        "North-FI"
+      ],
+      "seat_capacity": 16,
+      "cargo_capacity_kg": 220,
+      "has_boomlift_ticket": true,
+      "assigned_to": "Onni",
+      "availability_this_month": 0.48,
+      "vulnerability": "contract_ending_soon"
+    },
+    {
+      "driver_id": "DRV-018",
+      "name": "Esa Turunen",
+      "districts": [
+        "East-FI"
+      ],
+      "seat_capacity": 6,
+      "cargo_capacity_kg": 220,
+      "has_boomlift_ticket": false,
+      "assigned_to": "Onni",
+      "availability_this_month": 0.97,
+      "vulnerability": "cities_adjusting_fees"
+    },
+    {
+      "driver_id": "DRV-019",
+      "name": "Salla Väänänen",
+      "districts": [
+        "Central-FI"
+      ],
+      "seat_capacity": 6,
+      "cargo_capacity_kg": 220,
+      "has_boomlift_ticket": false,
+      "assigned_to": "REACH",
+      "availability_this_month": 0.66,
+      "vulnerability": "cities_adjusting_fees"
+    },
+    {
+      "driver_id": "DRV-020",
+      "name": "Nina Huhtala",
+      "districts": [
+        "North-FI"
+      ],
+      "seat_capacity": 12,
+      "cargo_capacity_kg": 220,
+      "has_boomlift_ticket": false,
+      "assigned_to": "Onni",
+      "availability_this_month": 0.47,
+      "vulnerability": "cities_adjusting_fees"
+    }
+  ]
+}

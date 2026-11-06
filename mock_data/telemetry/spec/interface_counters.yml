@@ -1,0 +1,105 @@
+# Telemetry collector spec for the transport layer (the OLT/CMDB-facing contract).
+# Owners: NOC-Transport. Last change: 2024-09-30
+apiVersion: volga.example/v1
+kind: PullSpec
+metadata:
+  name: interface-counters
+spec:
+  poll_interval_seconds: 900
+  olt_style_query: true
+  metrics: [in_octets_mbps, out_octets_mbps, rx_power_dbm, oper_status]
+  thresholds:
+    # THIS is where 'traffic zero' is defined for transport ports, not in the NMS banks
+    traffic_zero:
+      window_minutes: 60
+      condition: 'oper_status == UP and in_octets_mbps < 0.01'
+      action: raise TICKET, do not page
+  targets:
+    - ci_id: TRN-001
+      port: 1/1/3
+      model_family: TNC-2X
+      generation: Gen2
+    - ci_id: TRN-002
+      port: 1/1/3
+      model_family: TNC-3X
+      generation: Gen3
+    - ci_id: TRN-003
+      port: 1/1/3
+      model_family: TNC-3X
+      generation: Gen3
+    - ci_id: TRN-004
+      port: 1/1/3
+      model_family: TNC-1X
+      generation: Gen1
+    - ci_id: TRN-005
+      port: 1/1/3
+      model_family: TNC-1X
+      generation: Gen1
+    - ci_id: TRN-006
+      port: 1/1/3
+      model_family: TNC-3X
+      generation: Gen3
+    - ci_id: TRN-042
+      port: 1/1/3
+      model_family: TNC-1X
+      generation: Gen1
+    - ci_id: TRN-007
+      port: 1/1/3
+      model_family: TNC-1X
+      generation: Gen1
+    - ci_id: TRN-008
+      port: 1/1/3
+      model_family: TNC-3X
+      generation: Gen3
+    - ci_id: TRN-009
+      port: 1/1/3
+      model_family: TNC-3X
+      generation: Gen3
+    - ci_id: TRN-010
+      port: 1/1/3
+      model_family: TNC-2X
+      generation: Gen2
+    - ci_id: TRN-011
+      port: 1/1/3
+      model_family: TNC-2X
+      generation: Gen2
+    - ci_id: TRN-012
+      port: 1/1/3
+      model_family: TNC-2X
+      generation: Gen2
+    - ci_id: TRN-013
+      port: 1/1/3
+      model_family: TNC-1X
+      generation: Gen1
+    - ci_id: TRN-014
+      port: 1/1/3
+      model_family: TNC-1X
+      generation: Gen1
+    - ci_id: TRN-015
+      port: 1/1/3
+      model_family: TNC-3X
+      generation: Gen3
+    - ci_id: TRN-016
+      port: 1/1/3
+      model_family: TNC-2X
+      generation: Gen2
+    - ci_id: TRN-017
+      port: 1/1/3
+      model_family: TNC-1X
+      generation: Gen1
+    - ci_id: TRN-018
+      port: 1/1/3
+      model_family: TNC-1X
+      generation: Gen1
+    - ci_id: TRN-019
+      port: 1/1/3
+      model_family: TNC-1X
+      generation: Gen1
+    - ci_id: TRN-020
+      port: 1/1/3
+      model_family: TNC-2X
+      generation: Gen2
+    - ci_id: TRN-021
+      port: 1/1/3
+      model_family: TNC-2X
+      generation: Gen2
