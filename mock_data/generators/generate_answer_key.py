@@ -50,8 +50,7 @@ def main() -> None:
                                   "traffic counters after an SFP replacement on an older unit?",
              answerable_from="teams + email + PDF", in_corpus=True, documented_in=[
                  _ref_teams("chan-noc-transport", "Disable the interface, wait a little, then enable it again"),
-                 {"type": "email", "ref": "RE: TRN-042 traffic not recovering after SFP replacement",
-                  "note": "email_outlook/Sent Items/2025-10-14 1145 - RE TRN-042 ..."},
+                 _ref_email("RE: TRN-042 traffic not recovering after SFP replacement"),
                  {"type": "pdf", "ref": "documents/expert_notes/2019-11_transmission_upgrade_notes.pdf"}],
              expected="Disable/enable (bounce) the interface; do not replace the SFP again or reboot the node.",
              kind="procedure"),
@@ -64,16 +63,11 @@ def main() -> None:
         dict(id="QA-012", question="How do you get into the Kemi transport room, and who has access?",
              answerable_from="teams + email", in_corpus=True,
              documented_in=[_ref_teams("chan-field-ops", "The padlock key is on my keyring"),
-                            {"type": "email", "ref": "Kemi site new code lock installed (action for field ops)",
-                             "note": "says there is a code lock now, no key, contact security / Heikki"}],
+                            dict(_ref_email("Kemi site: new code lock installed (action for field ops)"),
+                                 note="says there is a code lock now, no key, contact security / Heikki")],
              expected="Private road, gated. Since 2026-08 a code lock (no physical key), custodian Heikki / "
                       "site security. Before 2026-08 the padlock key was on Pekka's keyring.",
              kind="access", trap="Teams knowledge is outdated"),
-        dict(id="QA-013", question="What is the maximum allowed BESS depth of discharge and SOC band now?",
-             answerable_from="email (superseding Teams + KB)", in_corpus=True,
-             documented_in=[{"type": "email", "ref": "BESS operating mode change from 1 April (aFRR participation)"}],
-             expected="SOC band 35-70%, DoD <= 35% per event, <= 6 events/day (aFRR cycling since 2026-04)",
-             kind="energy", trap="Teams 2025 and Confluence both say 'hold 80% SOC' - stale"),
         dict(id="QA-014", question="What MTU do the core links use?",
              answerable_from="teams (supersedes KB and older Teams)", in_corpus=True,
              documented_in=[_ref_teams("chan-noc-transport", "core links are 9216")],
@@ -86,19 +80,6 @@ def main() -> None:
              expected="Do not power-cycle without exporting config; escalate / get approval, check dish alignment. "
                       "(One person says power-cycle works; contested.)",
              kind="procedure", trap="two experts conflict"),
-        dict(id="QA-016", question="Why do the DC2 grid power readings spike to more than twice the IT power?",
-             answerable_from="teams", in_corpus=True,
-             documented_in=[_ref_teams("chan-sre-infra", "Confirmed it's the PDUs")],
-             expected="Metering artefact; do not use suspect rows for customer PUE reporting", kind="data quality"),
-        dict(id="QA-017", question="Was there a scheduled cause for the DC1 power spikes in September 2026?",
-             answerable_from="email", in_corpus=True,
-             documented_in=[{"type": "email", "ref": "DC1 power meter swap 2026-09-02 (short spikes expected)"}],
-             expected="Yes, a grid meter swap on 2026-09-02", kind="data quality"),
-        dict(id="QA-018", question="What happens to Kafka DLQ messages on the training event topic?",
-             answerable_from="teams", in_corpus=True,
-             documented_in=[_ref_teams("chan-sre-infra", "DLQ drains on its own")],
-             expected="On platform 4.0+ they drain within 10 min; persistent DLQ means poison message, do not "
-                      "raise memory", kind="procedure", trap="older advice (raise to 4Gi) is obsolete"),
         dict(id="QA-019", question="What is the SFP module model used on port 1/1/3 of TRN-042?",
              answerable_from="teams attachment", in_corpus=True,
              documented_in=[{"type": "teams_attachment", "ref": "TRN-042_1-1-3_port.txt"}],
@@ -126,17 +107,10 @@ def main() -> None:
                                   "co-located chain (e.g. Järvinen chain)?",
              answerable_from="nowhere", in_corpus=False, documented_in=[], from_network_data=False,
              expected="NOT DOCUMENTED", kind="procedure"),
-        dict(id="QA-036", question="What BESS aFRR revenue expectation should be used in the 2027 plan?",
-             answerable_from="nowhere", in_corpus=False, documented_in=[], from_network_data=False,
-             expected="NOT DOCUMENTED (only the mode change is documented, no revenue numbers/assumptions)",
-             kind="planning"),
         dict(id="QA-037", question="Which vendor escalation path is used for a 7750 SR power-supply fault on a "
                                   "weekend?",
              answerable_from="nowhere", in_corpus=False, documented_in=[], from_network_data=False,
              expected="NOT DOCUMENTED", kind="process"),
-        dict(id="QA-038", question="What is the accepted error margin when validating DC energy billing data?",
-             answerable_from="nowhere", in_corpus=False, documented_in=[], from_network_data=False,
-             expected="NOT DOCUMENTED", kind="data quality"),
     ]
 
     cases = [
@@ -166,20 +140,10 @@ def main() -> None:
              right_action="Do not power-cycle (config recovery); export config, check dish alignment, escalate/approve.",
              documentation="part_documented", where=["teams:Access-North (conflicting power-cycle vs no power-cycle)"],
              hidden_in="two contradicting experts; not resolved - an agent must surface the conflict"),
-        dict(id="CASE-005", title="BESS SOC alert firing",
-             symptom="BESS SOC alert at 48% unexpectedly goes off daily since April.",
-             right_action="Expected under aFRR cycling (SOC band 35-70%); update the alert threshold.",
-             documentation="documented", where=["email:BESS operating mode change from 1 April",
-                                                "teams (stale 'hold 80% SOC')", "Confluence (stale)"],
-             hidden_in="new rule only in a single email"),
-        dict(id="CASE-006", title="DC2 grid power > 2x IT power for a few hours",
-             symptom="Telemetry shows impossible PUE on FI-TRE-DC2 (~4) every other week.",
-             right_action="Mark as metering artefact (quality suspect); exclude from customer reporting.",
-             documentation="documented", where=["teams:SRE-Infra 2025-11-18"],
-             hidden_in="only Teams"),
         dict(id="CASE-007", title="Core link MTU change request",
              symptom="Request to set core links to 9216 bytes.",
-             right_action="1998 - allowed since the 2026 firmware.",
+             right_action="Allowed: core links run MTU 9216 since the 2026 firmware (the TNC-1X handles it); "
+                          "the 9114 guidance in Confluence / ITSM KB is stale.",
              documentation="documented", where=["teams:2026-04-20", "Confluence (stale 9114)"],
              hidden_in="contradictory KB (9114)"),
         dict(id="CASE-008", title="Second Gen2 unit shows the zero-counter symptom",
@@ -196,9 +160,9 @@ def main() -> None:
              hidden_in="the code-lock knowledge exists, but the out-of-hours escalation path was never written down"),
         dict(id="CASE-010", title="Which team owns the transport collector threshold for 'traffic zero'",
              symptom="CPU bus fault: ticket routing for zero-counters alerts.",
-             right_action="NOC-Transport owns the interface-counters spec; the NMS banks do NOT define the rule.",
+             right_action="NOC-Transport owns the interface-counters spec; the NMS alarm policy does NOT define the rule.",
              documentation="part_documented", where=["telemetry/spec/interface_counters.yml",
-                                                     "nms/alarm_policy.yaml (says enabled: false)"],
+                                                     "network/alarms/alarm_policy.yaml (says enabled: false)"],
              hidden_in="discoverable only by reading the spec, not by searching docs"),
         dict(id="CASE-011", title="Firmware fix version for the forwarding bug",
              symptom="Need the exact fixed firmware to plan the upgrade.",
@@ -233,6 +197,12 @@ def main() -> None:
     n_cases_doc = sum(1 for x in cases if x["documentation"] == "documented")
     n_cases_part = sum(1 for x in cases if x["documentation"] == "part_documented")
     n_cases_not = sum(1 for x in cases if x["documentation"] == "not_documented")
+    teams_dir = os.path.join(c.root_dir(), "teams", "messages")
+    n_channels = sum(1 for f in os.listdir(teams_dir) if f.endswith(".jsonl"))
+    n_msgs = len(_count_lines("teams"))
+    n_emails = len(_mail_index())
+    n_pdfs = len(os.listdir(os.path.join(c.root_dir(), "documents", "expert_notes")))
+    n_kb = len(os.listdir(os.path.join(c.root_dir(), "documents", "confluence")))
     readme = f"""# answer_key — what IS documented, and where
 
 This folder answers the question your agent must be able to answer:
@@ -276,10 +246,10 @@ limits of the documentation?
 
 ## Where the knowledge really lives (corpus map)
 
-* `teams/messages/*.jsonl` — {sum(1 for _ in _count_lines("teams"))} messages in 6 channels, threaded, with attachments
-* `email_outlook/Inbox` + `Sent Items` — 148 real Outlook `.msg` files (+ attachments)
-* `documents/expert_notes/*.pdf` — 2 scanned expert notes
-* `documents/confluence/*.html` — 4 KB pages (**stale in places**)
+* `teams/messages/*.jsonl` — {n_msgs} messages in {n_channels} channels, threaded, with attachments
+* `email_outlook/Inbox` + `Sent Items` — {n_emails} real Outlook `.msg` files (+ attachments)
+* `documents/expert_notes/*.pdf` — {n_pdfs} scanned expert notes
+* `documents/confluence/*.html` — {n_kb} KB pages (**stale in places**)
 * `itsm/knowledge_articles.jsonl` — ITSM KB (**stale in places**)
 * dropped-at-source channels: phone calls, in-person talks (`knowledge_graph/drop_rate_sheet.csv`)
 """
@@ -292,6 +262,21 @@ def _ref_teams(channel: str, needle: str) -> dict:
     m = _first_message(channel, needle)
     return {"type": "teams_message", "channel": channel, "message_id": m["message_id"],
             "created_at": m["created_at"], "excerpt": m["text"][:90]}
+
+
+def _mail_index() -> list[dict]:
+    with open(os.path.join(c.root_dir(), "email_outlook", "mail_export_index.json"), encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def _ref_email(subject: str) -> dict:
+    """Reference an email by subject, with its file and exact sent time (from the mail export index)."""
+    hits = [e for e in _mail_index() if e["subject"] == subject]
+    if len(hits) != 1:
+        raise KeyError(f"email subject not unique/found: {subject!r} ({len(hits)})")
+    e = hits[0]
+    return {"type": "email", "ref": subject, "message_id": e["message_id"], "created_at": e["sent_at"],
+            "path": f"email_outlook/{e['folder']}/{e['file']}"}
 
 
 def _count_lines(folder: str) -> list[str]:

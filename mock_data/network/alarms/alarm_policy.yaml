@@ -1,0 +1,15 @@
+# NMS alarm policy for the canonical alarm stream (network/alarms/alarms.jsonl)
+policy_version: "2026-03-11"
+silence_windows:
+  - "02:00-03:00 Europe/Helsinki"
+mute_rules:
+  - when: "change_approval in {approved, scheduled}"
+    suppress: true
+thresholds:
+  traffic_zero:
+    # NOT configured here for transport nodes - see telemetry/spec/interface_counters.yml
+    enabled: false
+  optical_degrade:
+    rx_power_dbm: {min: -9.0, max: 0.0}
+  temperature:
+    inlet_c: {min: 5, max: 30}

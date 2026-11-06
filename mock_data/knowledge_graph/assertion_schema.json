@@ -54,6 +54,10 @@
         "itsm"
       ]
     },
+    "valid_from_iid": {
+      "type": "integer",
+      "description": "15-minute telemetry slot containing valid_from (alignment key only)"
+    },
     "source_ref": {
       "type": "string"
     },
@@ -76,7 +80,7 @@
     "recorded_at": {
       "type": "string",
       "format": "date-time",
-      "description": "when the knowledge was first written down (transaction time); may be later than valid_from (e.g. a lock changed before anyone emailed about it) or earlier (e.g. a change announced in advance)"
+      "description": "when the knowledge was written down (transaction time) == the timestamp of the source artefact named by source_ref (message sent time, email sent time, document date). valid_from equals it unless the source states another start: later recording (a lock changed before anyone emailed about it) or earlier (a change announced in advance)"
     },
     "supersedes": {
       "type": [
@@ -113,6 +117,7 @@
     "status=superseded -> superseded_by is set and successor.valid_from == valid_to",
     "status=expired -> valid_to <= snapshot and no successor (a bounded window that ended)",
     "status=disputed -> contradicts is non-empty",
-    "the subject entity exists (entities.jsonl) at valid_from"
+    "the subject entity exists (entities.jsonl) at valid_from",
+    "recorded_at == timestamp of the source artefact (source_ref)"
   ]
 }

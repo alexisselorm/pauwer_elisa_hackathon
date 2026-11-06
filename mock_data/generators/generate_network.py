@@ -11,7 +11,8 @@ Volga's compute sites are attached to core routers. There are three sites:
     FI-OUL-DC3 (Oulu, tertiary)      FI-KEM-DC4 (Kemi, cold storage)
 on the "Elisa utility grid" that Volga trains jobs on (see telemetry.py).
 
-Every generated instant ID belongs to the same time grid (see common.py).
+Event-stream rows (device events, alarms) carry exact timestamps (record time = event time);
+their `*_iid` fields are only the 15-minute slot that contains the instant (see common.py).
 """
 from __future__ import annotations
 
@@ -37,8 +38,6 @@ ACCESS_CITIES = [
     ("Joensuu", 2), ("Vaasa", 2), ("Seinäjoki", 1), ("Kajaani", 1), ("Mikkeli", 1), ("Pori", 2),
     ("Kokkola", 1), ("Lappeenranta", 2), ("Hämeenlinna", 1), ("Sodankylä", 1),
 ]
-
-BANK_DEVICES = ["Zabbix", "Netcool", "Infrared", "Blueeye", "Uama", "Nagios"]
 
 
 def _node_profile(node_id: str) -> dict:
@@ -137,6 +136,10 @@ def build_network():
             physical_segments[-1]["private_road"] = private_road
             if private_road:
                 physical_segments[-1]["barrier"] = rng.choice(["gate", "boom", "chain"])
+                # the documents describe these barriers explicitly; keep the network record consistent
+                # (assigned after the draw so every other random value is unchanged)
+                physical_segments[-1]["barrier"] = {"Kemi": "gate", "Ivalo": "gate", "Kajaani": "boom"}.get(
+                    city, physical_segments[-1]["barrier"])
                 physical_segments[-1]["access_notes"] = "site reachable only via private road; see access register"
     # ---------------- access: per physical location a chain of hops
     access_nodes: list[dict] = []
@@ -401,16 +404,25 @@ def build_device_events(net: dict):
         rows.append(_evt(rng, dec["node_id"], "decommission", iid - 96, iid + 288, "decommission.completed",
                          f"{dec['node_id']} decommissioned, replaced by {dec['replacement']}",
                          "NOC-Transport", {"replacement": dec["replacement"]}))
-    rows.sort(key=lambda r: r["event_time_iid"])
+    # Work happens at exact times, not on the slot grid: a separate RNG (so the draws above are
+    # unchanged) places the start and the end somewhere inside their slots.
+    off = c.rng_for("events-offset")
+    for r in rows:
+        start = c.slot_event(off, r["event_time_iid"])
+        end = c.slot_event(off, r["end_time_iid"])
+        r["_start"], r["_end"] = start, max(end, start + dt.timedelta(minutes=1))
+    rows.sort(key=lambda r: (r["_start"], r["device_id"]))
     for i, r in enumerate(rows):
+        start, end = r.pop("_start"), r.pop("_end")
         r["event_id"] = f"EVT-{262000 + i:06d}"
-        r["record_time"] = r["event_time"] = c.ts_s(r["event_time_iid"])
-        r["end_time"] = c.ts_s(r["end_time_iid"])
+        r["record_time"] = r["event_time"] = c.iso(start)
+        r["end_time"] = c.iso(end)
+        r["event_time_iid"], r["end_time_iid"] = c.instant(start), c.instant(end)
     return rows
 
 
 def _evt(rng, device_id, etype, start, end, outcome, desc, team, payload) -> dict:
-    start = max(start, 0)
+    # history before the generator window (e.g. 2023 firmware upgrades) is kept at its real date
     end = min(max(end, start + 1), c.END_IID)
     return {
         "event_id": None, "device_id": device_id, "type": etype, "workorder_id": c.rand_id(rng, "WO-", 7),
@@ -422,49 +434,57 @@ def _evt(rng, device_id, etype, start, end, outcome, desc, team, payload) -> dic
 def build_alarms(net: dict, events: list[dict]):
     """NMS alarm stream. Includes the exact TRN-042 SFP case from the Elisa brief plus many others.
 
+    Two kinds of row share the stream:
+      kind=alarm  a condition with a lifetime: `raised` .. `cleared` (state active/cleared);
+      kind=event  a point-in-time notification (module inserted, link up, admin enable, ...):
+                  `raised` is the event time, `cleared` is null, state is "event".
     Returns (rows, case_meta) where case_meta describes where the TRN-042 incident lives.
     """
     rng = c.rng_for("alarms")
+    off = c.rng_for("alarms-offset")  # exact times inside the drawn slot; separate so draws stay stable
     rows = []
     alarm_no = 0
     candidates = [d["device_id"] for d in net["physical_devices"] if d["kind"] in
                   ("optical_transport", "microwave_radio", "aggregation_switch", "router")]
 
-    def emit(device, typ, sev, ts_iid, text, prob=None, counters=None, closed=None, cause=""):
+    def emit(device, typ, sev, at: dt.datetime, text, prob=None, counters=None, cleared: dt.datetime | None = None,
+             kind="alarm", **extra):
         nonlocal alarm_no
         alarm_no += 1
         rows.append({
-            "alarm_id": f"ALM-{alarm_no:06d}", "ne_id": device, "type": typ, "severity": sev,
-            "probable_cause": prob or "", "text": text, "raised_iid": ts_iid,
-            "cleared_iid": closed, "state": "cleared" if closed is not None else "active",
+            "alarm_id": f"ALM-{alarm_no:06d}", "ne_id": device, "kind": kind, "type": typ, "severity": sev,
+            "probable_cause": prob or "", "text": text, "_raised": at, "_cleared": cleared,
+            "state": "event" if kind == "event" else ("cleared" if cleared is not None else "active"),
             "group": "TRN-042case" if device == "TRN-042" and "SFP" in text else "",
-            "counters": counters or {},
+            "counters": counters or {}, **extra,
         })
 
     # ---- the canonical TRN-042 case (brief + example email), Oct 2025
     case_t = c.TRN042_CASE  # single shared timeline (common.py)
-    base_iid = c.to_iid(case_t["chat_start"])
-    sfp_out, sfp_in = c.to_iid(case_t["sfp_removed"]), c.to_iid(case_t["sfp_inserted"])
-    los_clear, bounce = c.to_iid(case_t["los_cleared"]), c.to_iid(case_t["bounce"])
-    # pre-existing low-severity alarm
-    emit("TRN-042", "LOS", "minor", base_iid - 480, "Loss of signal on port 1/1/3 (pre-existing, flapping)", "LOS")
-    # scheduled SFP replacement earlier that morning (field work order)
-    emit("TRN-042", "MODULE_REMOVED", "warning", sfp_out,
-         "Optical module removed on port 1/1/3 (planned SFP replacement)", "MODULE")
-    emit("TRN-042", "MODULE_INSERTED", "info", sfp_in,
-         "Optical module inserted on port 1/1/3 (SFP-10G-8421)", "MODULE")
-    emit("TRN-042", "LINK_UP", "info", sfp_in, "Interface 1/1/3 change: DOWN -> UP", "LINK")
-    emit("TRN-042", "ALARM_CLEAR", "minor", los_clear, "Loss of signal cleared on port 1/1/3", "LOS",
-         closed=los_clear)
-    emit("TRN-042", "OPTICAL_POWER_OK", "info", los_clear,
-         "RX optical power 1/1/3 within range: -3.1 dBm (expected -8..0 dBm)", "OPTICAL")
+    t = lambda k, s=0: case_t[k] + dt.timedelta(seconds=s)
+    # pre-existing flapping LOS: the reason for the planned SFP swap; clears once the new optic has light
+    emit("TRN-042", "LOS", "minor", dt.datetime(2025, 10, 9, 6, 15, 0, tzinfo=c.UTC),
+         "Loss of signal on port 1/1/3 (pre-existing, flapping)", "LOS", cleared=t("los_cleared"))
+    # scheduled SFP replacement earlier that morning (field work order): an equipment alarm while out
+    emit("TRN-042", "MODULE_REMOVED", "warning", t("sfp_removed"),
+         "Optical module removed on port 1/1/3 (planned SFP replacement)", "MODULE", cleared=t("sfp_inserted"))
+    emit("TRN-042", "MODULE_INSERTED", "info", t("sfp_inserted"),
+         "Optical module inserted on port 1/1/3 (SFP-10G-8421)", "MODULE", kind="event")
+    emit("TRN-042", "LINK_UP", "info", t("sfp_inserted", 20), "Interface 1/1/3 change: DOWN -> UP", "LINK",
+         kind="event")
+    emit("TRN-042", "ALARM_CLEAR", "minor", t("los_cleared"), "Loss of signal cleared on port 1/1/3", "LOS",
+         kind="event", clears_alarm_id="ALM-000001")
+    emit("TRN-042", "OPTICAL_POWER_OK", "info", t("los_cleared", 5),
+         "RX optical power 1/1/3 within range: -3.1 dBm (expected -8..0 dBm)", "OPTICAL", kind="event")
     # stalled traffic: counters zero, no alarms, link UP -> this is the silent symptom
-    # (nothing to alarm on! that is the whole point)
-    # the re-bounce resolves it
-    emit("TRN-042", "IF_DISABLED", "warning", bounce, "Interface 1/1/3 administratively disabled", "ADMIN")
-    emit("TRN-042", "IF_ENABLED", "info", bounce, "Interface 1/1/3 administratively enabled", "ADMIN")
-    emit("TRN-042", "LINK_UP", "info", bounce, "Interface 1/1/3 change: DOWN -> UP", "LINK")
-    # traffic resumes after bounce -> counters start rising again
+    # (nothing to alarm on! that is the whole point). The port bounce resolves it.
+    emit("TRN-042", "IF_DISABLED", "warning", t("bounce"), "Interface 1/1/3 administratively disabled", "ADMIN",
+         kind="event")
+    emit("TRN-042", "IF_ENABLED", "info", t("bounce_enabled"), "Interface 1/1/3 administratively enabled",
+         "ADMIN", kind="event")
+    emit("TRN-042", "LINK_UP", "info", t("bounce_enabled", 5), "Interface 1/1/3 change: DOWN -> UP", "LINK",
+         kind="event")
+    # traffic resumes after bounce -> counters start rising again (telemetry)
 
     # ---- background alarm noise
     n_bg = 420
@@ -488,14 +508,17 @@ def build_alarms(net: dict, events: list[dict]):
             dur = rng.randint(1, 6)
         if iid + dur > c.END_IID:
             dur = 1
-        emit(dev, typ, sev, iid, f"{text} on {dev}", cause, closed=iid + dur)
+        raised = c.slot_event(off, iid)
+        emit(dev, typ, sev, raised, f"{text} on {dev}", cause, cleared=c.slot_event(off, iid + dur))
 
-    rows.sort(key=lambda r: r["raised_iid"])
+    rows.sort(key=lambda r: (r["_raised"], r["alarm_id"]))
     for r in rows:
-        r["raised"] = c.ts_s(r["raised_iid"])
-        r["cleared"] = c.ts_s(r["cleared_iid"]) if r["cleared_iid"] is not None else None
-    return rows, {"case_base_iid": base_iid, "sfp_replace_iid": sfp_in,
-                  "bounce_iid": bounce, "resolved_iid": c.to_iid(case_t["recovered"]), "device": "TRN-042"}
+        raised, cleared = r.pop("_raised"), r.pop("_cleared")
+        r["raised"] = c.iso(raised)
+        r["cleared"] = c.iso(cleared) if cleared is not None else None
+        r["raised_iid"] = c.instant(raised)
+        r["cleared_iid"] = c.instant(cleared) if cleared is not None else None
+    return rows, {"device": "TRN-042", **{k: c.iso(v) for k, v in case_t.items() if isinstance(v, dt.datetime)}}
 
 
 def apply_validity(net: dict, rt: dict) -> None:
@@ -582,14 +605,18 @@ def main() -> None:
                   iter(events))
 
     c.write_jsonl(["network", "alarms", "alarms.jsonl"], alarms)
+    c.write_text(["network", "alarms", "alarm_policy.yaml"], alarm_policy())
+    chat = c.TRN042_CASE["chat_start"]
+    lo, hi = c.iso(chat - dt.timedelta(days=5)), c.iso(chat + dt.timedelta(days=5))
     c.write_json(["network", "alarms", "trn042_case.json"], {
-        "note": "Trace of the canonical Elisa case. Ten days around the incident.",
-        "device": case["device"], "sfp_replaced": c.ts_s(case["sfp_replace_iid"]),
-        "traffic_stalled_until": c.ts_s(case["bounce_iid"]),
-        "resolved": c.ts_s(case["resolved_iid"]),
-        # five days either side of the case (480 slots = 5 days)
-        "timeline": [a for a in alarms if a["ne_id"] == "TRN-042"
-                     and abs(a["raised_iid"] - case["case_base_iid"]) <= 480],
+        "note": "Trace of the canonical Elisa case: every TRN-042 alarm/event within 5 days of the Teams thread. "
+                "kind=alarm rows have raised/cleared; kind=event rows are point events (cleared = null). "
+                "case_timeline is the shared ground-truth timeline (UTC) used by every generator.",
+        "device": case["device"], "sfp_replaced": case["sfp_inserted"],
+        "traffic_stalled_until": case["bounce"],
+        "resolved": case["recovered"],
+        "case_timeline": {k: v for k, v in case.items() if k != "device"},
+        "timeline": [a for a in alarms if a["ne_id"] == "TRN-042" and lo <= a["raised"] <= hi],
     })
 
     # convenience: node registry that other generators (context layer) will import
@@ -599,12 +626,33 @@ def main() -> None:
         "core": net["core_nodes"],
         "sites": [s["code"] for s in net["sites"]],
         "trn_meta": net["trn_meta"],
-        "case": {"device": "TRN-042", "sfp_replaced": c.ts_s(case["sfp_replace_iid"]),
-                 "resolved": c.ts_s(case["resolved_iid"])},
+        "case": {"device": "TRN-042", "sfp_replaced": case["sfp_inserted"], "resolved": case["recovered"]},
         "segments": net["physical_segments"],
     })
     print(f"network: {len(net['design_nodes'])} design nodes, {len(net['physical_devices'])} devices, "
           f"{len(rt['current_links'])} links, {len(events)} events, {len(alarms)} alarms")
+
+
+def alarm_policy() -> str:
+    """NMS alarm policy for the canonical alarm stream (network/alarms/alarms.jsonl)."""
+    return "\n".join([
+        "# NMS alarm policy for the canonical alarm stream (network/alarms/alarms.jsonl)",
+        'policy_version: "2026-03-11"',
+        "silence_windows:",
+        '  - "02:00-03:00 Europe/Helsinki"',
+        "mute_rules:",
+        '  - when: "change_approval in {approved, scheduled}"',
+        "    suppress: true",
+        "thresholds:",
+        "  traffic_zero:",
+        "    # NOT configured here for transport nodes - see telemetry/spec/interface_counters.yml",
+        "    enabled: false",
+        "  optical_degrade:",
+        "    rx_power_dbm: {min: -9.0, max: 0.0}",
+        "  temperature:",
+        "    inlet_c: {min: 5, max: 30}",
+        "",
+    ])
 
 
 if __name__ == "__main__":

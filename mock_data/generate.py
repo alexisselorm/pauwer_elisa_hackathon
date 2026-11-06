@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """Generate the full mock_data dataset, in dependency order.
 
-    python3 mock_data/generate.py [--with-external]
+    python3 mock_data/generate.py
 
-Deterministic (seed 20261107). Standard library only.
+Deterministic (seed 20261107): two runs produce byte-identical files. Standard library only.
 """
 from __future__ import annotations
 
-import argparse
 import os
 import sys
 import time
@@ -17,33 +16,18 @@ sys.path.insert(0, os.path.join(HERE, "generators"))
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--with-external", action="store_true",
-                    help="also fetch real FMI weather + Nord Pool FI prices (needs internet)")
-    args = ap.parse_args()
-
     import generate_network
     import generate_telemetry
     import generate_context
     import generate_structured
-    import generate_alarm_banks
     import generate_knowledge_graph
     import generate_answer_key
-
-    if args.with_external:
-        scripts = os.path.join(HERE, "scripts")
-        sys.path.insert(0, scripts)
-        import fetch_external
-        t = time.time()
-        fetch_external.main()
-        print(f"external: {time.time() - t:.0f}s")
 
     steps = [
         ("network", generate_network.main),
         ("telemetry", generate_telemetry.main),
         ("context (teams/email/pdf/kb/gold)", generate_context.main),
         ("structured (itsm/cmdb/jira/...)", generate_structured.main),
-        ("alarm banks", generate_alarm_banks.main),
         ("knowledge graph helpers", generate_knowledge_graph.main),
         ("answer key (documented vs not documented)", generate_answer_key.main),
     ]
@@ -62,7 +46,7 @@ def main() -> int:
     import verify_temporal
     rc = verify_temporal.main(HERE)
     if rc:
-        print("ERROR: valid_from/valid_to check failed")
+        print("ERROR: temporal check failed (validity bounds / record time = event time)")
         return rc
 
     total = 0

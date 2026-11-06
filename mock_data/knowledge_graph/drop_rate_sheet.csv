@@ -1,6 +1,6 @@
 channel,captured_items,capture_status,note
-teams,801,reconstructable,raw message objects carry attachments/reactions/edits; Teams drops nothing in this export
-email,148,reconstructable,all .msg files incl. Sent Items; attachments present
+teams,582,reconstructable,raw message objects carry attachments/reactions/edits; Teams drops nothing in this export
+email,145,reconstructable,all .msg files incl. Sent Items; attachments present
 phone_call,0,dropped_at_source,calls are not recorded; this channel is invisible to any pipeline
 in_person,0,dropped_at_source,hallway/lab conversations are not recorded
 meeting_notes,2,reconstructable,PDF in documents/expert_notes

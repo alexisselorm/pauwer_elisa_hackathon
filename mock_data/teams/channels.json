@@ -71,39 +71,6 @@
     ]
   },
   {
-    "channel_id": "chan-sre-infra",
-    "name": "SRE-Infra",
-    "team": "SRE",
-    "topic": "Datacentre & platform reliability",
-    "members": [
-      {
-        "name": "Sanna Laine",
-        "upn": "sanna.laine@volga.example",
-        "role": "Site Reliability Engineer"
-      },
-      {
-        "name": "Riikka Koskinen",
-        "upn": "riikka.koskinen@volga.example",
-        "role": "Platform Engineer"
-      },
-      {
-        "name": "Olga Saarinen",
-        "upn": "olga.saarinen@volga.example",
-        "role": "Energy Analytics Lead"
-      },
-      {
-        "name": "Liisa Nieminen",
-        "upn": "liisa.nieminen@volga.example",
-        "role": "Facilities Manager"
-      },
-      {
-        "name": "Mikko Mäkinen",
-        "upn": "mikko.makinen@volga.example",
-        "role": "Core Engineer"
-      }
-    ]
-  },
-  {
     "channel_id": "chan-access-north",
     "name": "Access-North",
     "team": "Network Operations",
@@ -128,34 +95,6 @@
         "name": "Veikko Vikkelä",
         "upn": "veikko.vikkela@volga.example",
         "role": "Field Engineer"
-      }
-    ]
-  },
-  {
-    "channel_id": "chan-energy",
-    "name": "Energy-Procurement",
-    "team": "Energy",
-    "topic": "Electricity contracts, Fingrid, BESS",
-    "members": [
-      {
-        "name": "Olga Saarinen",
-        "upn": "olga.saarinen@volga.example",
-        "role": "Energy Analytics Lead"
-      },
-      {
-        "name": "Liisa Nieminen",
-        "upn": "liisa.nieminen@volga.example",
-        "role": "Facilities Manager"
-      },
-      {
-        "name": "Markku Järvinen",
-        "upn": "markku.jarvinen@volga.example",
-        "role": "Service Manager"
-      },
-      {
-        "name": "Sanna Laine",
-        "upn": "sanna.laine@volga.example",
-        "role": "Site Reliability Engineer"
       }
     ]
   },

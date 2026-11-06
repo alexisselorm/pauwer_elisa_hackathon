@@ -8,9 +8,9 @@ This folder answers the question your agent must be able to answer:
 
 | File | What |
 |---|---|
-| `questions.jsonl` | 21 Q&A items. `in_corpus` = **is the answer present in the documentation corpus**; `documented_in` lists the concrete artefacts (message-ids / email subjects / files). `expected` is the reference answer for scoring. |
+| `questions.jsonl` | 15 Q&A items. `in_corpus` = **is the answer present in the documentation corpus**; `documented_in` lists the concrete artefacts (message-ids / email subjects / files). `expected` is the reference answer for scoring. |
 | `qa_matrix.csv` | flat one-line-per-question scoring sheet |
-| `cases.jsonl` | 11 operational incident-style cases, each tagged `documented` / `part_documented` / `not_documented` with the correct next action |
+| `cases.jsonl` | 9 operational incident-style cases, each tagged `documented` / `part_documented` / `not_documented` with the correct next action |
 | `cases_matrix.csv` | flat scoring sheet |
 
 ## How to use it
@@ -24,10 +24,10 @@ This folder answers the question your agent must be able to answer:
 
 ## Counts
 
-* Questions: 10 documented, 9 never documented, 2 control questions answerable from the
-  network records rather than the documentation (out of 21).
-* Cases: 7 documented, 2 partially documented, 2 never documented
-  (out of 11).
+* Questions: 6 documented, 7 never documented, 2 control questions answerable from the
+  network records rather than the documentation (out of 15).
+* Cases: 5 documented, 2 partially documented, 2 never documented
+  (out of 9).
 * The 2 control questions ("how many Gen1 nodes", "which city hosts TRN-042") are answerable from the
   network records (`network/registry.json`), not from documents — use them to confirm the agent is not
   just refusing everything.
@@ -41,9 +41,9 @@ limits of the documentation?
 
 ## Where the knowledge really lives (corpus map)
 
-* `teams/messages/*.jsonl` — 801 messages in 6 channels, threaded, with attachments
-* `email_outlook/Inbox` + `Sent Items` — 148 real Outlook `.msg` files (+ attachments)
+* `teams/messages/*.jsonl` — 582 messages in 4 channels, threaded, with attachments
+* `email_outlook/Inbox` + `Sent Items` — 145 real Outlook `.msg` files (+ attachments)
 * `documents/expert_notes/*.pdf` — 2 scanned expert notes
-* `documents/confluence/*.html` — 4 KB pages (**stale in places**)
+* `documents/confluence/*.html` — 3 KB pages (**stale in places**)
 * `itsm/knowledge_articles.jsonl` — ITSM KB (**stale in places**)
 * dropped-at-source channels: phone calls, in-person talks (`knowledge_graph/drop_rate_sheet.csv`)

@@ -1,12 +1,18 @@
 """Shared helpers for the Pauwer/Elisa mock-data generator.
 
 Everything is deterministic: a single global seed drives every source, so two runs
-produce byte-identical files (except eml fetch timestamp / msg zip dates).
+produce byte-identical files.
 
-Time is handled as *instant IDs*: an ISO-8601 instant is mapped to a 15-minute slot,
-and the integer slot number is what all generated rows carry. This makes it trivial
-to keep the network layers, the context layer and the event stream consistent, and
-lets a consumer recover the exact timestamp with `ts(iid)`.
+Time model
+  * Event-stream rows (Teams messages, emails, ITSM tickets, Jira issues, vendor cases, alarms,
+    device events) carry their EXACT event timestamp, to the second (record time = event time).
+    Generators draw minutes/seconds from seeded RNGs so events are distinct and strictly ordered
+    inside every conversation.
+  * Only telemetry PM samples live on the 15-minute grid: a PM sample is an interval aggregate.
+    Its `ts` marks the START of the interval it covers, [ts, ts + 15 min).
+  * Rows may additionally carry a `*_iid` integer: the 15-minute slot that CONTAINS the instant
+    (floor, `instant()`), so any event can be joined to the PM bin it falls in. It is an alignment
+    key only; the ISO timestamp next to it is the truth.
 """
 from __future__ import annotations
 
@@ -51,16 +57,22 @@ def date_to_instant(d: str | None) -> str | None:
 
 # ---------------------------------------------------------------- the canonical TRN-042 case
 # ONE timeline for the brief's SFP case, shared by every generator (alarms, telemetry, Teams, email,
-# ITSM, vendor case). All UTC; 2025-10-14 is still summer time in Finland (EEST = UTC+3).
-#   08:00 local  SFP removed            08:15  new SFP inserted, link UP, optics OK, alarms clear
-#   09:14-09:27  Teams thread (Elisa's example timings) - the expert advises a port bounce
-#   09:15        ITSM ticket: traffic zero for 60 min (telemetry spec threshold)
-#   09:30        port disabled/enabled -> traffic resumes        09:45  counters back to normal
-#   11:40        Erkki's recap email
-# Times are snapped to the 15-minute slot grid the way the rest of the data is (to_iid = ceil).
-def _case_t(hh: int, mm: int) -> dt.datetime:
-    return dt.datetime(2025, 10, 14, hh, mm, tzinfo=dt.timezone.utc)
+# ITSM, vendor case). All UTC; 2025-10-14 is still summer time in Finland (EEST = UTC+3), so the
+# Teams thread's local 09:14-09:27 (Elisa's teams_chat.json) is 06:14-06:27 UTC.
+#   05:00 SFP removed (field work)        05:15 new SFP inserted, link UP     05:30 LOS cleared, optics OK
+#   06:14 Teams thread starts (msg 1)     06:15 ITSM ticket: 60 min of zero traffic with oper UP
+#   06:22 Erkki's advice (msg 8)          06:23 port disabled / re-enabled    06:24 traffic flows again
+#   06:25 "Did that. Traffic is back" (msg 9)                                 08:40 Erkki's recap email
+def _case_t(hh: int, mm: int, ss: int = 0) -> dt.datetime:
+    return dt.datetime(2025, 10, 14, hh, mm, ss, tzinfo=dt.timezone.utc)
 
+
+# Elisa's 12 messages at their exact (UTC) times; seconds keep equal minutes strictly ordered.
+TRN042_CHAT_TIMES = [
+    _case_t(6, 14, 5), _case_t(6, 16, 12), _case_t(6, 16, 41), _case_t(6, 18, 3),
+    _case_t(6, 18, 37), _case_t(6, 19, 22), _case_t(6, 21, 30), _case_t(6, 22, 8),
+    _case_t(6, 25, 4), _case_t(6, 25, 39), _case_t(6, 26, 15), _case_t(6, 27, 2),
+]
 
 TRN042_CASE = {
     "device": "TRN-042",
@@ -68,10 +80,13 @@ TRN042_CASE = {
     "sfp_removed": _case_t(5, 0),
     "sfp_inserted": _case_t(5, 15),
     "los_cleared": _case_t(5, 30),
-    "chat_start": _case_t(6, 14),
+    "chat_start": TRN042_CHAT_TIMES[0],
     "ticket_opened": _case_t(6, 15),
-    "bounce": _case_t(6, 30),
-    "recovered": _case_t(6, 45),
+    "advice": TRN042_CHAT_TIMES[7],          # msg 8: "Disable the interface, wait a little, then enable it"
+    "bounce": _case_t(6, 23),                # interface administratively disabled
+    "bounce_enabled": _case_t(6, 23, 40),    # ... and enabled again ("wait a little")
+    "recovered": _case_t(6, 24),             # forwarding resumes
+    "traffic_back_msg": TRN042_CHAT_TIMES[8],  # msg 9: "Did that. Traffic is back"
     "recap_email": _case_t(8, 40),
 }
 
@@ -91,8 +106,6 @@ ITSM_KB_ARTICLES = [
     {"article_id": "KB0018420", "title": "Kemi site access", "body": "Private road, gate. Ask Pekka for "
                                                                     "the key.",
      "valid_from": "2023-06-30", "status": "published"},
-    {"article_id": "KB0018501", "title": "BESS winter operating mode", "body": "Hold 80% SOC.",
-     "valid_from": "2025-11-10", "status": "published"},
 ]
 
 global_rng = random.Random(SEED)
@@ -100,14 +113,13 @@ global_rng = random.Random(SEED)
 
 # --------------------------------------------------------------------------- time
 def instant(d: dt.datetime) -> int:
-    """Map a datetime to its 15-minute slot ID (floor)."""
+    """Map a datetime to the 15-minute slot that contains it (floor)."""
     d = d.astimezone(UTC) if d.tzinfo else d.replace(tzinfo=UTC)
     return int((d - START).total_seconds() // SLOT_SECONDS)
 
 
 def to_iid(d: dt.datetime) -> int:
-    """Inclusive instant-id mapping: a timestamp is an event AT that time, so a 00:00
-    timestamp belongs to the slot that starts at it (i.e. ceil, not floor)."""
+    """Ceil mapping onto the slot grid. Only for telemetry window bounds; events use instant()."""
     d = d.astimezone(UTC) if d.tzinfo else d.replace(tzinfo=UTC)
     return math.ceil((d - START).total_seconds() / SLOT_SECONDS)
 
@@ -120,18 +132,43 @@ def ts_s(iid: int) -> str:
     return ts(iid).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def iso(d: dt.datetime) -> str:
+    """Exact UTC instant, to the second: '2025-10-14T06:22:08Z'."""
+    d = d.astimezone(UTC) if d.tzinfo else d.replace(tzinfo=UTC)
+    return d.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def parse_iso(s: str) -> dt.datetime:
+    return dt.datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+
+
+def jitter(rng: random.Random, d: dt.datetime, max_seconds: int = 59) -> dt.datetime:
+    """Deterministic sub-minute (or intra-slot) offset so events are distinct, not grid-snapped."""
+    return d + dt.timedelta(seconds=rng.randint(0, max_seconds))
+
+
+def slot_event(rng: random.Random, iid: int) -> dt.datetime:
+    """An exact instant somewhere inside slot `iid` (used where a generator picks a slot at random)."""
+    return ts(iid) + dt.timedelta(seconds=rng.randint(0, SLOT_SECONDS - 1))
+
+
 def ts_iso_millis(iid: int) -> str:
     return ts(iid).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
-def local_dt(iid: int) -> dt.datetime:
-    """Instant in Finnish local time (EET/EEST via zoneinfo)."""
+def to_local(d: dt.datetime) -> dt.datetime:
+    """Exact instant in Finnish local time (EET/EEST via zoneinfo)."""
     try:
         from zoneinfo import ZoneInfo
 
-        return ts(iid).astimezone(ZoneInfo("Europe/Helsinki"))
+        return d.astimezone(ZoneInfo("Europe/Helsinki"))
     except Exception:  # pragma: no cover - tzdata missing
-        return ts(iid) + dt.timedelta(hours=2)
+        return d + dt.timedelta(hours=2)
+
+
+def local_dt(iid: int) -> dt.datetime:
+    """Slot start in Finnish local time."""
+    return to_local(ts(iid))
 
 
 N_INSTANTS = instant(END)
@@ -179,7 +216,7 @@ FI_PLACES = [
     ("Sodankylä", "Sodankylän alue"),
 ]
 
-# City -> (lat, lon) used to map to the nearest FMI observation station.
+# City -> (lat, lon) used to place network nodes.
 CITY_COORDS = {
     "Helsinki": (60.17, 24.94), "Espoo": (60.21, 24.66), "Vantaa": (60.29, 25.04),
     "Tampere": (61.50, 23.79), "Turku": (60.45, 22.27), "Oulu": (65.01, 25.47),
@@ -257,7 +294,12 @@ def write_ndjson_gz(parts: Iterable[str] | str, rows: Iterable) -> str:  # type:
     rel = (parts,) if isinstance(parts, str) else tuple(parts)
     path = os.path.join(root_dir(), *rel)
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with gzip.open(path, "wt", encoding="utf-8", compresslevel=9) as fh:
+    import io
+
+    # mtime=0 and no file name in the header: byte-identical output on every run
+    with open(path, "wb") as raw, gzip.GzipFile(filename="", fileobj=raw, mode="wb", compresslevel=9,
+                                                 mtime=0) as gz, \
+            io.TextIOWrapper(gz, encoding="utf-8", newline="\n") as fh:
         for row in rows:
             fh.write(json.dumps(row, ensure_ascii=False, separators=(",", ":"), default=str) + "\n")
     return path

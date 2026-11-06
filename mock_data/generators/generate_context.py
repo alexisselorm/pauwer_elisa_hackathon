@@ -17,33 +17,38 @@ Outputs (all under mock_data/):
   knowledge_graph/derived_insights.json     conclusions that need >=2 layers
   knowledge_graph/access_register.jsonl     keys/codes/callers for gated sites
   knowledge_graph/drop_rate_sheet.*         per-channel capture-rate (email vs Teams)
+  email_outlook/mail_export_index.json      folder/message index (what an Exchange export looks like)
 
 Conventions
-  - Instants use the same 0.25h grid as telemetry (common.instant); all text timestamps
-    are converted with to_iid so they are comparable to telemetry rows.
-  - Every assertion carries source_ref = the concrete raw artefact id (msg id, chat id).
+  - Every message/email carries its exact send time (to the second). `created_iid` is only the
+    15-minute telemetry slot that contains it (common.instant), for joining to PM bins.
+  - Every assertion carries source_ref = the concrete raw artefact id (msg id, chat id), and
+    recorded_at == the timestamp of that artefact (record time = event time of the source).
+    valid_from equals it too, unless the source states a different validity start.
   - "Specialist grammar" (TRE, DC2, "the old units", "tnc2_roadm") is used inconsistently;
     see entity_aliases.csv.
 """
 from __future__ import annotations
 
-import base64
 import datetime as dt
 import hashlib
 import json
 import os
 import random
+import shutil
 import struct
 import zlib
 
 import common as c
 import generate_network as gn
 
-D = c.to_iid  # inclusive instant
+def _dt(y, m, d, hh=0, mm=0, ss=0) -> dt.datetime:
+    return dt.datetime(y, m, d, hh, mm, ss, tzinfo=c.UTC)
 
 
-def _dt(y, m, d, hh=0, mm=0) -> dt.datetime:
-    return dt.datetime(y, m, d, hh, mm, tzinfo=c.UTC)
+def mt(m: dict) -> dt.datetime:
+    """Exact send time of a Teams message or email record."""
+    return c.parse_iso(m["created_at"] if "created_at" in m else m["sent_at"])
 
 
 class Ctx:
@@ -116,15 +121,20 @@ class Ctx:
         self.entities.append(e)
         return eid
 
-    def assert_(self, *, subject: str, topic: str, statement: str, valid_from: int, valid_to: int | None,
-                source: dict, confidence: str = "high", status: str = "believed_true",
+    def retire_ids(self, n: int) -> None:
+        """Skip assertion ids that belonged to removed (off-domain) content, so the remaining ids
+        (e.g. ASR-0001 = TRN-042 rule, ASR-0024 = Kemi code lock) stay stable."""
+        self._aseq += n
+
+    def assert_(self, *, subject: str, topic: str, statement: str, valid_from: dt.datetime,
+                valid_to: dt.datetime | None, source: dict, confidence: str = "high", status: str = "believed_true",
                 supersedes: str | None = None, contradicts: list[str] | None = None,
                 corroborates: list[str] | None = None, superseded_by: str | None = None,
                 qualifiers: dict | None = None, layer: str = "context_layer",
                 about_entity_kind: str = "node") -> str:
         self._aseq += 1
         aid = f"ASR-{self._aseq:04d}"
-        vf = c.ts(valid_from)
+        recorded = source["recorded_at"]  # the source artefact's own timestamp; required
         self.assertions.append({
             "assertion_id": aid,
             "subject_entity_id": subject,
@@ -133,11 +143,11 @@ class Ctx:
             "topic": topic,
             "statement": statement,
             "qualifiers": qualifiers or {},
-            "valid_from": vf.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "valid_from_iid": valid_from,
-            "valid_to": (c.ts(valid_to).strftime("%Y-%m-%dT%H:%M:%SZ") if valid_to is not None else None),
-            "valid_to_iid": valid_to,
-            "recorded_at": c.ts_s(source.get("recorded_iid", valid_from)),
+            "valid_from": c.iso(valid_from),
+            "valid_from_iid": c.instant(valid_from),
+            "valid_to": c.iso(valid_to) if valid_to is not None else None,
+            "valid_to_iid": c.instant(valid_to) if valid_to is not None else None,
+            "recorded_at": c.iso(recorded),
             "source_type": source["type"],
             "source_ref": source["ref"],
             "source_detail": source.get("detail", ""),
@@ -231,9 +241,11 @@ def make_msg(path: str, *, subject: str, sender_name: str, sender_addr: str, to:
     oid = 0x0000
     P(0x001a, 0x001F, s("IPM.Note"))
     P(0x0037, 0x001F, s(subject))
-    P(0x0039, 0x0040, struct.pack("<Q", int(when.timestamp() * 10_000_000 + 116444736000000000)))
+    # `when` is timezone-aware: FILETIME is UTC, the Date header is local time with its offset
+    filetime = struct.pack("<Q", int(when.timestamp()) * 10_000_000 + 116444736000000000)
+    P(0x0039, 0x0040, filetime)
     P(0x0e03, 0x0003, struct.pack("<I", 1))
-    P(0x0e06, 0x0040, struct.pack("<Q", int(when.timestamp() * 10_000_000 + 116444736000000000)))
+    P(0x0e06, 0x0040, filetime)
     P(0x0e07, 0x0003, struct.pack("<I", 0))  # flags
     P(0x0e17, 0x0003, struct.pack("<I", 0))  # importance normal
     P(0x0e08, 0x0003, struct.pack("<I", 0))  # unread
@@ -248,7 +260,7 @@ def make_msg(path: str, *, subject: str, sender_name: str, sender_addr: str, to:
     hdrs.setdefault("From", f"{sender_name} <{sender_addr}>")
     hdrs.setdefault("To", "; ".join(f"{n} <{a}>" for n, a in to))
     hdrs.setdefault("Subject", subject)
-    hdrs.setdefault("Date", when.strftime("%a, %d %b %Y %H:%M:%S +0000"))
+    hdrs.setdefault("Date", c.to_local(when).strftime("%a, %d %b %Y %H:%M:%S %z"))
     hdrs.setdefault("Message-ID", message_id)
     if in_reply_to:
         hdrs.setdefault("In-Reply-To", in_reply_to)
@@ -418,20 +430,35 @@ class Channel:
         self.team = team
         self.messages: list[dict] = []
         self.rng = c.rng_for("teams", cid)
+        self.sec_rng = c.rng_for("teams-seconds", cid)  # separate stream: ids above stay stable
 
     def thread(self) -> str:
         return f"19:{c.hexid(self.rng, 24)}@thread.v2"
 
     def msg(self, t: dt.datetime, person: dict, text: str, *, thread: str | None = None,
+            reply_in: str | None = None, exact: bool = False, drop: bool = False,
             replies: dict | None = None, mentions: list[str] | None = None,
             attach: list[dict] | None = None, edited: bool = False, reaction: str | None = None) -> dict:
-        iid = D(t)
+        """Post a message at `t`.
+
+        exact     use `t` to the second (the canonical thread); otherwise a deterministic 0-59 s offset
+                  is added to the authored minute.
+        reply_in  put the message in an existing conversation. Unlike `thread`, it still draws the
+                  conversation id it would have had, so every later message id stays stable.
+        drop      draw ids as usual but do not keep the message (removed off-domain content).
+        """
+        sec = self.sec_rng.randint(0, 59)
+        when = t if exact else t + dt.timedelta(seconds=sec)
+        message_id = f"{c.rand_id(self.rng, '', 13, alphabet='0123456789')}"
+        conv = thread or self.thread()
+        if reply_in:
+            conv = reply_in
         m = {
-            "message_id": f"{c.rand_id(self.rng, '', 13, alphabet='0123456789')}",
-            "conversation_id": thread or self.thread(),
+            "message_id": message_id,
+            "conversation_id": conv,
             "channel_id": self.id,
-            "created_at": c.ts_s(iid),
-            "created_iid": iid,
+            "created_at": c.iso(when),
+            "created_iid": c.instant(when),
             "author_name": person["name"],
             "author_email": person["upn"],
             "role": person["role"],
@@ -445,7 +472,8 @@ class Channel:
         if replies:
             m["message_type"] = "message"
             m["replies"] = [dict(r, reply_to_message_id=m["message_id"]) for r in replies]
-        self.messages.append(m)
+        if not drop:
+            self.messages.append(m)
         return m
 
     def _resolve_mention(self, key: str) -> dict:
@@ -487,9 +515,8 @@ def build(meta: dict) -> None:
     for m in ["TNC-1X", "TNC-2X", "TNC-3X", "7250 IXR-e", "7250 IXR-s", "KMAX-4K", "KMAX-4H", "7750 SR-14s"]:
         ctx.entity("hw_model", m, generation={"TNC-1X": "Gen1", "TNC-2X": "Gen2", "TNC-3X": "Gen3"}.get(m),
                    valid_from=c.NETWORK_EPOCH, valid_to=None)
-    for topic in ["forwarding_state_after_sfp_swap", "sfp_replacement", "bess_arbitrage", "gpu_maintenance_spikes",
-                  "meter_swap", "mw_throughput", "upgrade_sfp_400g", "dlq_mem_quota", "mtu_change",
-                  "route_discard", "maintenance_freeze", "access_keys", "pue_reporting", "job_requeue_policy"]:
+    for topic in ["forwarding_state_after_sfp_swap", "sfp_replacement", "mw_throughput", "upgrade_sfp_400g",
+                  "mtu_change", "route_discard", "maintenance_freeze", "access_keys"]:
         ctx.entity("topic", f"TOPIC:{topic}", label=topic, valid_from=c.NETWORK_EPOCH, valid_to=None)
 
     # ---------------------------------------------------------------- source refs
@@ -497,15 +524,12 @@ def build(meta: dict) -> None:
                            ["erkki", "aino", "veikko", "pekka", "mikko", "emilia"], team="Network Operations")
     ch_field = Channel("chan-field-ops", "Field-Ops-FI", "Field engineers on site, travel and access",
                        ["veikko", "pekka", "heikki", "juhani", "liisa"], team="Field Operations")
-    ch_sre = Channel("chan-sre-infra", "SRE-Infra", "Datacentre & platform reliability",
-                     ["sanna", "riikka", "olga", "liisa", "mikko"], team="SRE")
     ch_access = Channel("chan-access-north", "Access-North", "Rovaniemi / Kemi / Ivalo access network",
                         ["pekka", "heikki", "juhani", "veikko"], team="Network Operations")
-    ch_energy = Channel("chan-energy", "Energy-Procurement", "Electricity contracts, Fingrid, BESS",
-                        ["olga", "liisa", "markku", "sanna"], team="Energy")
     ch_services = Channel("chan-services", "Service-Ops", "Service manager escalations & handoffs",
                           ["markku", "emilia", "timo", "sanna"], team="Service Operations")
-    channels = [ch_transport, ch_field, ch_sre, ch_access, ch_energy, ch_services]
+    # (the off-domain SRE-Infra and Energy-Procurement channels were removed: telecom ops only)
+    channels = [ch_transport, ch_field, ch_access, ch_services]
     for ch in channels:
         ch.thread_anchor = ch.thread()
 
@@ -513,10 +537,13 @@ def build(meta: dict) -> None:
 
     def email(key: str, t: dt.datetime, subject: str, frm: str, to: list[str], cc: list[str],
               body: str, *, thread_topic: str | None = None, in_reply_to: str | None = None,
-              attachments: list[tuple[str, bytes, str]] | None = None, folder: str = "Inbox") -> dict:
-        """Register an email and write its .msg + attachments."""
+              attachments: list[tuple[str, bytes, str]] | None = None, folder: str = "Inbox",
+              exact: bool = False) -> dict:
+        """Register an email and write its .msg + attachments. Sent at `t` (+ 0-59 s unless exact)."""
         r = c.rng_for("email", key)
         mid = msg_id(r)
+        if not exact:
+            t = c.jitter(c.rng_for("email-seconds", key), t)
         f = ctx.p(frm)
         to_list = [(ctx.p(k)["name"], ctx.p(k)["upn"]) for k in to]
         cc_list = [(ctx.p(k)["name"], ctx.p(k)["upn"]) for k in cc]
@@ -528,22 +555,22 @@ def build(meta: dict) -> None:
             att.append((fname, data))
         safe_subject = "".join(ch for ch in subject if ch not in '\\/:*?"<>|')[:90]
         path = os.path.join("email_outlook", folder,
-                            f"{c.local_dt(D(t)).strftime('%Y-%m-%d %H%M')} - {safe_subject}.msg")
+                            f"{c.to_local(t).strftime('%Y-%m-%d %H%M')} - {safe_subject}.msg")
         make_msg(os.path.join(c.root_dir(), path), subject=subject, sender_name=f["name"],
                  sender_addr=f["upn"], to=to_list, cc=cc_list, body=body,
-                 html=body_html, when=c.local_dt(D(t)).replace(tzinfo=None), message_id=mid,
+                 html=body_html, when=t, message_id=mid,
                  in_reply_to=in_reply_to, thread_topic=thread_topic or subject, attachments=att,
                  headers={"X-Mailer": "Microsoft Outlook 16.0", "Importance": "Normal"})
         e = {"key": key, "msg_id": mid, "path": path.replace("\\", "/"), "subject": subject,
-             "from": frm, "to": to, "cc": cc, "iid": D(t), "body": body, "in_reply_to": in_reply_to,
+             "from": frm, "to": to, "cc": cc, "sent_at": c.iso(t), "iid": c.instant(t), "body": body,
+             "in_reply_to": in_reply_to,
              "attachments": [a[0] for a in (attachments or [])], "folder": folder}
         emails.append(e)
         return e
 
     # ================================================================ 1. THE CANONICAL CASE
-    # Taken verbatim-ish from Elisa's example (teams_chat.json + email.txt), re-dated into our
-    # season and wired to our TRN-042 (Kemi) instance. Elisa's own timestamps had no date; we
-    # use 2025-10-14 09:14 Europe/Helsinki = 06:14 UTC.
+    # Text verbatim from Elisa's example (teams_chat.json), at Elisa's exact local times 09:14-09:27 on
+    # 2025-10-14 (Europe/Helsinki, EEST) = 06:14-06:27 UTC; see common.TRN042_CHAT_TIMES.
     case_t = c.TRN042_CASE["chat_start"]
     thread = ch_transport.thread()
     case_messages = [
@@ -560,12 +587,13 @@ def build(meta: dict) -> None:
         ("veikko", 12, "Is this documented somewhere?", []),
         ("erkki", 13, "Not that I know of 😄\nWe've just learned it over the years.", []),
     ]
+    assert len(case_messages) == len(c.TRN042_CHAT_TIMES)
     case_msg_objs = []
-    for key, mins, text, _ in case_messages:
+    for (key, mins, text, _), when in zip(case_messages, c.TRN042_CHAT_TIMES):
         attach = None
         if key == "veikko" and mins == 7:
             port_png = _tiny_png(b"TRN-042 1/1/3  in 0.0004 Mbps out 0.0003 Mbps  rx -3.7 dBm  oper UP")
-            fname = f"TRN-042_{c.local_dt(D(case_t + dt.timedelta(minutes=mins))).strftime('%Y%m%d-%H%M')}_counters.png"
+            fname = f"TRN-042_{c.to_local(when).strftime('%Y%m%d-%H%M')}_counters.png"
             attach = [{"name": fname, "content_type": "image/png", "size_bytes": len(port_png),
                        "inline": True, "source": "teams"}, {"name": "TRN-042_1-1-3_port.txt",
                                                                "content_type": "text/plain",
@@ -575,7 +603,7 @@ def build(meta: dict) -> None:
             c.write_bytes(["attachments", "current", "teams", "TRN-042_1-1-3_port.txt"],
                           b"show interface 1/1/3\noper-status: UP\nin-octets: 0.0004 Mbps\nout-octets: 0.0003 Mbps\n"
                           b"rx-power: -3.7 dBm\nsfp: SFP-10G-8421 (replaced 2025-10-14 08:15)\n")
-        m = ch_transport.msg(case_t + dt.timedelta(minutes=mins), ctx.p(key), text, thread=thread, attach=attach)
+        m = ch_transport.msg(when, ctx.p(key), text, thread=thread, attach=attach, exact=True)
         case_msg_objs.append((key, mins, m))
 
     # afternoon follow-up by the field engineer, after the morning fix
@@ -601,9 +629,11 @@ def build(meta: dict) -> None:
                     "Before replacing the SFP again or rebooting the unit, check the traffic counters. If the interface is UP "
                     "but the counters remain at zero, try disabling and enabling the interface once. This has solved the issue "
                     "in several cases I've seen.\n\nI don't think this is written in the normal field instructions. It is one of "
-                    "those things we have learned from experience.\n\nRegards,\nErkki", folder="Sent Items")
+                    "those things we have learned from experience.\n\nRegards,\nErkki", folder="Sent Items",
+                    exact=True)
 
     # a field engineer's photo-report email attaching the printed expert note
+    note_created = _dt(2019, 11, 12, 9, 0)
     note_pdf = make_pdf(os.path.join(c.root_dir(), "documents", "expert_notes", "2019-11_transmission_upgrade_notes.pdf"),
                         "Transmission upgrade notes - personal",
                         [["TRN upgrade / Gen1 (TNC-1X) notes - kept in my drawer, so sue me.", ""] +
@@ -620,7 +650,7 @@ def build(meta: dict) -> None:
                               "clear the forwarding issue in 2/4 cases; a port bounce cleared it in 4/4. Possible "
                               "supplier bug in the forwarding table update path.")],
                         subject="Transmission upgrade notes - personal", author="Erkki Expert",
-                        created=_dt(2019, 11, 12, 9, 0), numbered=True)
+                        created=note_created, numbered=True)
     em_note = email("note-pdf", _dt(2025, 11, 3, 7, 5), "Fwd: old upgrade notes for the TRN boxes",
                     "veikko", ["erkki"], [],
                     "Erkki,\n\nFound this in the drawer at Kemi when cleaning. Is this still valid for the old boxes? "
@@ -633,9 +663,10 @@ def build(meta: dict) -> None:
         statement="On Gen1 (2019) transmission units, after an SFP replacement the interface can be UP with normal "
                   "optical power and zero traffic counters; the fix is to disable and re-enable the interface, not "
                   "to replace the SFP again or reboot the node.",
-        valid_from=D(case_t), valid_to=None,
+        valid_from=mt(case_msg_objs[7][2]), valid_to=None,
         source={"type": "teams_message", "ref": case_msg_objs[7][2]["message_id"],
-                "detail": "NOC-Transport thread, message 8/12", "by": "erkki", "recorded_iid": D(case_t)},
+                "detail": "NOC-Transport thread, message 8/12", "by": "erkki",
+                "recorded_at": mt(case_msg_objs[7][2])},
         confidence="high", status="believed_true",
         qualifiers={"applies_to_models": ["TNC-1X"], "applies_to_generation": "Gen1",
                     "symptom": ["oper_up", "rx_power_normal", "counters_zero"], "action": "bounce_interface",
@@ -644,27 +675,27 @@ def build(meta: dict) -> None:
         subject="TRN-042", topic="forwarding_state_after_sfp_swap",
         statement="If the interface is UP but traffic counters remain at zero after an SFP replacement, disable and "
                   "enable the interface once before replacing the SFP or rebooting.",
-        valid_from=D(e_case), valid_to=None,
+        valid_from=mt(em_case), valid_to=None,
         source={"type": "email", "ref": em_case["msg_id"], "detail": "RE: TRN-042 ...", "by": "erkki",
-                "recorded_iid": D(e_case)},
+                "recorded_at": mt(em_case)},
         confidence="high", status="believed_true", corroborates=[a_fwd])
     a_note = ctx.assert_(
         subject="TNC-1X", topic="forwarding_state_after_sfp_swap",
         statement="Gen1 units: port bounce cleared the forwarding issue in 4/4 observed cases; re-inserting the module "
                   "did not (2/4). Supplier bug suspected in the forwarding-table update path.",
-        valid_from=D(_dt(2019, 11, 12)), valid_to=None,
+        valid_from=note_created, valid_to=None,
         source={"type": "pdf", "ref": "documents/expert_notes/2019-11_transmission_upgrade_notes.pdf",
                 "detail": "scanned personal notes by Erkki Expert", "by": "erkki",
-                "recorded_iid": D(_dt(2019, 11, 12))},
+                "recorded_at": note_created},
         confidence="medium", status="believed_true",
         qualifiers={"evidence": "4 of 4 observed cases"})
     # forwarded PDF: knowledge moved to a second place, same truth
     ctx.assert_(
         subject="TNC-1X", topic="forwarding_state_after_sfp_swap",
         statement="Scanned copy of the 2019 Gen1 forwarding notes forwarded to the transport expert list.",
-        valid_from=D(_dt(2025, 11, 3, 7, 5)), valid_to=None,
+        valid_from=mt(em_note), valid_to=None,
         source={"type": "email", "ref": em_note["msg_id"], "detail": "Fwd: old upgrade notes", "by": "veikko",
-                "recorded_iid": D(_dt(2025, 11, 3, 7, 5))},
+                "recorded_at": mt(em_note)},
         confidence="medium", status="believed_true", corroborates=[a_note])
 
     # ================================================================ 2. ADVICE THAT BECOMES OUTDATED
@@ -672,103 +703,33 @@ def build(meta: dict) -> None:
     t2 = _dt(2026, 3, 10, 7, 30)
     th_t2 = ch_transport.thread()
     m21 = ch_transport.msg(t2, ctx.p("aino"),
-                           "Anyone seen 1/1/3 UP + zero counters on a TNC-2X after SFP swap? Pulkkila node (TRN-009). "
+                           "Anyone seen 1/1/3 UP + zero counters on a TNC-2X after SFP swap? Mikkeli node (TRN-016). "
                            "Gen2, not one of the old ones.")
     m22 = ch_transport.msg(t2 + dt.timedelta(minutes=6), ctx.p("erkki"),
-                           "Hm. So it's not only Gen1.\nSame bounce worked?")
-    m23 = ch_transport.msg(t2 + dt.timedelta(minutes=9), ctx.p("aino"),
+                           "Hm. So it's not only Gen1.\nSame bounce worked?", reply_in=m21["conversation_id"])
+    m23 = ch_transport.msg(t2 + dt.timedelta(minutes=9), ctx.p("aino"), reply_in=m21["conversation_id"], text=
                            "Yes, disable/enable and it came back. Ok so the fix is fine but 'only old units' is wrong.")
     a_scope_old = ctx.assert_(
         subject="TNC-1X", topic="forwarding_state_after_sfp_swap",
         statement="Forwarding-state stall after SFP swap applies only to Gen1 (2019 TNC-1X) units.",
-        valid_from=case_msg_objs[9][2]["created_iid"], valid_to=D(t2),
+        valid_from=mt(case_msg_objs[9][2]), valid_to=mt(m23),
         source={"type": "teams_message", "ref": case_msg_objs[9][2]["message_id"],
                 "detail": "NOC-Transport thread, message 10/12 ('these old units')", "by": "erkki",
-                "recorded_iid": case_msg_objs[9][2]["created_iid"]},
+                "recorded_at": mt(case_msg_objs[9][2])},
         confidence="medium", status="superseded", qualifiers={"applies_to_generation": "Gen1"})
     a_scope_new = ctx.assert_(
         subject="TNC-2X", topic="forwarding_state_after_sfp_swap",
         statement="The forwarding-state stall after SFP swap also occurs on Gen2 (TNC-2X) units. Fix (port bounce) "
                   "still applies; the 'old units only' scope is stale.",
-        valid_from=D(t2), valid_to=None,
+        valid_from=mt(m23), valid_to=None,
         source={"type": "teams_message", "ref": m23["message_id"], "detail": "NOC-Transport 2026-03-10",
-                "by": "aino", "recorded_iid": D(t2)},
+                "by": "aino", "recorded_at": mt(m23)},
         confidence="high", status="believed_true", supersedes=a_scope_old,
         qualifiers={"applies_to_generation": ["Gen1", "Gen2"]})
 
-    # 2b. BESS instruction from 2025 that energy market changed (superseded by market update)
-    t_old = _dt(2025, 11, 4, 12, 0)
-    t_bess_switch = _dt(2026, 4, 1)      # effective "from 1 April" (announced by email at 09:00 that day)
-    th_e = ch_energy.thread()
-    m_e1 = ch_energy.msg(t_old, ctx.p("olga"),
-                         "Reminder: keep the DC1/DC2 BESS at 80% SOC for the winter because of the Fingrid capacity "
-                         "market. Charge cheap hours, do not discharge above 60% depth.")
-    a_bess_old = ctx.assert_(
-        subject="FI-TRE-DC2", topic="bess_arbitrage",
-        statement="Keep BESS at 80% SOC through winter for Fingrid capacity market; max 60% depth of discharge.",
-        valid_from=D(t_old), valid_to=D(t_bess_switch),
-        source={"type": "teams_message", "ref": m_e1["message_id"], "detail": "Energy-Procurement",
-                "by": "olga", "recorded_iid": D(t_old)},
-        confidence="high", status="superseded", qualifiers={"soC_target_pct": 80})
-    t_new = _dt(2026, 4, 1, 9, 0)        # email sent
-    em_mkt = email("bess-mkt", t_new, "BESS operating mode change from 1 April (aFRR participation)",
-                   "olga", ["liisa", "sanna", "markku"], ["riikka"],
-                   "Hi all,\n\nFingrid's aFRR products now pay better than capacity alone, so from 1 April the DC2 BESS "
-                   "switches from the winter 'hold 80% SOC' mode to aFRR cycling. SOC band 35-70%, depth of "
-                   "discharge up to 35% per event, max 6 events/day.\n\nPlease update any dashboards that alert on "
-                   "SOC < 50%. Thanks,\nOlga", thread_topic="BESS operating mode")
-    a_bess_new = ctx.assert_(
-        subject="FI-TRE-DC2", topic="bess_arbitrage",
-        statement="From 2026-04 BESS runs aFRR cycling: SOC band 35-70%, DoD <=35% per event, <=6 events/day.",
-        valid_from=D(t_bess_switch), valid_to=None,
-        source={"type": "email", "ref": em_mkt["msg_id"], "detail": "BESS operating mode change from 1 April",
-                "by": "olga", "recorded_iid": D(t_new)},
-        confidence="high", status="believed_true", supersedes=a_bess_old,
-        qualifiers={"soc_min_pct": 35, "soc_max_pct": 70, "dod_max_pct": 35})
-
-    # 2c. Energy-efficiency rule from a 2025 GTC email. Effective from January (bitemporal: recorded
-    #     2025-12-02, valid from 2026-01-01). Nothing in the corpus revises it, so it is still believed true.
-    t_gtc = _dt(2025, 12, 2, 10, 0)
-    em_gtc = email("gtc", t_gtc, "Updated Terms of Service - energy attribution clause", "markku",
-                   ["olga", "liisa", "sanna"], ["timo"],
-                   "Hello,\n\nOur customer GTCs have been updated so that the DC PUE reported to customers includes "
-                   "fixed overheads (cooling, lighting, losses). Until now we attributed them to the site. Please "
-                   "report PUE = total facility power / IT power for customer invoices from January.\n\nMarkku",
-                   folder="Sent Items")
-    a_gtc = ctx.assert_(
-        subject="FI-HEL-DC1", topic="pue_reporting",
-        statement="Customer PUE reported = total facility power / IT power, including fixed overheads "
-                  "(for customer invoices from January 2026).",
-        valid_from=D(_dt(2026, 1, 1)), valid_to=None,
-        source={"type": "email", "ref": em_gtc["msg_id"], "detail": "GTC update", "by": "markku",
-                "recorded_iid": D(t_gtc)},
-        confidence="medium", status="believed_true", qualifiers={"reporting": "customer"})
-
-    # 2d. Platform advice about DLQ that expired when the platform version changed
-    t_dlq = _dt(2025, 11, 8, 13, 0)
-    th_s = ch_sre.thread()
-    m_s1 = ch_sre.msg(t_dlq, ctx.p("sanna"),
-                      "Kafka DLQ queue is filling on `volga.train.events` again. Bump the consumer memory to 4Gi and "
-                      "it drains. We are on 3.4 so that is expected.")
-    m_s2 = ch_sre.msg(_dt(2026, 5, 12, 10, 0), ctx.p("riikka"),
-                      "PSA: platform is on 4.0 now. The 4Gi bump advice is obsolete - DLQ drains on its own within "
-                      "10 min, if it does not, it's a real poison message. Do not raise memory.")
-    a_dlq_old = ctx.assert_(
-        subject="TOPIC:dlq_mem_quota", topic="dlq_mem_quota", about_entity_kind="topic",
-        statement="Kafka DLQ on volga.train.events drains if consumer memory is raised to 4Gi (platform 3.4).",
-        valid_from=D(t_dlq), valid_to=D(_dt(2026, 5, 12)),
-        source={"type": "teams_message", "ref": m_s1["message_id"], "detail": "SRE-Infra",
-                "by": "sanna", "recorded_iid": D(t_dlq)},
-        confidence="high", status="superseded", qualifiers={"platform_version": "3.4"})
-    a_dlq_new = ctx.assert_(
-        subject="TOPIC:dlq_mem_quota", topic="dlq_mem_quota", about_entity_kind="topic",
-        statement="On platform 4.0+, DLQ drains within 10 min without memory changes; persistent DLQ = poison "
-                  "message, do not raise memory.",
-        valid_from=D(_dt(2026, 5, 12)), valid_to=None,
-        source={"type": "teams_message", "ref": m_s2["message_id"], "detail": "SRE-Infra",
-                "by": "riikka", "recorded_iid": D(_dt(2026, 5, 12))},
-        confidence="high", status="believed_true", supersedes=a_dlq_old,
-        qualifiers={"platform_version": "4.0"})
+    # 2b-2d (BESS operating mode, PUE reporting rule, Kafka DLQ advice) were off-domain energy / data-centre
+    # content and have been removed; their assertion ids ASR-0007..ASR-0011 are retired, not reused.
+    ctx.retire_ids(5)
 
     # ================================================================ 3. CONFLICTING ADVICE
     # 3a. Two experts disagree on what to do with ALARM_DOWN on a microwave hop
@@ -777,27 +738,27 @@ def build(meta: dict) -> None:
     m_c1 = ch_access.msg(t_conf, ctx.p("heikki"),
                          "RF alarm is up on the Kajaani hop. I usually just power-cycle the radio (the KMAX-4K). "
                          "Works 9/10.")
-    m_c2 = ch_access.msg(t_conf + dt.timedelta(minutes=12), ctx.p("juhani"),
+    m_c2 = ch_access.msg(t_conf + dt.timedelta(minutes=12), ctx.p("juhani"), reply_in=m_c1["conversation_id"], text=
                          "Please do NOT power-cycle KMAX-4K. The radio reboots into a config-recovery state and "
                          "loses the provisioned channel plan unless the config is exported first. Escalate to the "
                          "access engineer or ask for approval.")
-    m_c3 = ch_access.msg(t_conf + dt.timedelta(minutes=20), ctx.p("emilia"),
+    m_c3 = ch_access.msg(t_conf + dt.timedelta(minutes=20), ctx.p("emilia"), reply_in=m_c1["conversation_id"], text=
                          "Agreed with Juhani; and anyway the operationally relevant part is the field engineer "
                          "needs to check the dish alignment before any radio is reset. Otherwise we only lose more.")
     a_conf_1 = ctx.assert_(
         subject="KMAX-4K", topic="mw_throughput", statement="For an RF alarm on a KMAX-4K microwave hop, power-cycle "
         "the radio (works 9/10).",
-        valid_from=D(t_conf), valid_to=None,
+        valid_from=mt(m_c1), valid_to=None,
         source={"type": "teams_message", "ref": m_c1["message_id"], "detail": "Access-North",
-                "by": "heikki", "recorded_iid": D(t_conf)},
+                "by": "heikki", "recorded_at": mt(m_c1)},
         confidence="low", status="disputed", qualifiers={"step": "power_cycle_radio"})
     a_conf_2 = ctx.assert_(
         subject="KMAX-4K", topic="mw_throughput",
         statement="Do not power-cycle a KMAX-4K: it reboots into config-recovery and loses the channel plan unless "
                   "the config was exported first. Check dish alignment, escalate, or get approval.",
-        valid_from=m_c2["created_iid"], valid_to=None,
+        valid_from=mt(m_c2), valid_to=None,
         source={"type": "teams_message", "ref": m_c2["message_id"], "detail": "Access-North",
-                "by": "juhani", "recorded_iid": m_c2["created_iid"]},
+                "by": "juhani", "recorded_at": mt(m_c2)},
         confidence="high", status="disputed", qualifiers={"step": "escalate"},
         contradicts=[a_conf_1])
     ctx.contradictions.append({
@@ -820,16 +781,16 @@ def build(meta: dict) -> None:
     a_mtu_old = ctx.assert_(
         subject="CR-001", topic="mtu_change", statement="Core links are MTU 9114; do not change it, old TNC only "
         "handles 9114.",
-        valid_from=D(t_m1), valid_to=D(t_m2),
+        valid_from=mt(m_m1), valid_to=mt(m_m2),
         source={"type": "teams_message", "ref": m_m1["message_id"], "detail": "NOC-Transport",
-                "by": "mikko", "recorded_iid": D(t_m1)},
+                "by": "mikko", "recorded_at": mt(m_m1)},
         confidence="medium", status="superseded", qualifiers={"mtu": 9114})
     a_mtu_new = ctx.assert_(
         subject="CR-001", topic="mtu_change", statement="Core links are MTU 9216 since the 2026 firmware; TNC-1X "
         "handles it. Earlier 9114 guidance is obsolete.",
-        valid_from=D(t_m2), valid_to=None,
+        valid_from=mt(m_m2), valid_to=None,
         source={"type": "teams_message", "ref": m_m2["message_id"], "detail": "NOC-Transport",
-                "by": "erkki", "recorded_iid": D(t_m2)},
+                "by": "erkki", "recorded_at": mt(m_m2)},
         confidence="high", status="believed_true", supersedes=a_mtu_old, qualifiers={"mtu": 9216})
 
     # 3c. Access-key conflict: caller vs key holder replaced after the road barrier repair
@@ -838,14 +799,16 @@ def build(meta: dict) -> None:
     # ================================================================ 4. MORE SFP / MODULE STORIES (noise + structure)
     extra_sfp = [
         # node, model, date, who, resolution, text
-        ("TRN-009", "TNC-2X", _dt(2026, 3, 10, 7, 10), "aino", "bounce", None),
+        ("TRN-016", "TNC-2X", _dt(2026, 3, 10, 7, 10), "aino", "bounce", None),
         ("TRN-014", "TNC-1X", _dt(2025, 12, 3, 6, 40), "veikko", "bounce", None),
         ("TRN-006", "TNC-3X", _dt(2026, 1, 22, 11, 20), "pekka", "reseat", None),
-        ("TRN-019", "TNC-2X", _dt(2025, 11, 19, 8, 5), "veikko", "bounce", None),
+        ("TRN-019", "TNC-1X", _dt(2025, 11, 19, 8, 5), "veikko", "bounce", None),
         ("TRN-003", "TNC-3X", _dt(2026, 7, 14, 9, 30), "aino", "replace_again", None),
         ("TRN-042", "TNC-1X", _dt(2026, 9, 2, 7, 45), "veikko", "bounce", None),
     ]
     for nid, model, when, who, resolution, _ in extra_sfp:
+        if trn_meta[nid]["model"] != model:  # the chat must name the model the network actually has
+            raise ValueError(f"{nid} is a {trn_meta[nid]['model']}, not a {model}")
         t = nid.replace("TRN-", "")
         if resolution == "bounce":
             text = (f"Same thing again on {nid} ({model}) after SFP swap on 1/1/3. UP, optics fine, counters zero. "
@@ -864,9 +827,9 @@ def build(meta: dict) -> None:
             topic = "forwarding_state_after_sfp_swap"
         m = ch_transport.msg(when, ctx.p(who), text)
         ctx.assert_(
-            subject=nid, topic=topic, statement=st, valid_from=D(when), valid_to=None,
+            subject=nid, topic=topic, statement=st, valid_from=mt(m), valid_to=None,
             source={"type": "teams_message", "ref": m["message_id"], "detail": f"NOC-Transport {nid}",
-                    "by": who, "recorded_iid": D(when)},
+                    "by": who, "recorded_at": mt(m)},
             confidence="medium", status="believed_true" if resolution != "replace_again" else "disputed",
             qualifiers={"observed_model": model, "resolution": resolution},
             contradicts=[a_fwd] if resolution == "replace_again" else [],
@@ -883,45 +846,16 @@ def build(meta: dict) -> None:
                 "severity": "medium", "kind": "exception_to_rule",
             })
 
-    # ================================================================ 5. TELEMETRY / ENERGY INSIGHTS
-    # 5a. Weird spike on the Tampere meter during the first month: metering noise
-    t_spike = _dt(2025, 11, 18, 10, 0)
-    th_s2 = ch_sre.thread()
-    m_sa = ch_sre.msg(t_spike, ctx.p("sanna"),
-                      "Customers pinged: the DC2 meter spikes to >2x IT power about once every other week for a few "
-                      "hours. Looks like the meter reading or PDU-A IT measurement glitches, does not match real "
-                      "load, customer PUE dashboards complain.")
-    m_sb = ch_sre.msg(t_spike + dt.timedelta(minutes=35), ctx.p("olga"),
-                      "Confirmed it's the PDUs, we're short on readings between the metering point and the PDU "
-                      "aggregation. If grid != IT*PUE, flag it as suspect; do not feed it to customer reporting.")
-    a_spike = ctx.assert_(
-        subject="FI-TRE-DC2", topic="gpu_maintenance_spikes",
-        statement="DC2 grid meter occasionally reads >2x IT power for a few hours; this is a metering artefact, not "
-                  "a load spike. Do not feed suspect rows to customer PUE reporting.",
-        valid_from=D(_dt(2025, 10, 1)), valid_to=None,
-        source={"type": "teams_message", "ref": m_sb["message_id"], "detail": "SRE-Infra",
-                "by": "olga", "recorded_iid": D(t_spike)},
-        confidence="high", status="believed_true", qualifiers={"metric": "grid_power_mw", "quality": "suspect"})
+    # ================================================================ 5. CROSS-LAYER INSIGHTS
+    # (the former data-centre power insights INSIGHT-001..003 and ASR-0022 were off-domain; removed)
+    ctx.retire_ids(1)
     ctx.insights.append({
-        "id": "INSIGHT-001", "title": "DC2 meter spikes are metering artefacts",
-        "needs_layers": ["telemetry", "context"],
-        "derivation": "Rows where grid_power_mw / it_power_mw > 1.6 must be excluded from customer reporting; "
-                      "the context assertion gives the reason and the action.",
-        "assertion": a_spike,
-    })
-
-    # 5b. Maintenance windows explain 5% utilisation dips in the primary site (needs events layer)
-    t_main = _dt(2026, 11, 3, 15, 0)
-    m_main1 = ch_sre.msg(t_main, ctx.p("sanna"),
-                         "We'll do the GPU firmware push on DC1 next Wednesday; expect utilisation to drop 30 min per "
-                         "batch. This messes with our capacity alerts, ignore them.")
-    m_main2 = ch_sre.msg(t_main + dt.timedelta(minutes=8), ctx.p("riikka"), "Noted, no customer impact.")
-    ctx.insights.append({
-        "id": "INSIGHT-002", "title": "Utilisation dips on maintained sites are planned",
+        "id": "INSIGHT-004", "title": "TRN-042 forwarding stall is invisible to the alarm stream",
         "needs_layers": ["telemetry", "events", "context"],
-        "derivation": "Sudden GPU utilisation drops on a site with an open maintenance window (device_events) are "
-                      "expected; suppress capacity alerts.",
-        "assertion": None,
+        "derivation": "After MODULE_INSERTED / LINK_UP on TRN-042 1/1/3 (network/alarms) every alarm is cleared, "
+                      "yet the PM samples show oper_status UP with in_octets_mbps < 0.01 for >= 60 min "
+                      "(telemetry). Only the context assertion explains it and gives the action: bounce the port.",
+        "assertion": a_fwd,
     })
 
     # ================================================================ 6. ACCESS KNOWLEDGE (the locked barrier)
@@ -933,11 +867,11 @@ def build(meta: dict) -> None:
     m_bar1 = ch_field.msg(t_barrier, ctx.p("veikko"),
                           "Locked barrier at the start of the private road to the Kemi transport room. Nobody told "
                           "me. Pekka, where is the key?")
-    m_bar2 = ch_field.msg(t_barrier + dt.timedelta(minutes=14), ctx.p("pekka"),
+    m_bar2 = ch_field.msg(t_barrier + dt.timedelta(minutes=14), ctx.p("pekka"), reply_in=m_bar1["conversation_id"], text=
                           "The padlock key is on my keyring, I'll bring it. It's NOT in the key box, that is for "
                           "another gate.", reaction="\U0001F605")
     # (a 2025 message cannot know about the 2026 lock change; it only notes the register gap)
-    m_bar3 = ch_field.msg(t_barrier + dt.timedelta(minutes=25), ctx.p("heikki"),
+    m_bar3 = ch_field.msg(t_barrier + dt.timedelta(minutes=25), ctx.p("heikki"), reply_in=m_bar1["conversation_id"], text=
                           "Kemi is not in the access register at all. Someone should add the gate and who "
                           "holds the key, otherwise the next person gets stuck like this.")
     t_lock_change = _dt(2026, 8, 3)  # barrier repair: padlock replaced by a code lock
@@ -945,14 +879,14 @@ def build(meta: dict) -> None:
         subject=kemi_seg_id, topic="access_keys",
         statement="Kemi transport room gate is locked with a padlock; key is on Pekka Hämäläinen's keyring "
                   "(not in the key box at the office).",
-        valid_from=D(t_barrier + dt.timedelta(minutes=14)), valid_to=D(t_lock_change),
+        valid_from=mt(m_bar2), valid_to=t_lock_change,
         source={"type": "teams_message", "ref": m_bar2["message_id"], "detail": "Field-Ops-FI",
-                "by": "pekka", "recorded_iid": D(t_barrier + dt.timedelta(minutes=14))},
+                "by": "pekka", "recorded_at": mt(m_bar2)},
         confidence="high", status="superseded", about_entity_kind="segment",
         qualifiers={"lock_type": "padlock"})
     ctx.access_rows.append({"segment_id": kemi_seg_id, "site": "Kemi", "barrier": "gate",
-                            "valid_from": c.ts_s(D(t_barrier + dt.timedelta(minutes=14))),
-                            "valid_to": c.ts_s(D(t_lock_change)), "recorded_at": c.ts_s(D(t_barrier + dt.timedelta(minutes=14))),
+                            "valid_from": m_bar2["created_at"],
+                            "valid_to": c.iso(t_lock_change), "recorded_at": m_bar2["created_at"],
                             "lock": "padlock",
                             "holder": "Pekka Hämäläinen", "where": "keyring",
                             "source": m_bar2["message_id"]})
@@ -975,14 +909,14 @@ def build(meta: dict) -> None:
         subject=kemi_seg_id, topic="access_keys",
         statement="Kemi transport room gate is a code lock (installed 2026-08-03). There is no physical key. The "
                   "code is held by site security / Heikki Lehtonen; the 'Pekka has the key' advice is obsolete.",
-        valid_from=D(t_lock_change), valid_to=None,
+        valid_from=t_lock_change, valid_to=None,   # the email itself dates the change: 3 August
         source={"type": "email", "ref": em_code["msg_id"], "detail": "Kemi site: new code lock installed",
-                "by": "timo", "recorded_iid": D(t_code)},
+                "by": "timo", "recorded_at": mt(em_code)},
         confidence="high", status="believed_true", supersedes=a_bar_old, about_entity_kind="segment",
         qualifiers={"lock_type": "code_lock", "code_custodian": "Heikki Lehtonen"})
     ctx.access_rows.append({"segment_id": kemi_seg_id, "site": "Kemi", "barrier": "gate",
-                            "valid_from": c.ts_s(D(t_lock_change)), "valid_to": None,
-                            "recorded_at": c.ts_s(D(t_code)), "lock": "code_lock",
+                            "valid_from": c.iso(t_lock_change), "valid_to": None,
+                            "recorded_at": em_code["sent_at"], "lock": "code_lock",
                             "holder": "Heikki Lehtonen", "where": "email/site security",
                             "source": em_code["msg_id"]})
     ctx.contradictions.append({
@@ -996,12 +930,13 @@ def build(meta: dict) -> None:
     })
 
     # a second, ordinary private-road site: Ivalo (no Teams knowledge, only a PDF drawing + email)
-    ivalo_seg = [s for s in net["physical_segments"] if s["end_a"] == "TRN-012"]
+    ivalo_trn = net["trn_by_city"]["Ivalo"][0]
+    ivalo_seg = [s for s in net["physical_segments"] if s["end_a"] == ivalo_trn]
     if ivalo_seg:
         ivalo_seg_id = ivalo_seg[0]["segment_id"]
         draw_pdf = make_pdf(os.path.join(c.root_dir(), "documents", "expert_notes", "2024-06_ivalo_site_access.pdf"),
                             "Ivalo site access drawing",
-                            [["Ivalo transport site (TRN-012) - access plan"] + [""] +
+                            [[f"Ivalo transport site ({ivalo_trn}) - access plan"] + [""] +
                              wrap("Approach from road 4 by the snowmobile trail sign; 1.4 km private gravel road. "
                                   "The gate at the start of the gravel road is OPEN in summer. In winter the road is "
                                   "snowed in and you must call the local contractor (Rovaniemi field team) to "
@@ -1018,14 +953,14 @@ def build(meta: dict) -> None:
             subject=ivalo_seg_id, topic="access_keys",
             statement="Ivalo gate is unlocked; the 1.4 km gravel road is snowed in Oct-May and must be cleared by "
                       "the local contractor (call the Rovaniemi field team).",
-            valid_from=D(_dt(2024, 6, 12)), valid_to=None,
+            valid_from=_dt(2024, 6, 12), valid_to=None,   # the attached access drawing is dated 2024-06-12
             source={"type": "email", "ref": em_ivalo["msg_id"], "detail": "Ivalo site access",
-                    "by": "pekka", "recorded_iid": D(_dt(2025, 10, 28, 8, 10))},
+                    "by": "pekka", "recorded_at": mt(em_ivalo)},
             confidence="high", status="believed_true", about_entity_kind="segment")
-        ctx.access_rows.append({"segment_id": ivalo_seg_id, "site": "Ivalo", "barrier": "none",
-                                "valid_from": c.ts_s(D(_dt(2024, 6, 12))), "valid_to": None,
-                                "recorded_at": c.ts_s(D(_dt(2025, 10, 28, 8, 10))), "lock": "none",
-                                "holder": None, "where": "open", "source": em_ivalo["msg_id"]})
+        ctx.access_rows.append({"segment_id": ivalo_seg_id, "site": "Ivalo", "barrier": "gate",
+                                "valid_from": c.iso(_dt(2024, 6, 12)), "valid_to": None,
+                                "recorded_at": em_ivalo["sent_at"], "lock": "none",
+                                "holder": None, "where": "gate unlocked; road snowed in Oct-May, call the contractor", "source": em_ivalo["msg_id"]})
 
     # other private-road segments: put a line in the access register (no explicit knowledge -> a trap)
     for seg in net["physical_segments"]:
@@ -1036,14 +971,16 @@ def build(meta: dict) -> None:
                                     "source": None, "derived": "as_built flag private_road=true"})
 
     # ================================================================ 7. SERVICE-HANDOFF KNOWLEDGE
+    # The big-window job requeue rule (GPU training jobs, former ASR-0034) was off-domain data-centre
+    # content: the two messages are dropped (drop=True keeps every later message id stable).
     t_svc = _dt(2026, 2, 17, 12, 30)
     th_sv = ch_services.thread()
-    m_sv1 = ch_services.msg(t_svc, ctx.p("markku"),
+    m_sv1 = ch_services.msg(t_svc, ctx.p("markku"), drop=True, text=
                             "Reminder for the big-window jobs: if a service is about to end and job is not done, the "
                             "job must be requeued to the next window, not killed. Sales-specific; if killed the "
                             "customer is refunded.")
-    m_sv2 = ch_services.msg(t_svc + dt.timedelta(minutes=3), ctx.p("sanna"), "Ok, noted, our alerting should not "
-                                                                           "auto-close those.")
+    m_sv2 = ch_services.msg(t_svc + dt.timedelta(minutes=3), ctx.p("sanna"), drop=True,
+                            text="Ok, noted, our alerting should not auto-close those.")
     # The sales freeze is announced *before* it starts and is a bounded window: after 2026-01-05 it is
     # expired (not superseded - nothing replaced it). Who approves a night-time emergency change is
     # still never written down (QA-034 stays not_documented).
@@ -1055,9 +992,9 @@ def build(meta: dict) -> None:
         subject="TOPIC:maintenance_freeze", topic="maintenance_freeze",
         statement="During the sales freeze (Dec 20 - Jan 5) no network changes are allowed without a named change "
                   "approval; change-approval requests go to the service manager.",
-        valid_from=D(_dt(2025, 12, 20)), valid_to=D(_dt(2026, 1, 5)),
+        valid_from=_dt(2025, 12, 20), valid_to=_dt(2026, 1, 5),   # the window stated in the message
         source={"type": "teams_message", "ref": m_frz["message_id"], "detail": "Service-Ops",
-                "by": "markku", "recorded_iid": D(t_frz)},
+                "by": "markku", "recorded_at": mt(m_frz)},
         confidence="medium", status="expired", about_entity_kind="topic")
 
     # ================================================================ 8. HIGH-VOLUME CHATTER
@@ -1076,7 +1013,9 @@ def build(meta: dict) -> None:
         ("Access switch firmware v10.0.3 approved for the next change window.", "ch_access"),
         ("Cancelled the demo between 14 and 16, no impact for us.", "ch_services"),
     ]
-    by_channel = {"ch_transport": ch_transport, "ch_field": ch_field, "ch_sre": ch_sre,
+    # ch_sre stays as a key so the chatter RNG sequence (and every other message) is unchanged;
+    # chatter that used to land in the removed SRE-Infra channel is simply not posted.
+    by_channel = {"ch_transport": ch_transport, "ch_field": ch_field, "ch_sre": None,
                   "ch_access": ch_access, "ch_services": ch_services}
     people_keys = list(ctx._nick)
     for i in range(760):
@@ -1089,7 +1028,8 @@ def build(meta: dict) -> None:
             txt, chname = f"generic ops chatter #{i}: {chatter_rng.choice(['all good', 'FYI', 'no action', 'checked', 'closing'])}", chatter_rng.choice(list(by_channel))
         ch = by_channel[chname]
         who = chatter_rng.choice(people_keys)
-        ch.msg(t, ctx.p(who), txt)
+        if ch is not None:
+            ch.msg(t, ctx.p(who), txt)
 
     # ================================================================ 9. EMAIL NOISE + structured mail
     email_rng = c.rng_for("emailnoise")
@@ -1111,27 +1051,8 @@ def build(meta: dict) -> None:
         email(f"noise{i}", when, f"{subj} ({i})", frm, [to], [], body,
               folder="Inbox" if email_rng.random() < 0.6 else "Sent Items")
 
-    # a structured "meter swap" email that explains a maintenance spike in telemetry
-    t_meter = _dt(2026, 8, 20, 8, 0)
-    em_meter = email("meter-swap", t_meter, "DC1 power meter swap 2026-09-02 (short spikes expected)",
-                     "liisa", ["sanna", "olga"], ["markku"],
-                     "Hi,\n\nThe main grid meter for DC1 will be swapped 2026-09-02. Expect a few short reading "
-                     "spikes during the swap; they are metering artefacts and are good to ignore in reporting.\n\n"
-                     "Liisa")
-    a_meter = ctx.assert_(
-        subject="FI-HEL-DC1", topic="meter_swap",
-        statement="DC1 grid meter swap on 2026-09-02; short power spikes that day are metering artefacts.",
-        valid_from=D(_dt(2026, 9, 1)), valid_to=D(_dt(2026, 9, 4)),
-        source={"type": "email", "ref": em_meter["msg_id"], "detail": "meter swap notice", "by": "liisa",
-                "recorded_iid": D(t_meter)},
-        confidence="high", status="expired", qualifiers={"metric": "grid_power_mw"})
-    ctx.insights.append({
-        "id": "INSIGHT-003", "title": "DC1 September spikes are planned meter-swap artefacts",
-        "needs_layers": ["telemetry", "context"],
-        "derivation": "Telemetry spikes on FI-HEL-DC1 around 2026-09-02 match the meter-swap notice window; "
-                      "exclude them instead of alerting.",
-        "assertion": a_meter,
-    })
+    # (the DC1 power-meter swap email, former ASR-0027 / INSIGHT-003, was off-domain: removed)
+    ctx.retire_ids(1)
 
     # ================================================================ 10. Confluence pages
     kb = {
@@ -1150,9 +1071,6 @@ def build(meta: dict) -> None:
             body="<h1>Site access register</h1><table><tr><th>Site</th><th>Barrier</th><th>Holder</th></tr>"
                  "<tr><td>Ivalo</td><td>gate</td><td>contractor (snow)</td></tr>"
                  "<tr><td>Rovaniemi</td><td>boom</td><td>unknown</td></tr></table><p>Kemi: not in register.</p>"),
-        "kb-004_bess_operating_modes.html": dict(
-            title="BESS operating modes", last_edited=_dt(2025, 11, 10),
-            body="<h1>BESS operating modes</h1><p>Winter mode: hold 80% SOC for the Fingrid capacity market.</p>"),
     }
     os.makedirs(os.path.join(c.root_dir(), "documents", "confluence"), exist_ok=True)
     for fname, page in kb.items():
@@ -1161,20 +1079,14 @@ def build(meta: dict) -> None:
                 f"page id {c.hexid(c.rng_for('kb', fname), 8)}</p></body></html>")
         c.write_text(["documents", "confluence", fname], html)
         # every KB page gets an assertion? Only the ones that matter; KB is stale here, so
-        # mark the MTU one superseded and the BESS one as outdated.
+        # mark the MTU one superseded.
     a_kb_mtu = ctx.assert_(
         subject="CR-001", topic="mtu_change", statement="KB: all core and transport links use MTU 9114.",
-        valid_from=D(_dt(2025, 12, 15)), valid_to=D(t_m2),
+        valid_from=_dt(2025, 12, 15), valid_to=mt(m_m2),
         source={"type": "confluence", "ref": "documents/confluence/kb-002_mtu_policy.html",
-                "detail": "Core MTU policy", "by": "Confluence", "recorded_iid": D(_dt(2025, 12, 15))},
+                "detail": "Core MTU policy", "by": "Confluence", "recorded_at": _dt(2025, 12, 15)},
         confidence="low", status="superseded", superseded_by=a_mtu_new, qualifiers={"mtu": 9114})
-    a_kb_bess = ctx.assert_(
-        subject="FI-TRE-DC2", topic="bess_arbitrage",
-        statement="KB: Winter mode holds BESS at 80% SOC for the Fingrid capacity market.",
-        valid_from=D(_dt(2025, 11, 10)), valid_to=D(t_bess_switch),
-        source={"type": "confluence", "ref": "documents/confluence/kb-004_bess_operating_modes.html",
-                "detail": "BESS operating modes", "by": "Confluence", "recorded_iid": D(_dt(2025, 11, 10))},
-        confidence="low", status="superseded", superseded_by=a_bess_new, qualifiers={"soc_target_pct": 80})
+    ctx.retire_ids(1)  # former ASR-0029: Confluence BESS page (off-domain, removed)
 
     # ITSM KB articles (itsm/knowledge_articles.jsonl). The export only has a published date; the gold
     # layer records when each stale article stopped being true and what replaced it.
@@ -1182,27 +1094,26 @@ def build(meta: dict) -> None:
     itsm_gold = [
         # article, subject, topic, statement, valid_to, superseded_by, kind, corroborates
         ("KB0017001", "TRN-042", "forwarding_state_after_sfp_swap",
-         "ITSM KB: TRN-042-only known issue; workaround is to reboot the whole node.", D(case_t),
-         a_fwd, "node", []),
-        ("KB0018222", "CR-001", "mtu_change", "ITSM KB: core links use MTU 9114.", D(t_m2), a_mtu_new, "node",
+         "ITSM KB: TRN-042-only known issue; workaround is to reboot the whole node.",
+         mt(case_msg_objs[7][2]), a_fwd, "node", []),
+        ("KB0018222", "CR-001", "mtu_change", "ITSM KB: core links use MTU 9114.", mt(m_m2), a_mtu_new, "node",
          [a_mtu_old, a_kb_mtu]),
         ("KB0018420", kemi_seg_id, "access_keys", "ITSM KB: Kemi site is behind a private-road gate; ask Pekka "
-         "for the key.", D(t_lock_change), a_bar_new, "segment", [a_bar_old]),
-        ("KB0018501", "FI-TRE-DC2", "bess_arbitrage", "ITSM KB: BESS winter mode holds 80% SOC.",
-         D(t_bess_switch), a_bess_new, "node", [a_bess_old, a_kb_bess]),
+         "for the key.", t_lock_change, a_bar_new, "segment", [a_bar_old]),
     ]
     for art, subj, topic, st, until, succ, kind, same in itsm_gold:
-        published = D(dt.datetime.fromisoformat(itsm[art]["valid_from"]).replace(tzinfo=c.UTC))
+        published = dt.datetime.fromisoformat(itsm[art]["valid_from"]).replace(tzinfo=c.UTC)
         ctx.assert_(
             subject=subj, topic=topic, statement=st, valid_from=published, valid_to=until,
             source={"type": "itsm", "ref": f"itsm/knowledge_articles.jsonl#{art}", "detail": itsm[art]["title"],
-                    "by": "ITSM", "recorded_iid": published},
+                    "by": "ITSM", "recorded_at": published},
             confidence="low", status="superseded", superseded_by=succ, about_entity_kind=kind,
             corroborates=same)
+    ctx.retire_ids(1)  # former ASR-0033: ITSM KB0018501 BESS article (off-domain, removed)
 
     # ================================================================ 11. write channels
     for ch in channels:
-        ch.messages.sort(key=lambda m: m["created_iid"])
+        ch.messages.sort(key=lambda m: (m["created_at"], m["message_id"]))
         c.write_jsonl(["teams", "messages", f"{ch.id}.jsonl"], ch.messages)
         c.write_json(["teams", "messages", f"{ch.id}.json"], ch.to_json())
         c.write_text(["teams", "exports", f"{ch.id}.html"], _render_channel_html(ch))
@@ -1216,7 +1127,7 @@ def build(meta: dict) -> None:
     n_case_mentions = sum(1 for ch in channels for m in ch.messages
                           if m["conversation_id"] == thread or m.get("conversation_id") == th_t2)
     drop = [
-        ["teams", len(ch_transport.messages) + len(ch_field.messages) + len(ch_sre.messages) + len(ch_access.messages) + len(ch_energy.messages) + len(ch_services.messages),
+        ["teams", sum(len(ch.messages) for ch in channels),
          "reconstructable", "raw message objects carry attachments/reactions/edits; Teams drops nothing in this export"],
         ["email", len(emails), "reconstructable", "all .msg files incl. Sent Items; attachments present"],
         ["phone_call", 0, "dropped_at_source", "calls are not recorded; this channel is invisible to any pipeline"],
@@ -1225,19 +1136,39 @@ def build(meta: dict) -> None:
     ]
     c.write_csv(["knowledge_graph", "drop_rate_sheet.csv"],
                 ["channel", "captured_items", "capture_status", "note"], drop)
+    c.write_json(["email_outlook", "mail_export_index.json"], _mail_index(emails))
 
-    # KB only 4 pages - a hint for a pipeline 'completeness' report
-    # (created last so earlier assertion ids stay stable)
-    ctx.assert_(
-        subject="TOPIC:job_requeue_policy", topic="job_requeue_policy",
-        statement="Big-window jobs that will not finish before the service window ends must be requeued to the "
-                  "next window, not killed; a killed job means a customer refund.",
-        valid_from=D(t_svc), valid_to=None,
-        source={"type": "teams_message", "ref": m_sv1["message_id"], "detail": "Service-Ops",
-                "by": "markku", "recorded_iid": D(t_svc)},
-        confidence="medium", status="believed_true", about_entity_kind="topic")
+    # (former ASR-0034, the big-window job requeue rule, was off-domain and has been removed)
+    insights_access = {
+        "id": "INSIGHT-005", "title": "A Kemi dispatch after 2026-08-03 needs the code lock, not Pekka's key",
+        "needs_layers": ["as_built", "context"],
+        "derivation": "SEG-042 is flagged private_road (network/as_built/segments.json); the access assertion valid "
+                      "at the dispatch time says code lock since 2026-08-03 (recorded only on 2026-08-18).",
+        "assertion": a_bar_new,
+    }
+    ctx.insights.append(insights_access)
     ctx.finalize()
     return ctx
+
+
+def _mail_index(emails: list[dict]) -> list[dict]:
+    """Folder/message index, the way an Exchange export lists it (sent_at is UTC)."""
+    out = []
+    for e in sorted(emails, key=lambda e: (e["folder"], e["path"])):
+        out.append({"folder": e["folder"], "file": os.path.basename(e["path"]), "message_id": e["msg_id"],
+                    "subject": e["subject"], "sent_at": e["sent_at"],
+                    "size_bytes": os.path.getsize(os.path.join(c.root_dir(), e["path"])),
+                    "type": "IPM.Note", "format": "Outlook MSG (OLE2/CFB)"})
+    return out
+
+
+def _clean_outputs() -> None:
+    """Remove previously generated context artefacts: file names carry timestamps, and channels or
+    emails that no longer exist must not linger from an earlier run."""
+    for rel in ("teams", "email_outlook", "attachments/current", "documents/confluence"):
+        path = os.path.join(c.root_dir(), *rel.split("/"))
+        if os.path.isdir(path):
+            shutil.rmtree(path)
 
 
 def _render_channel_html(ch: "Channel") -> str:
@@ -1319,13 +1250,18 @@ def _schema() -> dict:
                          "description": "null = still believed true"},
             "competing_versions": {"type": "array"},
             "source_type": {"enum": ["teams_message", "email", "pdf", "confluence", "xlsx", "jira", "itsm"]},
+            "valid_from_iid": {"type": "integer",
+                               "description": "15-minute telemetry slot containing valid_from (alignment key only)"},
             "source_ref": {"type": "string"},
             "confidence": {"enum": ["low", "medium", "high"]},
             "status": {"enum": ["believed_true", "superseded", "disputed", "expired", "unverified"]},
             "recorded_at": {"type": "string", "format": "date-time",
-                            "description": "when the knowledge was first written down (transaction time); "
-                                           "may be later than valid_from (e.g. a lock changed before anyone "
-                                           "emailed about it) or earlier (e.g. a change announced in advance)"},
+                            "description": "when the knowledge was written down (transaction time) == the "
+                                           "timestamp of the source artefact named by source_ref (message "
+                                           "sent time, email sent time, document date). valid_from equals it "
+                                           "unless the source states another start: later recording (a lock "
+                                           "changed before anyone emailed about it) or earlier (a change "
+                                           "announced in advance)"},
             "supersedes": {"type": ["string", "null"], "description": "assertion this one replaced"},
             "superseded_by": {"type": ["string", "null"],
                               "description": "set iff status=superseded; its valid_from == this valid_to"},
@@ -1341,6 +1277,7 @@ def _schema() -> dict:
             "status=expired -> valid_to <= snapshot and no successor (a bounded window that ended)",
             "status=disputed -> contradicts is non-empty",
             "the subject entity exists (entities.jsonl) at valid_from",
+            "recorded_at == timestamp of the source artefact (source_ref)",
         ],
     }
 
@@ -1349,6 +1286,7 @@ def main() -> None:
     with open(os.path.join(c.root_dir(), "network", "registry.json"), encoding="utf-8") as fh:
         reg = json.load(fh)
     meta = {"case": reg["case"]}
+    _clean_outputs()
     ctx = build(meta)
     write_outputs(ctx)
     print(f"context: {len(ctx.assertions)} assertions, {len(ctx.entities)} entities, "

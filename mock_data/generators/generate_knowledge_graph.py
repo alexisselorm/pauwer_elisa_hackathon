@@ -52,8 +52,6 @@ def entity_aliases() -> list[tuple[str, str]]:
         ("TRN-042", ["TRN-042", "the Kemi box", "Kemi TRN-042 (ROADM-1)"]),
         # the specific gated segment (Kemi transport room private road)
         ("SEG-042", ["gate at Kemi", "Kemi gate", "the Kemi barrier", "private road to the Kemi transport room"]),
-        ("FI-TRE-DC2", ["Tampere DC", "TRE", "DC2", "FI-TRE-DC2", "the secondary site"]),
-        ("FI-HEL-DC1", ["Helsinki DC1", "HEL", "DC1", "FI-HEL-DC1", "the primary"]),
         ("TOPIC:forwarding_state_after_sfp_swap",
          ["forwarding state", "forwarding plane state", "FIB state", "silent blackhole", "green-but-dark"]),
         # generic kinds: no single entity
@@ -62,7 +60,6 @@ def entity_aliases() -> list[tuple[str, str]]:
         ("concept:optical_transport", ["transmission node", "TRN node", "ROADM", "optical transport unit", "TN",
                                        "line side", "the node"]),
         ("concept:sfp", ["SFP", "SFP+", "optical module", "transceiver", "the module", "10G optic"]),
-        ("concept:power_meter", ["the power meter", "meter", "PDU meter", "electricity meter", "the kWh meter"]),
         ("concept:hw_model", ["hardware model", "hardware_class", "hw", "HWC", "device model"]),
     ]
     return [(alias, canon) for canon, aliases in groups for alias in aliases]

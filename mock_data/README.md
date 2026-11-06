@@ -15,8 +15,9 @@ Synthetic operational documentation for the Elisa × Since AI 2026 "silent metad
 where**, or **has never been written down anywhere** (so the right behaviour is "not documented — ask a
 human", not an invented answer).
 
-Everything is synthetic and deterministic (seed `20261107`, standard-library Python only). The only
-non-synthetic files are the two optional feeds under `external/` (real FMI weather and Nord Pool FI prices).
+Everything is synthetic and deterministic (seed `20261107`, standard-library Python only; two runs are
+byte-identical). The corpus is scoped to the telecom operations problem: transport/access network, field
+work, NOC and service ops. About 3 MB in total.
 
 ---
 
@@ -37,7 +38,7 @@ interface came back **UP** with **normal optics** and **no alarms**, but **no tr
 knows the fix — *bounce the port, don't replace the SFP or reboot* — and that knowledge exists **only** in:
 
 * a Teams thread — `teams/messages/chan-noc-transport.jsonl` (also as HTML in `teams/exports/`),
-* an email — `email_outlook/Sent Items/2025-10-14 1145 - RE TRN-042 traffic not recovering after SFP replacement.msg`
+* an email — `email_outlook/Sent Items/2025-10-14 1140 - RE TRN-042 traffic not recovering after SFP replacement.msg`
   (a real Outlook `.msg` file),
 * a scanned personal note — `documents/expert_notes/2019-11_transmission_upgrade_notes.pdf`,
 
@@ -51,14 +52,17 @@ and is **contradicted** by a stale Confluence page and a stale ITSM article.
 
 ## 2. `answer_key/` — documented vs. never documented
 
-* `questions.jsonl` — 21 questions. Each has `status`:
-  * `documented` (10) — `documented_in` lists the exact artefacts (message-id, email subject, PDF path);
-  * `not_documented` (9) — the answer **does not exist anywhere** in the corpus; the correct agent
+* `questions.jsonl` — 15 questions. Each has `status`:
+  * `documented` (6) — `documented_in` lists the exact artefacts (message-id + `created_at`, email
+    subject + Message-ID + sent time + path, PDF path);
+  * `not_documented` (7) — the answer **does not exist anywhere** in the corpus; the correct agent
     behaviour is to say so and hand off to a human;
   * `answerable from network data` (2) — control questions answered by the network records, not documents.
-* `cases.jsonl` — 11 operational cases (symptom → right next action) tagged
-  `documented` (7) / `part_documented` (2, e.g. two experts disagree) / `not_documented` (2).
+* `cases.jsonl` — 9 operational cases (symptom → right next action) tagged
+  `documented` (5) / `part_documented` (2, e.g. two experts disagree) / `not_documented` (2).
 * `qa_matrix.csv`, `cases_matrix.csv` — flat scoring sheets.
+* IDs are stable: off-domain items (energy / data-centre: QA-013, QA-016, QA-017, QA-018, QA-036,
+  QA-038, CASE-005, CASE-006) were removed and their numbers are not reused.
 
 **Scoring principle:** for `documented` items, a good answer names the right action **and** cites a real
 source. For `not_documented` items, a confident answer with no source is a *failure*; the win is
@@ -69,29 +73,34 @@ source. For `not_documented` items, a confident answer with no source is a *fail
 ## 3. What is in the corpus
 
 ### Teams — `teams/`
-6 channels, ~801 messages: `NOC-Transport`, `Field-Ops-FI`, `SRE-Infra`, `Access-North`,
-`Energy-Procurement`, `Service-Ops`. Per channel: `.jsonl` (raw messages with thread ids, authors, roles,
-reactions, edits, attachments) and an `.html` "conversation export"; `channels.json` is the directory.
+4 channels, 582 messages: `NOC-Transport` (164), `Field-Ops-FI` (139), `Access-North` (107),
+`Service-Ops` (172). Per channel: `.jsonl` (raw messages with thread ids, authors, roles, reactions,
+edits, attachments) and an `.html` "conversation export"; `channels.json` is the directory.
 Inline evidence attachments (`attachments/current/teams/`, e.g. `TRN-042_1-1-3_port.txt`, a "screenshot").
+Every message carries its exact send time (`created_at`, to the second); replies sit in the conversation
+(`conversation_id`) they answer and are strictly ordered in time. The canonical TRN-042 thread is Elisa's
+`teams_chat.json` verbatim, at her local times 09:14–09:27 on 2025-10-14 (06:14–06:27 UTC).
 
 The channels deliberately contain, besides the useful knowledge: unrelated chatter, the same fact stated
 in two places, advice that later becomes outdated, and two experts who disagree.
 
 ### Email — `email_outlook/`
-**148 real Outlook `.msg` files** (OLE2/CFB compound documents, hand-written by the generator without any
-libraries) split into `Inbox/` and `Sent Items/`. Each has Subject, body, HTML body, sender, recipients,
-dates, Message-ID, transport headers. Attachments are copied into `email_outlook/Attachments/` and
-`attachments/current/email_outlook/`. `mail_export_index.json` lists them like an Exchange export.
+**145 real Outlook `.msg` files** (94 in `Inbox/`, 51 in `Sent Items/`; OLE2/CFB compound documents,
+hand-written by the generator without any libraries). Each has Subject, body, HTML body, sender,
+recipients, Message-ID, transport headers, and its exact send time (submit time in UTC; the `Date:` header
+and the file name in Finnish local time). Attachments are copied into `email_outlook/Attachments/` and
+`attachments/current/email_outlook/`. `mail_export_index.json` lists them like an Exchange export
+(folder, file, Message-ID, subject, `sent_at` UTC).
 
 ### Documents — `documents/`
 * `expert_notes/*.pdf` — 2 valid PDF 1.4 "scanned" expert notes (the Gen1 upgrade notes; the Ivalo site
   access drawing).
-* `confluence/*.html` — 4 knowledge-base pages, several **stale** (MTU 9114, BESS "hold 80% SOC",
-  "Kemi not in register", "replace the SFP again").
+* `confluence/*.html` — 3 knowledge-base pages, several **stale** (MTU 9114, "Kemi not in register",
+  "replace the SFP again").
 
 ### Structured knowledge — `itsm/`, `jira/`, `vendors/`, `admin/`
 * `itsm/tickets.jsonl` 621 tickets (incl. `INC00420001`, the TRN-042 incident),
-  `itsm/knowledge_articles.jsonl` 5 KB articles (**4 conflict** with newer chat/email truth — each carries a
+  `itsm/knowledge_articles.jsonl` 4 KB articles (**3 conflict** with newer chat/email truth — each carries a
   `conflict_note`), `itsm/change_calendar.jsonl`.
 * `jira/issues.jsonl` 262 issues, incl. `NETOPS-4821` "Document TRN-042 workaround" — still **open**
   (the knowledge was never actually written into a runbook) — and `IMPL-1088` (Kemi access register missing).
@@ -100,23 +109,26 @@ dates, Message-ID, transport headers. Attachments are copied into `email_outlook
 
 ### Supporting context (so answers are grounded in something real)
 * `network/registry.json` — the node inventory facts (e.g. TRN-042 = Kemi, Gen1, `TNC-1X`).
-* `knowledge_graph/` — a **gold** extracted view used only for scoring: `assertions.jsonl` (34
-  `valid_from`/`valid_to` assertions with source refs; see §5a), `contradictions.json`, `access_register.jsonl`,
-  `entity_aliases.csv` ("the old units" → `TNC-1X`, "TRE" → `FI-TRE-DC2`, …),
-  `drop_rate_sheet.csv` (calls and hallway talks are **dropped at source** — not searchable at all).
-  Treat this as the answer the pipeline should have produced, not as an input.
-* The full network/telemetry/CMDB/ITSM-simulation layers are still generated (the brief's five time-aware
-  layers, 90 MB in total) so a demo can show *why* a question comes up — e.g. the TRN-042 traffic chart
-  (`telemetry/case_trn042_counters_hourly.csv`) or the alarm trace (`network/alarms/trn042_case.json`).
-  If you only need documentation, just point the agent at `teams/ email_outlook/ documents/ itsm/ jira/
+* `network/alarms/` — the canonical NMS alarm stream (`alarms.jsonl`, 429 rows), the TRN-042 trace
+  (`trn042_case.json`, with the shared case timeline) and the alarm policy (`alarm_policy.yaml`).
+  `kind: alarm` rows have `raised`/`cleared`; `kind: event` rows (module inserted, link up, admin
+  enable/disable, …) are point events with `state: event` and `cleared: null`.
+* `network/events/device_events.jsonl` — 37 maintenance / change / decommission events
+  (`record_time` = `event_time`).
+* `telemetry/` — 15-min PM samples for the transport ports (`interface_counters_trn_15min.ndjson.gz`,
+  TRN-* port 1/1/3, 2025-10-07 → 2025-10-21 inclusive, one week either side of the case), the TRN-042
+  trace (`case_trn042_counters_*.jsonl`, `case_trn042_counters_hourly.csv`), `_case.json` and the
+  collector spec (`spec/interface_counters.yml`, where "traffic zero" is defined).
+* `knowledge_graph/` — a **gold** extracted view used only for scoring: `assertions.jsonl` (24
+  `valid_from`/`valid_to` assertions with source refs; see §5a), `contradictions.json` (3),
+  `derived_insights.json` (2 cross-layer insights), `access_register.jsonl`, `entity_aliases.csv`
+  ("the old units" → `TNC-1X`, "the Kemi barrier" → `SEG-042`, …), `drop_rate_sheet.csv` (calls and
+  hallway talks are **dropped at source** — not searchable at all). Treat this as the answer the pipeline
+  should have produced, not as an input. Assertion IDs are stable: ASR-0001 is the TRN-042 rule, ASR-0024
+  the Kemi code lock; the IDs of removed off-domain assertions (ASR-0007…0011, 0022, 0027, 0029, 0033,
+  0034) are retired, not reused.
+* If you only need documentation, just point the agent at `teams/ email_outlook/ documents/ itsm/ jira/
   vendors/`.
-
-### `external/` — real open data (optional)
-* `external/fmi/observations_15min.jsonl` — **real** FMI weather near each DC site, 15-min, full year
-  (<https://opendata.fmi.fi/wfs>, no key; the API caps a query at 7 days, so the fetcher chunks).
-* `external/nordpool/fi_price_15min.jsonl` — **real** Nord Pool FI prices via Elering
-  (<https://dashboard.elering.ee/api/nps/price>, no key).
-* Fingrid needs a free API key (`FINGRID_API_KEY`); not included.
 
 ---
 
@@ -124,9 +136,9 @@ dates, Message-ID, transport headers. Attachments are copied into `email_outlook
 
 | Kind | Example | Where |
 |---|---|---|
-| **documented once** | DC2 power spikes are a metering artefact | Teams `SRE-Infra`, 2025-11-18 |
+| **documented once** | the Gen2 scope correction ("so it's not only Gen1") | Teams `NOC-Transport`, 2026-03-10 |
 | **documented in 2 places** | TRN-042 port bounce | Teams + email (+ PDF) |
-| **outdated** | "holding 80% SOC", "MTU 9114", "Pekka has the key", "DLQ: raise memory to 4Gi" | Teams/Confluence/ITSM vs. newer email/Teams |
+| **outdated** | "MTU 9114", "Pekka has the key", "reboot the node", "only the old units" | Teams/Confluence/ITSM vs. newer email/Teams |
 | **contradictory** | power-cycle a KMAX-4K: yes / never | `chan-access-north` 2026-06-02 |
 | **never documented** | fixed firmware version for the forwarding bug; out-of-hours access procedure; cabling repair after rodent damage; RF channel plan; weekend vendor escalation | nothing anywhere → `answer_key` |
 
@@ -135,15 +147,27 @@ dates, Message-ID, transport headers. Attachments are copied into `email_outlook
 ## 5. Regenerating & checking
 
 ```bash
-python3 mock_data/generate.py                  # ~18 s, 90 MB, deterministic
-python3 mock_data/generate.py --with-external  # also re-fetches FMI + Nord Pool (~2 min)
-python3 mock_data/scripts/verify_msg.py mock_data   # must print "148 files, 148 valid, 0 broken"
+python3 mock_data/generate.py                       # ~1 s, ~3 MB, deterministic (byte-identical reruns)
+python3 mock_data/scripts/verify_msg.py mock_data   # must print "145 files, 145 valid, 0 broken"
+python3 mock_data/scripts/verify_temporal.py mock_data   # must print "0 violation(s)"
 ```
 
-`generate.py` also runs `scripts/verify_temporal.py` (must print `0 violation(s)`; see §5a).
+`generate.py` runs both checks. `verify_temporal.py` checks validity bounds (§5a) **and** that record
+time = event time everywhere:
 
-Requirements: Python 3.10+, standard library only. The fetchers need outbound HTTPS and skip gracefully
-offline (`external/` is optional; the documentation corpus never depends on it).
+* every assertion's `recorded_at` equals the timestamp of the artefact its `source_ref` names (Teams
+  message, `.msg` email — read from the file itself —, ITSM record, Jira issue, PDF, Confluence page);
+  unresolvable refs are violations;
+* messages in every Teams conversation are strictly increasing; email replies come after their parent;
+  the mail index, the `.msg` submit time, the `Date:` header and the file name agree;
+* event rows with `record_time` and `event_time` have them equal; alarm rows are either alarms
+  (`raised` ≤ `cleared`) or point events;
+* the TRN-042 case is causally ordered across layers (SFP inserted < advice, msg 8 < port bounce <
+  "Traffic is back", msg 9 ≤ end of the first PM bin with traffic) and the thread matches Elisa's
+  `teams_chat.json` verbatim at the same local times;
+* answer-key references carry the referenced message's real timestamp.
+
+Requirements: Python 3.10+, standard library only, no network access.
 
 ---
 
@@ -167,17 +191,44 @@ Following Elisa's reference architecture, every **graph-layer** record has valid
 * Kemi gate: the padlock was replaced by a code lock on **2026-08-03** (`valid_to` of the "Pekka has the key"
   records) but the email saying so arrived on **2026-08-18** (`recorded_at`). An agent dispatched in between
   would have acted on knowledge that was already invalid.
-* BESS mode switch: valid from 2026-04-01 00:00, announced by email at 09:00 the same day.
-* PUE reporting rule: recorded 2025-12-02, valid from 2026-01-01.
+* Ivalo access: recorded in a 2025-10-28 email, valid from the date of the attached access drawing
+  (2024-06-12).
 * Sales freeze: announced 2025-12-15 for the window 2025-12-20 → 2026-01-05 (now `expired`).
+
+Everywhere else `valid_from` = `recorded_at` = the source message's exact send time.
 
 Stale knowledge-base pages (Confluence *and* ITSM) have gold assertions with `valid_to` set and
 `superseded_by` pointing at the newer chat/email truth.
 
 **Not stamped on purpose:** raw source systems (Teams, email, ITSM, CMDB, Jira, vendor cases) carry only
 their own timestamps. A real CMDB does not know when its data went stale; inferring validity from these
-sources is the pipeline's job. Event-stream rows (alarms, device events, telemetry) are point-in-time
-(record time = event time).
+sources is the pipeline's job.
+
+### Time conventions
+
+* **Event stream** (Teams, email, ITSM, Jira, vendor cases, alarms, device events): exact UTC timestamps
+  to the second — record time = event time. Nothing is snapped to a grid.
+* **Telemetry PM samples** are the only grid-aligned data: one sample per 15 minutes, and `ts` marks the
+  **start** of the interval it aggregates, `[ts, ts + 15 min)` (`sample_timestamp: interval_start` in
+  `telemetry/spec/interface_counters.yml`). In the TRN-042 case the bounce (06:23Z) and recovery (06:24Z)
+  fall in the `06:15Z` bin, which shows partial traffic; the `06:30Z` bin is normal.
+* `*_iid` fields (e.g. `created_iid`, `raised_iid`, `valid_from_iid`) are only the index of the 15-minute
+  slot that **contains** the instant (floor, slot 0 = 2025-10-01T00:00Z), for joining events to PM bins.
+
+### TRN-042 timeline (UTC, 2025-10-14; local = UTC+3)
+
+| Time | What | Where |
+|---|---|---|
+| 05:00 | SFP removed (MODULE_REMOVED alarm raised) | `network/alarms` |
+| 05:15 | new SFP inserted, link UP (point events); traffic stays at zero | `network/alarms`, `telemetry` |
+| 05:30 | LOS cleared, optical power OK | `network/alarms` |
+| 06:14:05 | Teams thread starts (Elisa's msg 1, 09:14 local) | `teams` |
+| 06:15:00 | ITSM `INC00420001`: 60 min of oper UP + zero counters | `itsm` |
+| 06:22:08 | Erkki's advice, msg 8 (source of ASR-0001) | `teams` |
+| 06:23:00 / 06:23:40 | interface disabled / enabled | `network/alarms` |
+| 06:24:00 | forwarding resumes (ticket resolved) | `telemetry`, `itsm` |
+| 06:25:04 | "Did that. Traffic is back 👍" (msg 9) | `teams` |
+| 08:40:00 | Erkki's recap email (11:40 local; source of ASR-0002) | `email_outlook/Sent Items` |
 
 ---
 
@@ -185,6 +236,6 @@ sources is the pipeline's job. Event-stream rows (alarms, device events, telemet
 
 Synthetic throughout, generated by our team with the scripts in `generators/`; nothing here was supplied by
 Elisa. Motifs from the Elisa brief (TRN-042 SFP case, locked barrier) are reproduced in spirit with invented
-names and node IDs, as the brief explicitly allows; the TRN-042 Teams thread and email are re-dated
-paraphrases of Elisa's own example files.
-`external/fmi` is FMI open data; `external/nordpool` is from Elering's public API.
+names and node IDs, as the brief explicitly allows. Two exceptions reuse Elisa's example material: the
+TRN-042 Teams thread is her `teams_chat.json` verbatim (dated 2025-10-14, her local times kept), and the
+recap email is a re-dated adaptation of her `email.txt`.

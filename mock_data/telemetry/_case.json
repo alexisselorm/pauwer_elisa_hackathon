@@ -1,4 +1,23 @@
 {
-  "sfp_iid": "2025-10-14T05:15:00Z",
-  "bounce_iid": "2025-10-14T06:30:00Z"
+  "sample_timestamp": "interval_start: a sample stamped ts covers [ts, ts + 15 min)",
+  "timeline": {
+    "sfp_removed": "2025-10-14T05:00:00Z",
+    "sfp_inserted": "2025-10-14T05:15:00Z",
+    "los_cleared": "2025-10-14T05:30:00Z",
+    "chat_start": "2025-10-14T06:14:05Z",
+    "ticket_opened": "2025-10-14T06:15:00Z",
+    "advice": "2025-10-14T06:22:08Z",
+    "bounce": "2025-10-14T06:23:00Z",
+    "bounce_enabled": "2025-10-14T06:23:40Z",
+    "recovered": "2025-10-14T06:24:00Z",
+    "traffic_back_msg": "2025-10-14T06:25:04Z",
+    "recap_email": "2025-10-14T08:40:00Z"
+  },
+  "first_down_bin": "2025-10-14T05:00:00Z",
+  "first_up_zero_traffic_bin": "2025-10-14T05:15:00Z",
+  "traffic_zero_threshold_met": "2025-10-14T06:15:00Z",
+  "partial_recovery_bin": "2025-10-14T06:15:00Z",
+  "partial_recovery_in_octets_mbps": 1.0129,
+  "first_normal_bin": "2025-10-14T06:30:00Z",
+  "first_normal_in_octets_mbps": 2.4565
 }

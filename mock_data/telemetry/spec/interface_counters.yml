@@ -6,10 +6,13 @@ metadata:
   name: interface-counters
 spec:
   poll_interval_seconds: 900
+  # Each sample aggregates one poll interval. `ts` is the interval START: a sample stamped
+  # 06:15:00Z describes [06:15:00Z, 06:30:00Z). Counters are mean rates over that interval.
+  sample_timestamp: interval_start
   olt_style_query: true
   metrics: [in_octets_mbps, out_octets_mbps, rx_power_dbm, oper_status]
   thresholds:
-    # THIS is where 'traffic zero' is defined for transport ports, not in the NMS banks
+    # THIS is where 'traffic zero' is defined for transport ports, not in the NMS alarm policy
     traffic_zero:
       window_minutes: 60
       condition: 'oper_status == UP and in_octets_mbps < 0.01'

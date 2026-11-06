@@ -26,16 +26,6 @@ gate at Kemi,SEG-042,entity
 Kemi gate,SEG-042,entity
 the Kemi barrier,SEG-042,entity
 private road to the Kemi transport room,SEG-042,entity
-Tampere DC,FI-TRE-DC2,entity
-TRE,FI-TRE-DC2,entity
-DC2,FI-TRE-DC2,entity
-FI-TRE-DC2,FI-TRE-DC2,entity
-the secondary site,FI-TRE-DC2,entity
-Helsinki DC1,FI-HEL-DC1,entity
-HEL,FI-HEL-DC1,entity
-DC1,FI-HEL-DC1,entity
-FI-HEL-DC1,FI-HEL-DC1,entity
-the primary,FI-HEL-DC1,entity
 forwarding state,TOPIC:forwarding_state_after_sfp_swap,entity
 forwarding plane state,TOPIC:forwarding_state_after_sfp_swap,entity
 FIB state,TOPIC:forwarding_state_after_sfp_swap,entity
@@ -60,11 +50,6 @@ optical module,concept:sfp,concept
 transceiver,concept:sfp,concept
 the module,concept:sfp,concept
 10G optic,concept:sfp,concept
-the power meter,concept:power_meter,concept
-meter,concept:power_meter,concept
-PDU meter,concept:power_meter,concept
-electricity meter,concept:power_meter,concept
-the kWh meter,concept:power_meter,concept
 hardware model,concept:hw_model,concept
 hardware_class,concept:hw_model,concept
 hw,concept:hw_model,concept

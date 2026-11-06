@@ -1,24 +1,18 @@
 {
-  "entities": 172,
-  "assertions": 34,
+  "entities": 166,
+  "assertions": 24,
   "by_status": {
-    "believed_true": 18,
+    "believed_true": 13,
     "disputed": 3,
-    "expired": 2,
-    "superseded": 11
+    "expired": 1,
+    "superseded": 7
   },
   "by_topic": {
     "access_keys": 4,
-    "bess_arbitrage": 4,
-    "dlq_mem_quota": 2,
     "forwarding_state_after_sfp_swap": 12,
-    "gpu_maintenance_spikes": 1,
-    "job_requeue_policy": 1,
     "maintenance_freeze": 1,
-    "meter_swap": 1,
     "mtu_change": 4,
     "mw_throughput": 2,
-    "pue_reporting": 1,
     "sfp_replacement": 1
   }
 }

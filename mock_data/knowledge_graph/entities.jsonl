@@ -158,15 +158,9 @@
 {"entity_id": "7750 SR-14s", "type": "hw_model", "generation": null, "valid_from": "2018-01-01T00:00:00Z", "valid_to": null}
 {"entity_id": "TOPIC:forwarding_state_after_sfp_swap", "type": "topic", "label": "forwarding_state_after_sfp_swap", "valid_from": "2018-01-01T00:00:00Z", "valid_to": null}
 {"entity_id": "TOPIC:sfp_replacement", "type": "topic", "label": "sfp_replacement", "valid_from": "2018-01-01T00:00:00Z", "valid_to": null}
-{"entity_id": "TOPIC:bess_arbitrage", "type": "topic", "label": "bess_arbitrage", "valid_from": "2018-01-01T00:00:00Z", "valid_to": null}
-{"entity_id": "TOPIC:gpu_maintenance_spikes", "type": "topic", "label": "gpu_maintenance_spikes", "valid_from": "2018-01-01T00:00:00Z", "valid_to": null}
-{"entity_id": "TOPIC:meter_swap", "type": "topic", "label": "meter_swap", "valid_from": "2018-01-01T00:00:00Z", "valid_to": null}
 {"entity_id": "TOPIC:mw_throughput", "type": "topic", "label": "mw_throughput", "valid_from": "2018-01-01T00:00:00Z", "valid_to": null}
 {"entity_id": "TOPIC:upgrade_sfp_400g", "type": "topic", "label": "upgrade_sfp_400g", "valid_from": "2018-01-01T00:00:00Z", "valid_to": null}
-{"entity_id": "TOPIC:dlq_mem_quota", "type": "topic", "label": "dlq_mem_quota", "valid_from": "2018-01-01T00:00:00Z", "valid_to": null}
 {"entity_id": "TOPIC:mtu_change", "type": "topic", "label": "mtu_change", "valid_from": "2018-01-01T00:00:00Z", "valid_to": null}
 {"entity_id": "TOPIC:route_discard", "type": "topic", "label": "route_discard", "valid_from": "2018-01-01T00:00:00Z", "valid_to": null}
 {"entity_id": "TOPIC:maintenance_freeze", "type": "topic", "label": "maintenance_freeze", "valid_from": "2018-01-01T00:00:00Z", "valid_to": null}
 {"entity_id": "TOPIC:access_keys", "type": "topic", "label": "access_keys", "valid_from": "2018-01-01T00:00:00Z", "valid_to": null}
-{"entity_id": "TOPIC:pue_reporting", "type": "topic", "label": "pue_reporting", "valid_from": "2018-01-01T00:00:00Z", "valid_to": null}
-{"entity_id": "TOPIC:job_requeue_policy", "type": "topic", "label": "job_requeue_policy", "valid_from": "2018-01-01T00:00:00Z", "valid_to": null}

@@ -224,7 +224,7 @@
   "case": {
     "device": "TRN-042",
     "sfp_replaced": "2025-10-14T05:15:00Z",
-    "resolved": "2025-10-14T06:45:00Z"
+    "resolved": "2025-10-14T06:24:00Z"
   },
   "segments": [
     {
@@ -329,7 +329,7 @@
       "installed": "2019-04-18",
       "notes": "duct route shared with chain operator",
       "private_road": true,
-      "barrier": "boom",
+      "barrier": "gate",
       "access_notes": "site reachable only via private road; see access register",
       "valid_from": "2019-04-18T00:00:00Z",
       "valid_to": null
@@ -406,7 +406,7 @@
       "installed": "2022-03-07",
       "notes": "",
       "private_road": true,
-      "barrier": "boom",
+      "barrier": "gate",
       "access_notes": "site reachable only via private road; see access register",
       "valid_from": "2022-03-07T00:00:00Z",
       "valid_to": null
@@ -468,7 +468,7 @@
       "installed": "2024-09-03",
       "notes": "",
       "private_road": true,
-      "barrier": "gate",
+      "barrier": "boom",
       "access_notes": "site reachable only via private road; see access register",
       "valid_from": "2024-09-03T00:00:00Z",
       "valid_to": null
