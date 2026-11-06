@@ -15,7 +15,7 @@ from mcp.server.auth.provider import AccessToken
 from mcp.server.auth.settings import AuthSettings
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
-from pydantic import AnyHttpUrl, SecretStr
+from pydantic import AnyHttpUrl, BaseModel, SecretStr
 
 from silentctx import __version__
 
@@ -25,6 +25,12 @@ INSTRUCTIONS = (
     "from experts' chat and email, bound to network entities and valid over time. "
     "Resolve entities first, then read context as of a time. Cite assertion ids."
 )
+
+
+class PingResult(BaseModel):
+    server: str
+    version: str
+    agent_id: str | None
 
 
 class StaticTokenVerifier:
@@ -74,8 +80,8 @@ def create_mcp_server(tokens: dict[str, SecretStr]) -> FastMCP:
     )
 
     @server.tool()
-    async def ping() -> dict[str, str | None]:
+    async def ping() -> PingResult:
         """Check the connection. Returns the server version and your agent id."""
-        return {"server": SERVER_NAME, "version": __version__, "agent_id": current_agent_id()}
+        return PingResult(server=SERVER_NAME, version=__version__, agent_id=current_agent_id())
 
     return server

@@ -5,16 +5,30 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Any
 
+from asgi_correlation_id import correlation_id
 from fastapi import FastAPI, Request
-from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.responses import JSONResponse
 
-from silentctx.logging import get_logger
+from silentctx.logging import REQUEST_ID_HEADER, get_logger
 
 PROBLEM_JSON = "application/problem+json"
 log = get_logger(__name__)
+
+
+class Problem(BaseModel):
+    """RFC 9457 problem document. Extension members are allowed (e.g. `errors`)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    type: str = "about:blank"
+    title: str
+    status: int = Field(ge=400, le=599)
+    detail: str | None = None
+    instance: str | None = None
+    request_id: str | None = None
 
 
 class ProblemError(Exception):
@@ -47,20 +61,20 @@ def problem_response(
     headers: dict[str, str] | None = None,
     **extensions: Any,
 ) -> JSONResponse:
-    body: dict[str, Any] = {
-        "type": type_,
-        "title": title or HTTPStatus(status).phrase,
-        "status": status,
-        "instance": request.url.path,
-    }
-    if detail is not None:
-        body["detail"] = detail
-    request_id = getattr(request.state, "request_id", None)
-    if request_id:
-        body["request_id"] = request_id
-    body.update(extensions)
+    problem = Problem(
+        type=type_,
+        title=title or HTTPStatus(status).phrase,
+        status=status,
+        detail=detail,
+        instance=request.url.path,
+        request_id=correlation_id.get(),
+        **extensions,
+    )
     return JSONResponse(
-        jsonable_encoder(body), status_code=status, media_type=PROBLEM_JSON, headers=headers
+        problem.model_dump(mode="json", exclude_none=True),
+        status_code=status,
+        media_type=PROBLEM_JSON,
+        headers=headers,
     )
 
 
@@ -97,16 +111,13 @@ async def _validation_error(request: Request, exc: Exception) -> JSONResponse:
 
 
 async def _unhandled_error(request: Request, exc: Exception) -> JSONResponse:
-    # Starlette runs this handler outside the user middleware, so the request id is no
-    # longer bound to the log context: pass it explicitly.
-    log.exception(
-        "unhandled_error",
-        error_type=type(exc).__name__,
-        request_id=getattr(request.state, "request_id", None),
-        path=request.url.path,
-    )
+    log.exception("unhandled_error", error_type=type(exc).__name__, path=request.url.path)
+    # Starlette sends a 500 from outside the user middleware, so the correlation-id
+    # middleware can't add its header: add it here (as asgi-correlation-id documents).
+    request_id = correlation_id.get()
+    headers = {REQUEST_ID_HEADER: request_id} if request_id else None
     # Never leak internals in the body; the request id links the response to the log.
-    return problem_response(request, 500, detail="An unexpected error occurred.")
+    return problem_response(request, 500, detail="An unexpected error occurred.", headers=headers)
 
 
 def install_error_handlers(app: FastAPI) -> None:

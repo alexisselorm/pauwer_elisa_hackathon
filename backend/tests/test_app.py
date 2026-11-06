@@ -14,6 +14,7 @@ from silentctx.errors import ProblemError
 from silentctx.main import create_app
 from tests.conftest import AGENT_TOKEN, OTHER_TOKEN
 
+RID = "0f8fad5bd9cb469fa16570867728950e"  # a valid uuid4 hex
 MCP_HEADERS = {
     "Accept": "application/json, text/event-stream",
     "Content-Type": "application/json",
@@ -65,7 +66,7 @@ def test_readyz_is_503_when_neo4j_is_down(client: TestClient) -> None:
     body = r.json()
     assert body["status"] == "down"
     assert body["checks"]["neo4j"]["status"] == "down"
-    assert body["checks"]["migrations"]["status"] == "down"
+    assert body["checks"]["schema"]["status"] == "down"
     assert body["checks"]["llm"] == {
         "status": "degraded",
         "missing": ["ANTHROPIC_API_KEY", "FEATHERLESS_API_KEY"],
@@ -83,8 +84,8 @@ def test_request_id_is_generated_and_echoed(client: TestClient) -> None:
     r = client.get("/healthz")
     generated = r.headers["x-request-id"]
     assert len(generated) == 32
-    r = client.get("/healthz", headers={"X-Request-ID": "slack-evt-123"})
-    assert r.headers["x-request-id"] == "slack-evt-123"
+    r = client.get("/healthz", headers={"X-Request-ID": RID})
+    assert r.headers["x-request-id"] == RID
 
 
 def test_unsafe_request_id_is_replaced(client: TestClient) -> None:
@@ -104,10 +105,10 @@ def _assert_problem(r: Any, status: int) -> dict[str, Any]:
 
 
 def test_404_is_problem_json(client: TestClient) -> None:
-    body = _assert_problem(client.get("/nope", headers={"X-Request-ID": "rid-1"}), 404)
+    body = _assert_problem(client.get("/nope", headers={"X-Request-ID": RID}), 404)
     assert body["title"] == "Not Found"
     assert body["instance"] == "/nope"
-    assert body["request_id"] == "rid-1"
+    assert body["request_id"] == RID
     assert "detail" not in body
 
 
@@ -127,10 +128,11 @@ def test_problem_error_carries_extensions(client: TestClient) -> None:
 
 
 def test_unhandled_error_is_500_without_internals(client: TestClient) -> None:
-    r = client.get("/_test/boom", headers={"X-Request-ID": "rid-boom"})
+    r = client.get("/_test/boom", headers={"X-Request-ID": RID})
     body = _assert_problem(r, 500)
     assert "secret internals" not in r.text
-    assert body["request_id"] == "rid-boom"
+    assert r.headers["x-request-id"] == RID
+    assert body["request_id"] == RID
 
 
 # --- MCP mount -----------------------------------------------------------------------

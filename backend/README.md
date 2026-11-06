@@ -33,11 +33,15 @@ Connect an agent (the same client our ops agent uses):
 ```python
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
-client = MultiServerMCPClient({"silentctx": {
-    "transport": "streamable_http",
-    "url": "http://localhost:8000/mcp",
-    "headers": {"Authorization": "Bearer <token>"},
-}})
+client = MultiServerMCPClient(
+    {
+        "silentctx": {
+            "transport": "streamable_http",
+            "url": "http://localhost:8000/mcp",
+            "headers": {"Authorization": "Bearer <token>"},
+        }
+    }
+)
 tools = await client.get_tools()
 ```
 
