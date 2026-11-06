@@ -20,9 +20,10 @@ from silentctx import __version__, health
 from silentctx.config import Settings, get_settings
 from silentctx.errors import install_error_handlers
 from silentctx.graph.driver import GraphState, create_driver
+from silentctx.llm.embeddings import FeatherlessEmbedder
 from silentctx.logging import REQUEST_ID_HEADER, configure_logging, get_logger
 from silentctx.mcp.server import create_mcp_server
-from silentctx.state import AppState
+from silentctx.state import AppState, EmbeddingState
 
 log = get_logger(__name__)
 
@@ -38,11 +39,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         driver = create_driver(settings)
         graph = GraphState(driver=driver, settings=settings)
         bootstrap = asyncio.create_task(graph.bootstrap(), name="neo4j-bootstrap")
+        embeddings = EmbeddingState(embedder=FeatherlessEmbedder.from_settings(settings))
+        probe = asyncio.create_task(embeddings.run_probe(), name="embedding-probe")
         try:
             settings.state_dir.mkdir(parents=True, exist_ok=True)
             async with AsyncSqliteSaver.from_conn_string(str(settings.checkpoint_db)) as saver:
                 await saver.setup()
-                app.state.ctx = AppState(settings=settings, graph=graph, checkpointer=saver)
+                app.state.ctx = AppState(
+                    settings=settings, graph=graph, checkpointer=saver, embeddings=embeddings
+                )
                 async with mcp_server.session_manager.run():
                     log.info(
                         "startup_complete",
@@ -52,9 +57,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     )
                     yield
         finally:
-            bootstrap.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await bootstrap
+            for task in (probe, bootstrap):
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
             await driver.close()
             log.info("shutdown_complete")
 

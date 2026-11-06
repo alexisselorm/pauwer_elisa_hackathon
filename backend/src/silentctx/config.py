@@ -57,6 +57,8 @@ class Settings(BaseSettings):
     embedding_model: str = "Qwen/Qwen3-Embedding-8B"
     embedding_dim: int = Field(default=1024, ge=32, le=4096)
     embedding_max_concurrency: int = Field(default=2, ge=1)
+    embedding_batch_size: int = Field(default=32, ge=1, le=2048)
+    embedding_timeout_s: float = Field(default=30.0, gt=0)
     featherless_api_key: SecretStr | None = None
 
     # --- Data and state ------------------------------------------------------------------
@@ -120,6 +122,8 @@ class Settings(BaseSettings):
             raise ValueError(
                 "model must be a 'provider:model' string, e.g. anthropic:claude-sonnet-5-5"
             )
+        if provider not in _PROVIDER_KEY_FIELD:
+            raise ValueError(f"provider must be one of {', '.join(sorted(_PROVIDER_KEY_FIELD))}")
         return v
 
     @property

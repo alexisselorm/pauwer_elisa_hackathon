@@ -90,6 +90,11 @@ def test_model_must_be_provider_colon_model(
         make_settings(chat_model=model)
 
 
+def test_model_provider_must_be_supported(make_settings: Callable[..., Settings]) -> None:
+    with pytest.raises(ValidationError, match="provider must be one of"):
+        make_settings(fast_model="mistral:large")
+
+
 def test_missing_llm_keys(make_settings: Callable[..., Settings]) -> None:
     s = make_settings()
     assert s.missing_llm_keys() == ["ANTHROPIC_API_KEY", "FEATHERLESS_API_KEY"]

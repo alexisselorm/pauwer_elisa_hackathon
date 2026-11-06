@@ -84,6 +84,20 @@ async def readyz(app_state: AppStateDep) -> JSONResponse:
         else Check(status=CheckStatus.OK)
     )
 
+    emb = app_state.embeddings
+    if emb.embedder is None:
+        checks["embeddings"] = Check(
+            status=CheckStatus.DEGRADED, error="no FEATHERLESS_API_KEY: graph-only retrieval"
+        )
+    elif not emb.done:
+        checks["embeddings"] = Check(status=CheckStatus.DEGRADED, error="probe running")
+    elif emb.error is not None:
+        checks["embeddings"] = Check(
+            status=CheckStatus.DEGRADED, error=f"{emb.error} (graph-only retrieval)"
+        )
+    else:
+        checks["embeddings"] = Check(status=CheckStatus.OK)
+
     readiness = Readiness.from_checks(checks)
     code = 503 if readiness.status is CheckStatus.DOWN else 200
     return JSONResponse(readiness.model_dump(mode="json", exclude_none=True), status_code=code)
