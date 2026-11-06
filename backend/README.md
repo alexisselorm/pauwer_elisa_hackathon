@@ -53,6 +53,24 @@ client = MultiServerMCPClient(
 tools = await client.get_tools()
 ```
 
+## Seeding the graph
+
+```bash
+uv run silentctx seed --network                         # network layers (demo profile)
+uv run silentctx seed --network --gold --profile full   # + gold answers, for the eval only
+uv run silentctx seed --wipe-gold                       # drop gold before scoring extraction
+```
+
+Loads `DATA_DIR` (mock_data): devices, segments, sites, hardware models and generations,
+as-running snapshots and links (all with validity), plus device events and alarms as
+events (R1). Gold assertions and the access register are eval-only and refused with the
+demo profile. Every run converges on the source: rows are MERGEd, rows that left the source
+are pruned, and a re-run changes nothing. The temporal checks (`graph/checks.py`) run at the
+end; the command exits 1 on any violation. The JSON report goes to stdout, logs to stderr.
+
+The demo profile (`seed/profiles.py`) also defines what the historical backfill must skip:
+every corpus source about the forwarding stall after an SFP swap (plan 001 §3.5).
+
 ## Checks
 
 ```bash
@@ -67,11 +85,13 @@ uv run pytest                        # + Neo4j via testcontainers (Docker, ~1 mi
 src/silentctx/
   main.py config.py logging.py errors.py health.py state.py cli.py
   domain/       time rules R1-R10 (time.py), shared types (models.py)
-  graph/        driver + readiness, schema.py, migrations/V*.cypher
+  graph/        driver + readiness, schema.py, checks.py, cypher/vector.py, migrations/V*.cypher
+  seed/         mock_data loader, demo/full profiles (silentctx seed)
+  llm/          chat-model factory, Featherless embedder
   mcp/          MCP server (auth, tools)
   slack/        Bolt app (bot.py)
   sim/          network simulator (app.py)
-  ingest/ extraction/ validation/ agents/ telemetry/ eval/ llm/
+  ingest/ extraction/ validation/ agents/ telemetry/ eval/
 ```
 
 ## Schema migrations

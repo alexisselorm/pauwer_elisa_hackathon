@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import sys
 from collections.abc import MutableMapping
-from typing import Any
+from typing import Any, TextIO
 
 import structlog
 from asgi_correlation_id import correlation_id
@@ -22,8 +22,11 @@ def _add_request_id(
     return event_dict
 
 
-def configure_logging(level: str = "INFO", *, json: bool = True) -> None:
-    """Route both structlog and stdlib logging (uvicorn, neo4j, httpx) through one renderer."""
+def configure_logging(
+    level: str = "INFO", *, json: bool = True, stream: TextIO | None = None
+) -> None:
+    """Route both structlog and stdlib logging (uvicorn, neo4j, httpx) through one renderer.
+    Services log to stdout; CLI commands pass `sys.stderr` so stdout stays machine-readable."""
     shared: list[Any] = [
         structlog.contextvars.merge_contextvars,
         _add_request_id,
@@ -49,7 +52,7 @@ def configure_logging(level: str = "INFO", *, json: bool = True) -> None:
             renderer,
         ],
     )
-    handler = logging.StreamHandler(sys.stdout)
+    handler = logging.StreamHandler(stream or sys.stdout)
     handler.setFormatter(formatter)
 
     root = logging.getLogger()

@@ -2736,6 +2736,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "slack-bolt" },
     { name = "structlog" },
+    { name = "typer" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -2772,6 +2773,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.16.2" },
     { name = "slack-bolt", specifier = "==1.30.0" },
     { name = "structlog", specifier = ">=26.1.0" },
+    { name = "typer", specifier = ">=0.28.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.54.0" },
 ]
 

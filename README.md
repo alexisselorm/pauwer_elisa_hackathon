@@ -22,6 +22,8 @@ Needs Docker with Compose v2.24+.
      from the Slack app (SL-0);
    - `ANTHROPIC_API_KEY` and `FEATHERLESS_API_KEY` (without them `/readyz` reports `degraded`).
 2. `docker compose up --build`
+3. Load the network into the graph (idempotent, safe to repeat):
+   `docker compose exec api silentctx seed --network --profile demo`
 
 | Service | URL | Healthy when |
 |---|---|---|

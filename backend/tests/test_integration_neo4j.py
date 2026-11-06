@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable, Iterator
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -117,7 +118,8 @@ async def test_rerunning_migrations_is_a_no_op(neo4j_url: str, settings: Setting
         neo4j_url,
         "MATCH (m:__Neo4jMigration) WHERE m.version <> 'BASELINE' RETURN m.version AS v",
     )
-    assert sorted(r["v"] for r in versions) == ["0001", "0002"]
+    expected = sorted(p.name[1:5] for p in schema.MIGRATIONS_DIR.glob("V*.cypher"))
+    assert sorted(r["v"] for r in versions) == expected
 
 
 def test_restart_applies_nothing_and_is_ready(settings: Settings) -> None:
@@ -208,3 +210,105 @@ async def test_vector_search_rejects_bad_arguments(settings: Settings) -> None:
             await vector.search(driver, "neo4j", vector.ASSERTIONS, _unit(0), 0)
         with pytest.raises(ValueError, match="can't filter"):
             await vector.search(driver, "neo4j", vector.CHUNKS, _unit(0), 1, status_in=["x"])
+
+
+# --- Seed loader (BE-1.4) ----------------------------------------------------------------------
+
+MOCK_DATA = Path(__file__).parents[2] / "mock_data"
+
+
+async def _snapshot(url: str) -> dict[str, Any]:
+    """Every seed/gold node with its labels, properties and outgoing relationships."""
+    rows = _query(
+        url,
+        "MATCH (n) WHERE n.origin IN ['seed', 'gold'] "
+        "OPTIONAL MATCH (n)-[r]->(m) "
+        "WITH n, r, m ORDER BY type(r), coalesce(m.entity_id, m.assertion_id, m.record_id) "
+        "RETURN coalesce(n.entity_id, n.assertion_id, n.event_id, n.snapshot_id, n.record_id) "
+        "AS id, "
+        "labels(n) AS labels, properties(n) AS props, "
+        "collect([type(r), properties(r), "
+        "coalesce(m.entity_id, m.assertion_id, m.record_id)]) AS rels",
+    )
+    return {r["id"]: (sorted(r["labels"]), r["props"], r["rels"]) for r in rows}
+
+
+async def test_seed_full_is_clean_idempotent_and_wipeable(
+    neo4j_url: str, make_settings: Callable[..., Settings]
+) -> None:
+    from silentctx.seed.profiles import Profile
+    from silentctx.seed.service import SeedRequest, seed
+
+    settings = make_settings(neo4j_uri=neo4j_url, neo4j_password=PASSWORD, data_dir=MOCK_DATA)
+    full = SeedRequest(network=True, gold=True, profile=Profile.FULL)
+
+    first = await seed(settings, full)
+    assert first.violations == 0, [c for c in first.checks if c.violations]
+    assert first.network is not None
+    assert first.gold is not None
+    assert first.network.entities == 169  # 166 entities + Gen1..Gen3
+    assert first.gold.gold_assertions == 24
+    before = await _snapshot(neo4j_url)
+
+    second = await seed(settings, full)
+    assert second.violations == 0
+    assert second.network is not None
+    assert second.gold is not None
+    assert second.network.pruned == {}
+    assert second.gold.pruned == {}
+    assert await _snapshot(neo4j_url) == before  # a re-run changes nothing
+
+    # Elisa's binding: node, class and activity.
+    bindings = _query(
+        neo4j_url,
+        "MATCH (:ContextAssertion {assertion_id: 'ASR-0001'})-[r:ABOUT]->(e) "
+        "RETURN r.scope AS scope, e.entity_id AS id ORDER BY scope",
+    )
+    assert [(b["scope"], b["id"]) for b in bindings] == [
+        ("activity", "TOPIC:forwarding_state_after_sfp_swap"),
+        ("applies_to", "TNC-1X"),
+        ("observed_on", "TRN-042"),
+    ]
+
+    # As of a Kemi dispatch on 2026-08-10, only the code lock is in scope (R9).
+    kemi = _query(
+        neo4j_url,
+        "WITH datetime('2026-08-10T06:00:00Z') AS t "
+        "MATCH (a:ContextAssertion)-[:ABOUT {scope: 'observed_on'}]->"
+        "(:Segment {entity_id: 'SEG-042'}) "
+        "WHERE a.valid_from <= t AND t < coalesce(a.valid_to, datetime('9999-12-31T00:00:00Z')) "
+        "RETURN a.assertion_id AS id",
+    )
+    assert [k["id"] for k in kemi] == ["ASR-0024"]
+
+    wiped = await seed(settings, SeedRequest(wipe_gold=True, profile=Profile.FULL))
+    assert wiped.gold_nodes_wiped == 29  # 24 assertions + 5 access records
+    assert _query(neo4j_url, "MATCH (n {origin: 'gold'}) RETURN count(n) AS n")[0]["n"] == 0
+    assert wiped.violations == 0
+
+
+async def test_seed_prunes_rows_that_left_the_source(
+    neo4j_url: str, make_settings: Callable[..., Settings]
+) -> None:
+    from silentctx.seed.service import SeedRequest, seed
+
+    settings = make_settings(neo4j_uri=neo4j_url, neo4j_password=PASSWORD, data_dir=MOCK_DATA)
+    _query(
+        neo4j_url,
+        "MATCH (d:Device {entity_id: 'TRN-004'}) "
+        "CREATE (:Event:Alarm {event_id: 'ALM-STALE', origin: 'seed', "
+        "event_time: datetime('2030-01-01T00:00:00Z')})-[:ON]->(d)",
+    )
+    _query(
+        neo4j_url, "CREATE (:ContextAssertion {assertion_id: 'X-EXTRACTED', origin: 'extracted'})"
+    )
+    result = await seed(settings, SeedRequest(network=True))
+    assert result.network is not None
+    assert result.network.pruned.get("events") == 1
+    assert result.violations == 0
+    # Extracted knowledge is never pruned by the seed.
+    assert (
+        _query(neo4j_url, "MATCH (n {assertion_id: 'X-EXTRACTED'}) RETURN count(n) AS n")[0]["n"]
+        == 1
+    )
+    _query(neo4j_url, "MATCH (n {assertion_id: 'X-EXTRACTED'}) DELETE n")

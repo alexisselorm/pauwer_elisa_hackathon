@@ -26,6 +26,7 @@ dependencies = [
     "pydantic-settings>=2.16.2",
     "slack-bolt==1.30.0",
     "structlog>=26.1.0",
+    "typer>=0.28.0",
     "uvicorn[standard]>=0.54.0",
 ]
 
@@ -47,6 +48,7 @@ dev = [
 ]
 
 [project.scripts]
+silentctx = "silentctx.cli:app"
 silentctx-api = "silentctx.cli:serve"
 silentctx-slackbot = "silentctx.slack.bot:main"
 silentctx-sim = "silentctx.sim.app:main"
