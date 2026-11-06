@@ -1,0 +1,50 @@
+# Slack app manifest for silentctx (plan 002 §3.1).
+# Create the app: https://api.slack.com/apps -> Create New App -> From a manifest -> paste this.
+# Socket Mode: no public URL, so there are no request URLs below.
+display_information:
+  name: silentctx
+  description: Captures resolved ops threads as dated, citable knowledge.
+  background_color: "#1f2933"
+features:
+  app_home:
+    home_tab_enabled: true # time-travel date picker (plan 002 §2)
+    messages_tab_enabled: true # ops agent DMs
+    messages_tab_read_only_enabled: false
+  bot_user:
+    display_name: silentctx
+    always_online: true
+  shortcuts:
+    - name: Capture this as knowledge
+      type: message
+      callback_id: capture_message
+      description: Store this message as a context assertion
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read
+      - channels:history
+      - channels:join # bot joins capture channels itself
+      - channels:manage # bootstrap the demo channels
+      - channels:read # resolve channel ids/names for SLACK_CAPTURE_CHANNELS
+      - chat:write
+      - chat:write.customize # demo replay personas only
+      - commands
+      - groups:history
+      - im:history
+      - im:write # route gaps/flags to the expert by DM
+      - reactions:read
+      - users:read
+settings:
+  event_subscriptions:
+    bot_events:
+      - app_home_opened
+      - app_mention
+      - message.channels
+      - message.groups
+      - message.im
+      - reaction_added
+  interactivity:
+    is_enabled: true # buttons, modals, the message shortcut
+  org_deploy_enabled: false
+  socket_mode_enabled: true
+  token_rotation_enabled: false
