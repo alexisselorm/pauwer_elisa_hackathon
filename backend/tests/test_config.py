@@ -112,3 +112,22 @@ def test_env_example_lists_every_setting_and_loads() -> None:
     assert s.anthropic_api_key is None  # empty in the example
     assert s.slack_capture_channels == []
     assert list(s.mcp_tokens) == ["ops-agent"]
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("slack_bot_token", "xapp-wrong-kind"), ("slack_app_token", "xoxb-wrong-kind")],
+)
+def test_slack_tokens_must_have_the_right_prefix(
+    make_settings: Callable[..., Settings], field: str, value: str
+) -> None:
+    with pytest.raises(ValidationError, match=field.upper()):
+        make_settings(**{field: value})
+
+
+def test_env_example_has_no_inline_comments() -> None:
+    # docker compose's env_file keeps "value  # comment" verbatim as the value.
+    example = Path(__file__).parents[1] / ".env.example"
+    for n, line in enumerate(example.read_text().splitlines(), 1):
+        if "=" in line and not line.lstrip().startswith("#"):
+            assert " #" not in line.split("=", 1)[1], f".env.example:{n}: {line}"

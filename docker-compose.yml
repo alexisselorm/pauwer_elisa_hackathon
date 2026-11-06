@@ -1,0 +1,88 @@
+# The whole demo: `docker compose up --build` (see README "Run the demo").
+# Secrets and Slack tokens come from backend/.env (copy backend/.env.example).
+# Ports are bound to 127.0.0.1 only.
+
+x-backend: &backend
+  build: ./backend
+  image: silentctx-backend:local
+  init: true
+  restart: unless-stopped
+  env_file:
+    - path: backend/.env
+      required: true
+  environment: &backend-env
+    # Inside compose these always win over backend/.env.
+    NEO4J_URI: bolt://neo4j:7687
+    NEO4J_USER: neo4j
+    NEO4J_PASSWORD: ${NEO4J_PASSWORD:-silentctx-local-dev}
+    DATA_DIR: /data/mock_data
+    STATE_DIR: /state
+
+services:
+  neo4j:
+    image: neo4j:2026.10.1-community
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-silentctx-local-dev}
+      NEO4J_server_memory_heap_max__size: 1G
+      NEO4J_server_memory_pagecache_size: 512M
+    ports:
+      - "127.0.0.1:7474:7474"
+      - "127.0.0.1:7687:7687"
+    volumes:
+      - neo4j-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p \"$${NEO4J_AUTH#neo4j/}\" 'RETURN 1' >/dev/null"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 20s
+
+  api:
+    <<: *backend
+    command: ["silentctx-api"]
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"  # REST + MCP at http://localhost:8000/mcp
+    volumes:
+      - ./mock_data:/data/mock_data:ro
+      - ./eval:/data/eval:ro
+      - api-state:/state  # LangGraph SQLite checkpointer
+    healthcheck:
+      # /readyz is 200 when Neo4j answers and the schema is applied (degraded counts as up).
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/readyz', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+
+  slackbot:
+    <<: *backend
+    command: ["silentctx-slackbot"]
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/silentctx-slackbot.ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 20s
+
+  sim:
+    <<: *backend
+    command: ["silentctx-sim"]
+    ports:
+      - "127.0.0.1:8100:8100"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8100/healthz', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  neo4j-data:
+  api-state:

@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "aiohttp>=3.14.5",
     "asgi-correlation-id>=5.0.1",
     "dateparser>=1.5.0",
     "duckdb>=2.0.0",
@@ -44,6 +45,8 @@ dev = [
 
 [project.scripts]
 silentctx-api = "silentctx.cli:serve"
+silentctx-slackbot = "silentctx.slack.bot:main"
+silentctx-sim = "silentctx.sim.app:main"
 
 [tool.ruff]
 line-length = 100
@@ -72,6 +75,11 @@ plugins = ["pydantic.mypy"]
 module = ["tests.*"]
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
+
+[[tool.mypy.overrides]]
+# slack_bolt's Socket Mode handlers are not annotated.
+module = ["silentctx.slack.*"]
+disallow_untyped_calls = false
 
 [[tool.mypy.overrides]]
 module = ["testcontainers.*", "neo4j_python_migrations.*"]

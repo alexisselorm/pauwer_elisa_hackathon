@@ -10,7 +10,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 # Provider prefix of a `provider:model` string -> the settings field holding its key.
@@ -87,6 +87,15 @@ class Settings(BaseSettings):
         # Comma-separated in the environment: SLACK_CAPTURE_CHANNELS=C01,C02
         if isinstance(v, str):
             return [c.strip() for c in v.split(",") if c.strip()]
+        return v
+
+    @field_validator("slack_bot_token", "slack_app_token")
+    @classmethod
+    def _check_slack_token(cls, v: SecretStr | None, info: ValidationInfo) -> SecretStr | None:
+        name = info.field_name or ""
+        prefix = "xoxb-" if name == "slack_bot_token" else "xapp-"
+        if v is not None and not v.get_secret_value().startswith(prefix):
+            raise ValueError(f"{name.upper()} must start with {prefix}")
         return v
 
     @field_validator("mcp_tokens")
