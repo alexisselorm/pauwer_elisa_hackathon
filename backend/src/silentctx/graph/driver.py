@@ -31,6 +31,9 @@ def create_driver(settings: Settings) -> AsyncDriver:
         max_transaction_retry_time=settings.neo4j_connect_timeout_s * 2,
         # "index already exists" and similar INFORMATION notices are expected and noisy.
         notifications_min_severity="WARNING",
+        # Optional properties (retracted_at, permalink, ...) appear only once something
+        # writes them; "unknown property" notices would otherwise flood the logs.
+        notifications_disabled_classifications=["UNRECOGNIZED"],
     )
 
 

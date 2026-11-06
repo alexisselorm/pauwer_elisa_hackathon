@@ -40,6 +40,25 @@ def _main() -> None:
 
 
 @app.command()
+def mcp(
+    stdio: Annotated[bool, typer.Option("--stdio", help="Serve MCP over stdin/stdout.")] = False,
+    agent_id: Annotated[
+        str, typer.Option(help="Who the writes are attributed to (stdio has no token).")
+    ] = "local-stdio",
+) -> None:
+    """Run the MCP server over stdio, for local clients (Claude Desktop, MCP Inspector).
+    Over HTTP the API serves it at /mcp with bearer tokens."""
+    if not stdio:
+        raise typer.BadParameter("only --stdio is supported here; HTTP is served by the API")
+    from silentctx.mcp.stdio import run_stdio
+
+    settings = get_settings()
+    # stdout carries the MCP protocol: logs must go to stderr.
+    configure_logging(settings.log_level, json=settings.log_json, stream=sys.stderr)
+    asyncio.run(run_stdio(settings, agent_id))
+
+
+@app.command()
 def seed(
     network: Annotated[bool, typer.Option("--network", help="Load the network layers.")] = False,
     gold: Annotated[

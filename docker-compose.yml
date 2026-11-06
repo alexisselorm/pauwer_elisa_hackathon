@@ -61,6 +61,9 @@ services:
   slackbot:
     <<: *backend
     command: ["silentctx-slackbot"]
+    environment:
+      <<: *backend-env
+      MCP_URL: http://api:8000/mcp  # the ops agent uses MCP only, like any other agent
     depends_on:
       api:
         condition: service_healthy

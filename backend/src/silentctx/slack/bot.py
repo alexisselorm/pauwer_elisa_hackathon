@@ -1,27 +1,44 @@
 """`silentctx-slackbot`: the Bolt app in Socket Mode (no public URL needed).
 
-For now it only says hello (debug: proves events reach us and replies get back), and logs
-that channel messages arrive. Capture handlers, the context card and the ops agent replace
-this in SL-1 and SL-2. The bot reaches the context layer through the API's MCP server,
-never by importing it (plan 002).
+Answers questions with the ops agent (@mention in a channel, or a DM), and logs that channel
+messages arrive (capture is SL-1). The agent reaches the context layer through the API's
+MCP server only, never by importing it (plan 002).
 """
 
 from __future__ import annotations
 
 import asyncio
+import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
 from slack_bolt.async_app import AsyncApp
-from slack_bolt.context.say.async_say import AsyncSay
+from slack_sdk.web.async_client import AsyncWebClient
 
+from silentctx.agents.ops_agent import OpsAgent, OpsAnswer
 from silentctx.config import Settings, get_settings
 from silentctx.logging import configure_logging, get_logger
+from silentctx.slack.format import format_answer
 
 # Written once connected; the compose healthcheck looks for it.
 READY_FILE = Path("/tmp/silentctx-slackbot.ready")  # noqa: S108  # container-local marker
 log = get_logger(__name__)
+
+
+class Answerer(Protocol):
+    async def ask(
+        self, question: str, *, request_id: str, asker: str | None = None
+    ) -> OpsAnswer: ...
+
+
+THINKING = ":hourglass_flowing_sand: Looking into it…"
+HELP = (
+    "Hi <@{user}>! :wave: Ask me about the network in plain words, e.g. "
+    '_"I swapped the SFP on the Pori node and there\'s no traffic, what should I try?"_ '
+    'or _"How do I get through the gate at the Kemi site?"_'
+)
+_MENTION = re.compile(r"<@[A-Z0-9]+(?:\|[^>]*)?>")
 
 
 def _is_from_a_bot(event: dict[str, Any]) -> bool:
@@ -29,40 +46,74 @@ def _is_from_a_bot(event: dict[str, Any]) -> bool:
     return bool(event.get("bot_id")) or event.get("subtype") == "bot_message"
 
 
-async def handle_mention(event: dict[str, Any], say: AsyncSay) -> None:
-    """@silentctx in a channel: say hello in the thread of the mention."""
-    if _is_from_a_bot(event) or event.get("subtype"):
-        return
-    log.info("slack_mention", channel=event.get("channel"), ts=event.get("ts"))
-    await say(
-        text=f"Hello <@{event.get('user')}>! :wave: silentctx is online.",
-        thread_ts=event.get("thread_ts") or event.get("ts"),
-    )
+def question_text(event: dict[str, Any]) -> str:
+    return " ".join(_MENTION.sub(" ", event.get("text") or "").split())
 
 
-async def handle_message(event: dict[str, Any], say: AsyncSay) -> None:
-    """A DM to the bot gets a hello. Channel messages are only logged for now (capture is
-    SL-1); an @mention in a channel is answered by `handle_mention`, not here."""
-    if _is_from_a_bot(event) or event.get("subtype"):  # edits, joins, deletions...
-        return
-    if event.get("channel_type") == "im":
-        log.info("slack_dm", channel=event.get("channel"), ts=event.get("ts"))
-        await say(text=f"Hello <@{event.get('user')}>! :wave: silentctx is online.")
-        return
-    log.info(
-        "slack_message_seen",
-        channel=event.get("channel"),
-        channel_type=event.get("channel_type"),
-        ts=event.get("ts"),
-        thread_ts=event.get("thread_ts"),
-    )
+class SlackOps:
+    """The ops agent's Slack surface: @mentions in channels and DMs (plan 002 §3.4).
+    One bot message per question: a placeholder, edited in place into the answer."""
+
+    def __init__(self, answerer: Answerer) -> None:
+        self.answerer = answerer
+
+    async def answer(
+        self, client: AsyncWebClient, event: dict[str, Any], *, thread_ts: str | None
+    ) -> None:
+        channel, user = event["channel"], event.get("user")
+        question = question_text(event)
+        if not question:
+            await client.chat_postMessage(
+                channel=channel, thread_ts=thread_ts, text=HELP.format(user=user)
+            )
+            return
+        placeholder = await client.chat_postMessage(
+            channel=channel, thread_ts=thread_ts, text=THINKING
+        )
+        try:
+            result = await self.answerer.ask(
+                question, request_id=f"slack:{channel}:{event.get('ts')}", asker=f"<@{user}>"
+            )
+            text = format_answer(result)
+        except Exception as exc:  # the user always gets a reply
+            log.exception("ops_agent_failed", channel=channel, ts=event.get("ts"))
+            text = (
+                ":warning: Sorry, I couldn't answer that right now "
+                f"({type(exc).__name__}). Please try again in a minute."
+            )
+        await client.chat_update(channel=channel, ts=placeholder["ts"], text=text)
+
+    async def handle_mention(self, event: dict[str, Any], client: AsyncWebClient) -> None:
+        """@silentctx in a channel: answer in the thread of the mention."""
+        if _is_from_a_bot(event) or event.get("subtype"):
+            return
+        log.info("slack_mention", channel=event.get("channel"), ts=event.get("ts"))
+        await self.answer(client, event, thread_ts=event.get("thread_ts") or event.get("ts"))
+
+    async def handle_message(self, event: dict[str, Any], client: AsyncWebClient) -> None:
+        """A DM to the bot is a question. Channel messages are only logged for now (capture
+        is SL-1); an @mention in a channel is answered by `handle_mention`, not here."""
+        if _is_from_a_bot(event) or event.get("subtype"):  # edits, joins, deletions...
+            return
+        if event.get("channel_type") == "im":
+            log.info("slack_dm", channel=event.get("channel"), ts=event.get("ts"))
+            await self.answer(client, event, thread_ts=event.get("thread_ts"))
+            return
+        log.info(
+            "slack_message_seen",
+            channel=event.get("channel"),
+            channel_type=event.get("channel_type"),
+            ts=event.get("ts"),
+            thread_ts=event.get("thread_ts"),
+        )
 
 
-def build_app(settings: Settings) -> AsyncApp:
+def build_app(settings: Settings, answerer: Answerer | None = None) -> AsyncApp:
     assert settings.slack_bot_token is not None
     app = AsyncApp(token=settings.slack_bot_token.get_secret_value())
-    app.event("app_mention")(handle_mention)
-    app.event("message")(handle_message)
+    ops = SlackOps(answerer or OpsAgent(settings))
+    app.event("app_mention")(ops.handle_mention)
+    app.event("message")(ops.handle_message)
     return app
 
 

@@ -24,6 +24,7 @@ dependencies = [
     "neo4j-python-migrations>=0.1.5",
     "openai>=3.46.0",
     "pydantic-settings>=2.16.2",
+    "rapidfuzz>=3.14.6",
     "slack-bolt==1.30.0",
     "structlog>=26.1.0",
     "typer>=0.28.0",

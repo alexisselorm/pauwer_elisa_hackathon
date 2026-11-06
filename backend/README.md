@@ -53,6 +53,43 @@ client = MultiServerMCPClient(
 tools = await client.get_tools()
 ```
 
+## MCP tools (plan 002 §4)
+
+`http://localhost:8000/mcp` (Streamable HTTP, `Authorization: Bearer <MCP_TOKENS[agent]>`),
+or `uv run silentctx mcp --stdio --agent-id <name>` for local clients (Claude Desktop).
+Every tool returns typed `structuredContent`; times are ISO-8601 UTC; `as_of` and `known_at`
+default to now.
+
+| Read | |
+|---|---|
+| `resolve_entities(text)` | "the Pori node" → TRN-017; aliases are fuzzy-matched |
+| `get_entity(id, as_of)` | model, generation, firmware at t, segments, links |
+| `get_context(id, as_of, known_at, topic, symptoms, statuses)` | knowledge in scope at t: the node, its model and generation, its segments, plus observations on same-model devices; ranked, with citations |
+| `search_context(query, as_of, entity_id)` | semantic (Featherless embeddings), keyword fallback |
+| `check_conditions(assertion_id, entity_id, port, at)` | each symptom met / not_met / unknown from telemetry (last complete 15-min interval) |
+| `get_site_access(entity_or_site, as_of, known_at)` | access knowledge + register at the visit time; `known_at` shows what was believed then |
+| `get_events(id, start, end, types)` | alarms, device events, outcomes |
+| `get_history(assertion_id)` | supersession chain, contradictions, evidence, flags |
+
+| Write (governed: no confirm / retract / validity edits) | |
+|---|---|
+| `report_outcome` | Outcome event; SUPPORTS if resolved, REFUTES only if the conditions were met |
+| `open_knowledge_gap` | routed to the most frequent author on those entities |
+| `propose_assertion` | `unverified`, must cite ≥ 1 existing event |
+| `flag_assertion` | sets `review_due` |
+
+Writes are idempotent per (agent, tool, `idempotency_key`) and each is recorded as an
+`AgentAction` event attributed to the token's agent. Prompt `ops_triage`; resource
+`context://entity/{id}`.
+
+## Ops agent
+
+`silentctx.agents.ops_agent.OpsAgent`: LangChain `create_agent` on `CHAT_MODEL`
+(Featherless Kimi-K2), whose only tools are the MCP read tools + `open_knowledge_gap`,
+connected with its own token (`OPS_AGENT_ID`). Answers are a structured `OpsAnswer`; code
+then drops any step without a citation the tools actually returned, and any step whose
+conditions are `not_met`. In Slack: @mention the bot or DM it.
+
 ## Seeding the graph
 
 ```bash

@@ -76,6 +76,10 @@ class Settings(BaseSettings):
 
     # --- MCP (required): agent_id -> bearer token, as JSON ------------------------------
     mcp_tokens: dict[str, SecretStr]
+    # Where our own ops agent (in the slackbot) reaches the MCP server, and as whom.
+    mcp_url: str = "http://localhost:8000/mcp"
+    ops_agent_id: str = "ops-agent"
+    ops_agent_timeout_s: float = Field(default=120.0, gt=0)
 
     @field_validator("neo4j_uri")
     @classmethod
@@ -127,6 +131,13 @@ class Settings(BaseSettings):
         if provider not in _PROVIDER_KEY_FIELD:
             raise ValueError(f"provider must be one of {', '.join(sorted(_PROVIDER_KEY_FIELD))}")
         return v
+
+    def ops_agent_token(self) -> SecretStr:
+        """The ops agent's own MCP token (MCP_TOKENS[OPS_AGENT_ID])."""
+        token = self.mcp_tokens.get(self.ops_agent_id)
+        if token is None:
+            raise ValueError(f"MCP_TOKENS has no token for OPS_AGENT_ID={self.ops_agent_id!r}")
+        return token
 
     @property
     def checkpoint_db(self) -> Path:

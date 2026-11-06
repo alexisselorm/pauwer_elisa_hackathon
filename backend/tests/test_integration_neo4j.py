@@ -312,3 +312,177 @@ async def test_seed_prunes_rows_that_left_the_source(
         == 1
     )
     _query(neo4j_url, "MATCH (n {assertion_id: 'X-EXTRACTED'}) DELETE n")
+
+
+# --- MCP tools over HTTP (MCP-1, MCP-2) ------------------------------------------------------
+
+ALL_TOOLS = {
+    "ping",
+    "resolve_entities",
+    "get_entity",
+    "get_context",
+    "search_context",
+    "check_conditions",
+    "get_site_access",
+    "get_events",
+    "get_history",
+    "report_outcome",
+    "open_knowledge_gap",
+    "propose_assertion",
+    "flag_assertion",
+}
+
+
+class _Mcp:
+    def __init__(self, client: TestClient, token: str) -> None:
+        self.client, self.token, self.n = client, token, 0
+
+    def rpc(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
+        import json
+
+        self.n += 1
+        r = self.client.post(
+            "/mcp",
+            json={"jsonrpc": "2.0", "id": self.n, "method": method, "params": params},
+            headers={
+                "Accept": "application/json, text/event-stream",
+                "Authorization": f"Bearer {self.token}",
+            },
+        )
+        assert r.status_code == 200, r.text
+        for line in r.text.splitlines():
+            if line.startswith("data: "):
+                return dict(json.loads(line[6:]))
+        return dict(r.json())
+
+    def call(self, tool: str, **args: Any) -> dict[str, Any]:
+        result = self.rpc("tools/call", {"name": tool, "arguments": args})["result"]
+        return dict(result)
+
+
+async def test_mcp_tools_end_to_end(neo4j_url: str, make_settings: Callable[..., Settings]) -> None:
+    from silentctx.seed.profiles import Profile
+    from silentctx.seed.service import SeedRequest, seed
+    from tests.conftest import AGENT_TOKEN
+
+    settings = make_settings(neo4j_uri=neo4j_url, neo4j_password=PASSWORD, data_dir=MOCK_DATA)
+    seeded = await seed(settings, SeedRequest(network=True, gold=True, profile=Profile.FULL))
+    assert seeded.violations == 0
+
+    with TestClient(create_app(settings)) as client:
+        assert _readyz(client, until_code=200)["code"] == 200
+        mcp = _Mcp(client, AGENT_TOKEN)
+
+        tools = {t["name"] for t in mcp.rpc("tools/list", {})["result"]["tools"]}
+        assert tools == ALL_TOOLS  # and nothing that confirms, retracts or edits validity
+
+        r = mcp.call("resolve_entities", text="I swapped the SFP on the Pori node")
+        assert r["structuredContent"]["candidates"][0]["entity_id"] == "TRN-017"
+
+        r = mcp.call("get_entity", entity_id="TRN-017")["structuredContent"]
+        assert (r["model"], r["generation"], r["exists_at"]) == ("TNC-1X", "Gen1", True)
+
+        ctx = mcp.call("get_context", entity_id="TRN-017")["structuredContent"]
+        top = ctx["assertions"][0]
+        assert top["assertion_id"] == "ASR-0001"
+        assert top["match"] == "model"  # reached through TNC-1X
+        assert top["qualifiers"]["avoid"] == ["replace_sfp", "reboot_node"]
+
+        cond = mcp.call(
+            "check_conditions",
+            assertion_id="ASR-0001",
+            entity_id="TRN-042",
+            at="2025-10-14T06:21:30Z",
+        )["structuredContent"]
+        assert cond["all_met"] is True
+        assert cond["port"] == "1/1/3"
+
+        # Kemi on 2026-08-10: the code lock today; the padlock as it was known then (R10).
+        now = mcp.call("get_site_access", entity_or_site="TRN-042", as_of="2026-08-10T06:00:00Z")
+        assert [a["assertion_id"] for a in now["structuredContent"]["assertions"]] == ["ASR-0024"]
+        then = mcp.call(
+            "get_site_access",
+            entity_or_site="TRN-042",
+            as_of="2026-08-10T06:00:00Z",
+            known_at="2026-08-10T06:00:00Z",
+        )["structuredContent"]
+        assert "ASR-0023" in [a["assertion_id"] for a in then["assertions"]]
+        assert then["access_register"][0]["lock"] == "padlock"
+
+        events = mcp.call(
+            "get_events",
+            entity_id="TRN-042",
+            start="2025-10-14T00:00:00Z",
+            end="2025-10-15T00:00:00Z",
+        )["structuredContent"]
+        assert any(e["type"] == "MODULE_INSERTED" for e in events["events"])
+
+        history = mcp.call("get_history", assertion_id="ASR-0023")["structuredContent"]
+        assert "ASR-0024" in [v["assertion_id"] for v in history["versions"]]
+
+        search = mcp.call("search_context", query="zero traffic after replacing the SFP")
+        assert search["structuredContent"]["assertions"]
+
+        # Writes: idempotent, attributed, governed.
+        args = {
+            "entity_id": "TRN-042",
+            "action": "bounce_interface",
+            "result": "resolved",
+            "assertion_id": "ASR-0001",
+            "observed_at": "2025-10-14T06:21:30Z",
+            "idempotency_key": "it-outcome-1",
+        }
+        first = mcp.call("report_outcome", **args)["structuredContent"]
+        again = mcp.call("report_outcome", **args)["structuredContent"]
+        assert first["evidence"] == "SUPPORTS"
+        assert first["conditions_met"] is True
+        assert again["replayed"] is True
+        assert again["event_id"] == first["event_id"]
+        assert again["support_n"] == first["support_n"]
+
+        gap = mcp.call(
+            "open_knowledge_gap",
+            question="Which firmware fixes the forwarding bug?",
+            entity_ids=["TNC-1X"],
+            idempotency_key="it-gap-1",
+        )["structuredContent"]
+        assert gap["routed_to"] == "erkki"
+
+        proposal = mcp.call(
+            "propose_assertion",
+            statement="A bounce also clears the stall on TNC-2X",
+            entity_ids=["TRN-010", "TNC-2X"],
+            evidence_event_ids=[first["event_id"]],
+            rationale="bounce worked",
+            idempotency_key="it-prop-1",
+        )["structuredContent"]
+        assert proposal["status"] == "unverified"
+
+        flag = mcp.call(
+            "flag_assertion", assertion_id="ASR-0030", reason="stale", idempotency_key="it-f-1"
+        )["structuredContent"]
+        assert flag["review_due"] is True
+
+        refused = mcp.call(
+            "propose_assertion",
+            statement="no evidence",
+            entity_ids=["TRN-010"],
+            evidence_event_ids=["EV-NOPE"],
+            rationale="r",
+            idempotency_key="it-prop-2",
+        )
+        assert refused["isError"] is True
+        assert "unknown events" in refused["content"][0]["text"]
+        unknown = mcp.call("get_entity", entity_id="NOPE-1")
+        assert unknown["isError"] is True
+
+        action = _query(
+            neo4j_url,
+            "MATCH (e:AgentAction {tool: 'report_outcome'}) RETURN e.agent_id AS agent",
+        )
+        assert [a["agent"] for a in action] == ["ops-agent"]  # from the token, once
+
+        prompt = mcp.rpc("prompts/get", {"name": "ops_triage"})["result"]
+        assert "get_context" in prompt["messages"][0]["content"]["text"]
+        resource = mcp.rpc("resources/read", {"uri": "context://entity/TRN-017"})["result"]
+        assert "ASR-0001" in resource["contents"][0]["text"]
