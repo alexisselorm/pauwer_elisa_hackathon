@@ -544,7 +544,7 @@ def build(meta: dict) -> None:
     # Taken verbatim-ish from Elisa's example (teams_chat.json + email.txt), re-dated into our
     # season and wired to our TRN-042 (Kemi) instance. Elisa's own timestamps had no date; we
     # use 2025-10-14 09:14 Europe/Helsinki = 06:14 UTC.
-    case_t = _dt(2025, 10, 14, 6, 14)
+    case_t = c.TRN042_CASE["chat_start"]
     thread = ch_transport.thread()
     case_messages = [
         ("veikko", 0, "Hi Erkki, I'm at the site now. Changed the SFP on transmission node TRN-042.\nLink is up and alarms cleared, but traffic is still not coming back. Have you seen this before?", []),
@@ -574,14 +574,15 @@ def build(meta: dict) -> None:
             c.write_bytes(["attachments", "current", "teams", fname], port_png)
             c.write_bytes(["attachments", "current", "teams", "TRN-042_1-1-3_port.txt"],
                           b"show interface 1/1/3\noper-status: UP\nin-octets: 0.0004 Mbps\nout-octets: 0.0003 Mbps\n"
-                          b"rx-power: -3.7 dBm\nsfp: SFP-10G-8421 (replaced 2025-10-14 08:27)\n")
+                          b"rx-power: -3.7 dBm\nsfp: SFP-10G-8421 (replaced 2025-10-14 08:15)\n")
         m = ch_transport.msg(case_t + dt.timedelta(minutes=mins), ctx.p(key), text, thread=thread, attach=attach)
         case_msg_objs.append((key, mins, m))
 
-    # follow-up by the field engineer two days later, after the fix
+    # afternoon follow-up by the field engineer, after the morning fix
     fix_t = _dt(2025, 10, 14, 15, 52)
     m_fix = ch_transport.msg(fix_t, ctx.p("veikko"),
-                             "Did the disable/enable on 1/1/3. Traffic is back 👍\nCounters climbing. No reboot needed.",
+                             "Checked TRN-042 again: 1/1/3 counters normal since the bounce this morning 👍\n"
+                             "No reboot needed.",
                              thread=thread, reaction="\U0001F44D")
     # and a 'we should write this down' note the next week
     note_t = _dt(2025, 10, 23, 8, 10)
@@ -591,7 +592,7 @@ def build(meta: dict) -> None:
                               thread=thread)
 
     # email version of the same case (the one Elisa shipped as example email)
-    e_case = _dt(2025, 10, 14, 8, 40)
+    e_case = c.TRN042_CASE["recap_email"]
     em_case = email("trn042-case", e_case, "RE: TRN-042 traffic not recovering after SFP replacement",
                     "erkki", ["veikko"], ["aino"],
                     "Hi Veikko,\n\nThat sounds like the behaviour we have seen with some of the older transmission units.\n\n"

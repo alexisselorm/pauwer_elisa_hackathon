@@ -142,7 +142,7 @@ def main() -> None:
     cases = [
         dict(id="CASE-001", title="TRN-042 SFP swap: UP, optics OK, zero counters",
              symptom="After an SFP replacement on port 1/1/3 the link is UP, RX power normal, alarms cleared, but "
-                     "in/out octets stay at ~0 for hours.",
+                     "in/out octets stay at ~0 for over an hour.",
              right_action="Disable and re-enable interface 1/1/3; do NOT replace the SFP again or reboot the node.",
              documentation="documented", where=["teams:chan-noc-transport (2025-10-14)",
                                                 "email:RE: TRN-042 traffic not recovering after SFP replacement",

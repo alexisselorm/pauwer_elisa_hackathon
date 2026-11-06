@@ -1,48 +1,72 @@
-alias_surface,canonical_entity
-older units,the old units
-older transmission units,the old units
-older units (2019),the old units
-Gen1 units,the old units
-the old TNC-1X,the old units
-TNC-1X,the old units
-the Kemi box,the old units
-TRN-042,the old units
-barrier,bit-barrier
-portti,bit-barrier
-the gate,bit-barrier
-the boom at the road,bit-barrier
-private road gate,bit-barrier
-gate at Kemi,bit-barrier
-TRN node,transmission node
-ROADM,transmission node
-optical transport unit,transmission node
-TN,transmission node
-line side,transmission node
-the node,transmission node
-SFP+,SFP
-optical module,SFP
-transceiver,SFP
-the module,SFP
-10G optic,SFP
-forwarding plane state,forwarding state
-FIB state,forwarding state
-silent blackhole,forwarding state
-green-but-dark,forwarding state
-meter,the power meter
-PDU meter,the power meter
-electricity meter,the power meter
-the kWh meter,the power meter
-TRE,Tampere DC
-DC2,Tampere DC
-FI-TRE-DC2,Tampere DC
-the secondary site,Tampere DC
-HEL,Helsinki DC1
-DC1,Helsinki DC1
-FI-HEL-DC1,Helsinki DC1
-the primary,Helsinki DC1
-hardware_class,hardware model
-hw,hardware model
-HWC,hardware model
-device model,hardware model
-tnc2_roadm,hardware model
-TNC-2X,hardware model
+alias_surface,canonical_entity,kind
+the old units,TNC-1X,entity
+older units,TNC-1X,entity
+older transmission units,TNC-1X,entity
+older units (2019),TNC-1X,entity
+Gen1 units,TNC-1X,entity
+the old TNC-1X,TNC-1X,entity
+TNC-1X,TNC-1X,entity
+tnc1x,TNC-1X,entity
+tnc1_roadm,TNC-1X,entity
+tnc-1x_roadm,TNC-1X,entity
+TNC-2X,TNC-2X,entity
+Gen2 units,TNC-2X,entity
+tnc2x,TNC-2X,entity
+tnc2_roadm,TNC-2X,entity
+tnc-2x_roadm,TNC-2X,entity
+TNC-3X,TNC-3X,entity
+Gen3 units,TNC-3X,entity
+tnc3x,TNC-3X,entity
+tnc3_roadm,TNC-3X,entity
+tnc-3x_roadm,TNC-3X,entity
+TRN-042,TRN-042,entity
+the Kemi box,TRN-042,entity
+Kemi TRN-042 (ROADM-1),TRN-042,entity
+gate at Kemi,SEG-042,entity
+Kemi gate,SEG-042,entity
+the Kemi barrier,SEG-042,entity
+private road to the Kemi transport room,SEG-042,entity
+Tampere DC,FI-TRE-DC2,entity
+TRE,FI-TRE-DC2,entity
+DC2,FI-TRE-DC2,entity
+FI-TRE-DC2,FI-TRE-DC2,entity
+the secondary site,FI-TRE-DC2,entity
+Helsinki DC1,FI-HEL-DC1,entity
+HEL,FI-HEL-DC1,entity
+DC1,FI-HEL-DC1,entity
+FI-HEL-DC1,FI-HEL-DC1,entity
+the primary,FI-HEL-DC1,entity
+forwarding state,TOPIC:forwarding_state_after_sfp_swap,entity
+forwarding plane state,TOPIC:forwarding_state_after_sfp_swap,entity
+FIB state,TOPIC:forwarding_state_after_sfp_swap,entity
+silent blackhole,TOPIC:forwarding_state_after_sfp_swap,entity
+green-but-dark,TOPIC:forwarding_state_after_sfp_swap,entity
+bit-barrier,concept:barrier,concept
+barrier,concept:barrier,concept
+portti,concept:barrier,concept
+the gate,concept:barrier,concept
+the boom at the road,concept:barrier,concept
+private road gate,concept:barrier,concept
+transmission node,concept:optical_transport,concept
+TRN node,concept:optical_transport,concept
+ROADM,concept:optical_transport,concept
+optical transport unit,concept:optical_transport,concept
+TN,concept:optical_transport,concept
+line side,concept:optical_transport,concept
+the node,concept:optical_transport,concept
+SFP,concept:sfp,concept
+SFP+,concept:sfp,concept
+optical module,concept:sfp,concept
+transceiver,concept:sfp,concept
+the module,concept:sfp,concept
+10G optic,concept:sfp,concept
+the power meter,concept:power_meter,concept
+meter,concept:power_meter,concept
+PDU meter,concept:power_meter,concept
+electricity meter,concept:power_meter,concept
+the kWh meter,concept:power_meter,concept
+hardware model,concept:hw_model,concept
+hardware_class,concept:hw_model,concept
+hw,concept:hw_model,concept
+HWC,concept:hw_model,concept
+device model,concept:hw_model,concept

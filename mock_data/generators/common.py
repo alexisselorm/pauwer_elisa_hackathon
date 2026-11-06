@@ -49,6 +49,33 @@ def date_to_instant(d: str | None) -> str | None:
     return d if "T" in d else f"{d}T00:00:00Z"
 
 
+# ---------------------------------------------------------------- the canonical TRN-042 case
+# ONE timeline for the brief's SFP case, shared by every generator (alarms, telemetry, Teams, email,
+# ITSM, vendor case). All UTC; 2025-10-14 is still summer time in Finland (EEST = UTC+3).
+#   08:00 local  SFP removed            08:15  new SFP inserted, link UP, optics OK, alarms clear
+#   09:14-09:27  Teams thread (Elisa's example timings) - the expert advises a port bounce
+#   09:15        ITSM ticket: traffic zero for 60 min (telemetry spec threshold)
+#   09:30        port disabled/enabled -> traffic resumes        09:45  counters back to normal
+#   11:40        Erkki's recap email
+# Times are snapped to the 15-minute slot grid the way the rest of the data is (to_iid = ceil).
+def _case_t(hh: int, mm: int) -> dt.datetime:
+    return dt.datetime(2025, 10, 14, hh, mm, tzinfo=dt.timezone.utc)
+
+
+TRN042_CASE = {
+    "device": "TRN-042",
+    "port": "1/1/3",
+    "sfp_removed": _case_t(5, 0),
+    "sfp_inserted": _case_t(5, 15),
+    "los_cleared": _case_t(5, 30),
+    "chat_start": _case_t(6, 14),
+    "ticket_opened": _case_t(6, 15),
+    "bounce": _case_t(6, 30),
+    "recovered": _case_t(6, 45),
+    "recap_email": _case_t(8, 40),
+}
+
+
 # ITSM knowledge articles. Shared between the ITSM export (generate_structured) and the gold
 # context layer (generate_context), which records when each stale article stopped being true.
 ITSM_KB_ARTICLES = [

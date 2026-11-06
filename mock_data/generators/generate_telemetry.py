@@ -46,9 +46,8 @@ def build_telemetry():
     reg = json.load(open(os.path.join(c.root_dir(), "network", "registry.json")))
     sites = gn.SITES
     # case timing (from the network generator): SFP replaced 2025-10-14 ~08:0x, bounce at ~15:5x
-    case_day = c.to_iid(dt.datetime(2025, 10, 14, 6, 0, tzinfo=c.UTC))  # 09:00 EEST
-    sfp_iid = case_day + 34  # 08:30 local (SFP replaced ~08:2x)
-    bounce_iid = case_day + 394  # ~15:55 local (admin bounce)
+    sfp_iid = c.to_iid(c.TRN042_CASE["sfp_inserted"])   # traffic stalls from the SFP insert ...
+    bounce_iid = c.to_iid(c.TRN042_CASE["bounce"])      # ... until the port bounce (common.py)
 
     weather = _weather_by_site()
     site_temp: dict[str, list[float]] = {}

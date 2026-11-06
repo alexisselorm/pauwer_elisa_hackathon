@@ -1,8 +1,8 @@
 {"id": "ALM-000194", "ne": "ACC-027", "code": "OPTICAL_DEGRADE", "sev": "minor", "ts": "2025-10-02T05:15:00Z"}
 {"id": "ALM-000246", "ne": "ACC-014", "code": "LOS", "sev": "major", "ts": "2025-10-06T03:00:00Z"}
 {"id": "ALM-000117", "ne": "ACC-047", "code": "LOS", "sev": "major", "ts": "2025-10-09T20:30:00Z"}
-{"id": "ALM-000005", "ne": "TRN-042", "code": "LOS", "sev": "minor", "ts": "2025-10-13T22:00:00Z"}
-{"id": "ALM-000173", "ne": "ACC-017", "code": "ADMIN", "sev": "warning", "ts": "2025-10-17T19:00:00Z"}
+{"id": "ALM-000005", "ne": "TRN-042", "code": "LOS", "sev": "minor", "ts": "2025-10-14T05:30:00Z"}
+{"id": "ALM-000425", "ne": "ACC-028", "code": "OPTICAL_DEGRADE", "sev": "minor", "ts": "2025-10-15T23:30:00Z"}
 {"id": "ALM-000380", "ne": "ACC-014", "code": "LOS", "sev": "major", "ts": "2025-10-25T03:45:00Z"}
 {"id": "ALM-000339", "ne": "ACC-001", "code": "OPTICAL_DEGRADE", "sev": "minor", "ts": "2025-10-31T08:45:00Z"}
 {"id": "ALM-000301", "ne": "ACC-022", "code": "LOS", "sev": "major", "ts": "2025-11-06T03:30:00Z"}

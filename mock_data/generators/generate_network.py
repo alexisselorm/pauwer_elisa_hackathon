@@ -442,26 +442,28 @@ def build_alarms(net: dict, events: list[dict]):
         })
 
     # ---- the canonical TRN-042 case (brief + example email), Oct 2025
-    case_day = dt.datetime(2025, 10, 14, tzinfo=c.UTC)
-    base_iid = c.instant(case_day) + 36  # 09:00 local (EET = UTC+2)
+    case_t = c.TRN042_CASE  # single shared timeline (common.py)
+    base_iid = c.to_iid(case_t["chat_start"])
+    sfp_out, sfp_in = c.to_iid(case_t["sfp_removed"]), c.to_iid(case_t["sfp_inserted"])
+    los_clear, bounce = c.to_iid(case_t["los_cleared"]), c.to_iid(case_t["bounce"])
     # pre-existing low-severity alarm
     emit("TRN-042", "LOS", "minor", base_iid - 480, "Loss of signal on port 1/1/3 (pre-existing, flapping)", "LOS")
     # scheduled SFP replacement earlier that morning (field work order)
-    emit("TRN-042", "MODULE_REMOVED", "warning", base_iid - 60,
+    emit("TRN-042", "MODULE_REMOVED", "warning", sfp_out,
          "Optical module removed on port 1/1/3 (planned SFP replacement)", "MODULE")
-    emit("TRN-042", "MODULE_INSERTED", "info", base_iid - 52,
+    emit("TRN-042", "MODULE_INSERTED", "info", sfp_in,
          "Optical module inserted on port 1/1/3 (SFP-10G-8421)", "MODULE")
-    emit("TRN-042", "LINK_UP", "info", base_iid - 50, "Interface 1/1/3 change: DOWN -> UP", "LINK")
-    emit("TRN-042", "ALARM_CLEAR", "minor", base_iid - 44, "Loss of signal cleared on port 1/1/3", "LOS",
-         closed=base_iid - 44)
-    emit("TRN-042", "OPTICAL_POWER_OK", "info", base_iid - 40,
+    emit("TRN-042", "LINK_UP", "info", sfp_in, "Interface 1/1/3 change: DOWN -> UP", "LINK")
+    emit("TRN-042", "ALARM_CLEAR", "minor", los_clear, "Loss of signal cleared on port 1/1/3", "LOS",
+         closed=los_clear)
+    emit("TRN-042", "OPTICAL_POWER_OK", "info", los_clear,
          "RX optical power 1/1/3 within range: -3.1 dBm (expected -8..0 dBm)", "OPTICAL")
     # stalled traffic: counters zero, no alarms, link UP -> this is the silent symptom
     # (nothing to alarm on! that is the whole point)
     # the re-bounce resolves it
-    emit("TRN-042", "IF_DISABLED", "warning", base_iid + 408, "Interface 1/1/3 administratively disabled", "ADMIN")
-    emit("TRN-042", "IF_ENABLED", "info", base_iid + 412, "Interface 1/1/3 administratively enabled", "ADMIN")
-    emit("TRN-042", "LINK_UP", "info", base_iid + 416, "Interface 1/1/3 change: DOWN -> UP", "LINK")
+    emit("TRN-042", "IF_DISABLED", "warning", bounce, "Interface 1/1/3 administratively disabled", "ADMIN")
+    emit("TRN-042", "IF_ENABLED", "info", bounce, "Interface 1/1/3 administratively enabled", "ADMIN")
+    emit("TRN-042", "LINK_UP", "info", bounce, "Interface 1/1/3 change: DOWN -> UP", "LINK")
     # traffic resumes after bounce -> counters start rising again
 
     # ---- background alarm noise
@@ -492,8 +494,8 @@ def build_alarms(net: dict, events: list[dict]):
     for r in rows:
         r["raised"] = c.ts_s(r["raised_iid"])
         r["cleared"] = c.ts_s(r["cleared_iid"]) if r["cleared_iid"] is not None else None
-    return rows, {"case_base_iid": base_iid, "sfp_replace_iid": base_iid - 52,
-                  "bounce_iid": base_iid + 408, "device": "TRN-042"}
+    return rows, {"case_base_iid": base_iid, "sfp_replace_iid": sfp_in,
+                  "bounce_iid": bounce, "resolved_iid": c.to_iid(case_t["recovered"]), "device": "TRN-042"}
 
 
 def apply_validity(net: dict, rt: dict) -> None:
@@ -584,8 +586,10 @@ def main() -> None:
         "note": "Trace of the canonical Elisa case. Ten days around the incident.",
         "device": case["device"], "sfp_replaced": c.ts_s(case["sfp_replace_iid"]),
         "traffic_stalled_until": c.ts_s(case["bounce_iid"]),
-        "resolved": c.ts_s(case["bounce_iid"] + 8),
-        "timeline": [a for a in alarms if a["ne_id"] == "TRN-042" and a["raised_iid"] >= case["case_base_iid"] - 600],
+        "resolved": c.ts_s(case["resolved_iid"]),
+        # five days either side of the case (480 slots = 5 days)
+        "timeline": [a for a in alarms if a["ne_id"] == "TRN-042"
+                     and abs(a["raised_iid"] - case["case_base_iid"]) <= 480],
     })
 
     # convenience: node registry that other generators (context layer) will import
@@ -596,7 +600,7 @@ def main() -> None:
         "sites": [s["code"] for s in net["sites"]],
         "trn_meta": net["trn_meta"],
         "case": {"device": "TRN-042", "sfp_replaced": c.ts_s(case["sfp_replace_iid"]),
-                 "resolved": c.ts_s(case["bounce_iid"] + 8)},
+                 "resolved": c.ts_s(case["resolved_iid"])},
         "segments": net["physical_segments"],
     })
     print(f"network: {len(net['design_nodes'])} design nodes, {len(net['physical_devices'])} devices, "

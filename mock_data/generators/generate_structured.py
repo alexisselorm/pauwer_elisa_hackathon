@@ -87,13 +87,14 @@ def itsm(net, events, alarms, ctx_files=None):
                          "cmdb_ci": rng.choice(devs), "priority": rng.choice([2, 3]), "state": "Open",
                          "opened_iid": iid, "opened_at": c.ts_s(iid)})
     # deterministic canonical tickets tied to the case
-    case = c.to_iid(dt.datetime(2025, 10, 14, 7, 0))
+    case = c.to_iid(c.TRN042_CASE["ticket_opened"])  # traffic-zero threshold (60 min after the SFP insert)
     rows.append({"number": "INC00420001", "type": "incident", "short_description": "TRN-042 traffic not recovering",
                  "description": "After SFP replacement on TRN-042 port 1/1/3, interface UP, optics OK, alarms "
                                 "cleared, no traffic counters.",
                  "category": "TRAFFIC_LOW", "cmdb_ci": "TRN-042", "priority": 2, "state": "Resolved",
                  "assigned_to": "NOC-Transport", "opened_iid": case, "opened_at": c.ts_s(case),
-                 "resolved_iid": case + 394, "resolution_notes": "Admin bounce of 1/1/3 restored traffic.",
+                 "resolved_iid": c.to_iid(c.TRN042_CASE["recovered"]),
+                 "resolution_notes": "Admin bounce of 1/1/3 restored traffic.",
                  "related_alarm": "ALM-000002"})
     rows.sort(key=lambda r: r["opened_iid"])
     for row in rows:
