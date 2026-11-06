@@ -6,6 +6,8 @@
     "capacity_gbps": 10,
     "media": "microwave",
     "retired_at": "2024-04-11",
-    "superseded_by": "LINK-TRN-012-CR-006"
+    "superseded_by": "LINK-TRN-012-CR-002",
+    "valid_from": "2022-11-18T00:00:00Z",
+    "valid_to": "2024-04-11T00:00:00Z"
   }
 ]

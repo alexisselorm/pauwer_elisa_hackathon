@@ -119,6 +119,7 @@ class Ctx:
     def assert_(self, *, subject: str, topic: str, statement: str, valid_from: int, valid_to: int | None,
                 source: dict, confidence: str = "high", status: str = "believed_true",
                 supersedes: str | None = None, contradicts: list[str] | None = None,
+                corroborates: list[str] | None = None, superseded_by: str | None = None,
                 qualifiers: dict | None = None, layer: str = "context_layer",
                 about_entity_kind: str = "node") -> str:
         self._aseq += 1
@@ -144,9 +145,35 @@ class Ctx:
             "confidence": confidence,
             "status": status,
             "supersedes": supersedes,
+            "superseded_by": superseded_by,
             "contradicts": contradicts or [],
+            "corroborates": corroborates or [],
         })
         return aid
+
+    def finalize(self) -> None:
+        """Derive the inverse links so the gold graph is consistent in both directions.
+
+        * `supersedes` on the successor -> `superseded_by` on the predecessor
+        * `contradicts` and `corroborates` are symmetric relations
+        Temporal rules (valid_to of a superseded record == valid_from of its successor, etc.) are
+        checked by scripts/verify_temporal.py, not silently patched here.
+        """
+        by_id = {a["assertion_id"]: a for a in self.assertions}
+        for a in self.assertions:
+            if a["supersedes"]:
+                old = by_id[a["supersedes"]]
+                if old["superseded_by"] not in (None, a["assertion_id"]):
+                    raise ValueError(f"{old['assertion_id']} superseded twice")
+                old["superseded_by"] = a["assertion_id"]
+        for rel in ("contradicts", "corroborates"):
+            for a in self.assertions:
+                for other in a[rel]:
+                    if a["assertion_id"] not in by_id[other][rel]:
+                        by_id[other][rel].append(a["assertion_id"])
+        for a in self.assertions:
+            a["contradicts"].sort()
+            a["corroborates"].sort()
 
 
 # ============================================================================ helpers
@@ -439,6 +466,7 @@ def build(meta: dict) -> None:
     ctx = main_ctx = Ctx()
     rng = c.rng_for("ctx")
     net = gn.build_network()
+    gn.apply_validity(net, gn.build_runtime(net))  # entities inherit valid_from/valid_to from the network
     trn_meta = net["trn_meta"]
     access_ids = [n["node_id"] for n in net["access_nodes"]]
     segments = {s["segment_id"]: s for s in net["physical_segments"]}
@@ -447,18 +475,22 @@ def build(meta: dict) -> None:
     # ---------------------------------------------------------------- entities
     for d in net["physical_devices"]:
         ctx.entity("device", d["device_id"], name=d["name"], kind=d["kind"], vendor=d["vendor"],
-                   model=d["model"], city=d["room"], commissioned=d["commissioned"])
+                   model=d["model"], city=d["room"], commissioned=d["commissioned"],
+                   valid_from=d["valid_from"], valid_to=d["valid_to"])
     for s in net["physical_segments"]:
         ctx.entity("segment", s["segment_id"], name=s["name"], type=s["type"], end_a=s["end_a"],
-                   end_b=s["end_b"], private_road=bool(s.get("private_road")))
+                   end_b=s["end_b"], private_road=bool(s.get("private_road")),
+                   valid_from=s["valid_from"], valid_to=s["valid_to"])
     for code, name, city, lat, lon, role, *_ in gn.SITES:
-        ctx.entity("site", code, name=name, city=city, role=role, lat=lat, lon=lon)
+        ctx.entity("site", code, name=name, city=city, role=role, lat=lat, lon=lon,
+                   valid_from=c.NETWORK_EPOCH, valid_to=None)
     for m in ["TNC-1X", "TNC-2X", "TNC-3X", "7250 IXR-e", "7250 IXR-s", "KMAX-4K", "KMAX-4H", "7750 SR-14s"]:
-        ctx.entity("hw_model", m, generation={"TNC-1X": "Gen1", "TNC-2X": "Gen2", "TNC-3X": "Gen3"}.get(m))
+        ctx.entity("hw_model", m, generation={"TNC-1X": "Gen1", "TNC-2X": "Gen2", "TNC-3X": "Gen3"}.get(m),
+                   valid_from=c.NETWORK_EPOCH, valid_to=None)
     for topic in ["forwarding_state_after_sfp_swap", "sfp_replacement", "bess_arbitrage", "gpu_maintenance_spikes",
                   "meter_swap", "mw_throughput", "upgrade_sfp_400g", "dlq_mem_quota", "mtu_change",
-                  "route_discard", "maintenance_freeze", "access_keys"]:
-        ctx.entity("topic", f"TOPIC:{topic}", label=topic)
+                  "route_discard", "maintenance_freeze", "access_keys", "pue_reporting", "job_requeue_policy"]:
+        ctx.entity("topic", f"TOPIC:{topic}", label=topic, valid_from=c.NETWORK_EPOCH, valid_to=None)
 
     # ---------------------------------------------------------------- source refs
     ch_transport = Channel("chan-noc-transport", "NOC-Transport", "Transport operations, field escalations",
@@ -614,7 +646,7 @@ def build(meta: dict) -> None:
         valid_from=D(e_case), valid_to=None,
         source={"type": "email", "ref": em_case["msg_id"], "detail": "RE: TRN-042 ...", "by": "erkki",
                 "recorded_iid": D(e_case)},
-        confidence="high", status="believed_true", contradicts=[a_fwd])
+        confidence="high", status="believed_true", corroborates=[a_fwd])
     a_note = ctx.assert_(
         subject="TNC-1X", topic="forwarding_state_after_sfp_swap",
         statement="Gen1 units: port bounce cleared the forwarding issue in 4/4 observed cases; re-inserting the module "
@@ -632,7 +664,7 @@ def build(meta: dict) -> None:
         valid_from=D(_dt(2025, 11, 3, 7, 5)), valid_to=None,
         source={"type": "email", "ref": em_note["msg_id"], "detail": "Fwd: old upgrade notes", "by": "veikko",
                 "recorded_iid": D(_dt(2025, 11, 3, 7, 5))},
-        confidence="medium", status="believed_true", contradicts=[])
+        confidence="medium", status="believed_true", corroborates=[a_note])
 
     # ================================================================ 2. ADVICE THAT BECOMES OUTDATED
     # 2a. The 'applies to old units' scope is superseded once TNC-2X units show the same symptom.
@@ -648,9 +680,10 @@ def build(meta: dict) -> None:
     a_scope_old = ctx.assert_(
         subject="TNC-1X", topic="forwarding_state_after_sfp_swap",
         statement="Forwarding-state stall after SFP swap applies only to Gen1 (2019 TNC-1X) units.",
-        valid_from=D(case_t), valid_to=D(t2),
-        source={"type": "teams_message", "ref": m21["message_id"], "detail": "NOC-Transport 2026-03-10",
-                "by": "erkki", "recorded_iid": D(t2)},
+        valid_from=case_msg_objs[9][2]["created_iid"], valid_to=D(t2),
+        source={"type": "teams_message", "ref": case_msg_objs[9][2]["message_id"],
+                "detail": "NOC-Transport thread, message 10/12 ('these old units')", "by": "erkki",
+                "recorded_iid": case_msg_objs[9][2]["created_iid"]},
         confidence="medium", status="superseded", qualifiers={"applies_to_generation": "Gen1"})
     a_scope_new = ctx.assert_(
         subject="TNC-2X", topic="forwarding_state_after_sfp_swap",
@@ -664,6 +697,7 @@ def build(meta: dict) -> None:
 
     # 2b. BESS instruction from 2025 that energy market changed (superseded by market update)
     t_old = _dt(2025, 11, 4, 12, 0)
+    t_bess_switch = _dt(2026, 4, 1)      # effective "from 1 April" (announced by email at 09:00 that day)
     th_e = ch_energy.thread()
     m_e1 = ch_energy.msg(t_old, ctx.p("olga"),
                          "Reminder: keep the DC1/DC2 BESS at 80% SOC for the winter because of the Fingrid capacity "
@@ -671,11 +705,11 @@ def build(meta: dict) -> None:
     a_bess_old = ctx.assert_(
         subject="FI-TRE-DC2", topic="bess_arbitrage",
         statement="Keep BESS at 80% SOC through winter for Fingrid capacity market; max 60% depth of discharge.",
-        valid_from=D(t_old), valid_to=D(_dt(2026, 4, 1)),
+        valid_from=D(t_old), valid_to=D(t_bess_switch),
         source={"type": "teams_message", "ref": m_e1["message_id"], "detail": "Energy-Procurement",
                 "by": "olga", "recorded_iid": D(t_old)},
         confidence="high", status="superseded", qualifiers={"soC_target_pct": 80})
-    t_new = _dt(2026, 4, 1, 9, 0)
+    t_new = _dt(2026, 4, 1, 9, 0)        # email sent
     em_mkt = email("bess-mkt", t_new, "BESS operating mode change from 1 April (aFRR participation)",
                    "olga", ["liisa", "sanna", "markku"], ["riikka"],
                    "Hi all,\n\nFingrid's aFRR products now pay better than capacity alone, so from 1 April the DC2 BESS "
@@ -685,13 +719,14 @@ def build(meta: dict) -> None:
     a_bess_new = ctx.assert_(
         subject="FI-TRE-DC2", topic="bess_arbitrage",
         statement="From 2026-04 BESS runs aFRR cycling: SOC band 35-70%, DoD <=35% per event, <=6 events/day.",
-        valid_from=D(t_new), valid_to=None,
+        valid_from=D(t_bess_switch), valid_to=None,
         source={"type": "email", "ref": em_mkt["msg_id"], "detail": "BESS operating mode change from 1 April",
                 "by": "olga", "recorded_iid": D(t_new)},
         confidence="high", status="believed_true", supersedes=a_bess_old,
         qualifiers={"soc_min_pct": 35, "soc_max_pct": 70, "dod_max_pct": 35})
 
-    # 2c. Energy-efficiency rule from 2025 GTC email that got silently re-ised (Q3 2026)
+    # 2c. Energy-efficiency rule from a 2025 GTC email. Effective from January (bitemporal: recorded
+    #     2025-12-02, valid from 2026-01-01). Nothing in the corpus revises it, so it is still believed true.
     t_gtc = _dt(2025, 12, 2, 10, 0)
     em_gtc = email("gtc", t_gtc, "Updated Terms of Service - energy attribution clause", "markku",
                    ["olga", "liisa", "sanna"], ["timo"],
@@ -700,12 +735,13 @@ def build(meta: dict) -> None:
                    "report PUE = total facility power / IT power for customer invoices from January.\n\nMarkku",
                    folder="Sent Items")
     a_gtc = ctx.assert_(
-        subject="FI-HEL-DC1", topic="bess_arbitrage",
-        statement="Customer PUE reported = total facility power / IT power, including fixed overheads.",
-        valid_from=D(t_gtc), valid_to=D(_dt(2026, 8, 15)),
+        subject="FI-HEL-DC1", topic="pue_reporting",
+        statement="Customer PUE reported = total facility power / IT power, including fixed overheads "
+                  "(for customer invoices from January 2026).",
+        valid_from=D(_dt(2026, 1, 1)), valid_to=None,
         source={"type": "email", "ref": em_gtc["msg_id"], "detail": "GTC update", "by": "markku",
                 "recorded_iid": D(t_gtc)},
-        confidence="medium", status="superseded", qualifiers={"reporting": "customer"})
+        confidence="medium", status="believed_true", qualifiers={"reporting": "customer"})
 
     # 2d. Platform advice about DLQ that expired when the platform version changed
     t_dlq = _dt(2025, 11, 8, 13, 0)
@@ -717,14 +753,14 @@ def build(meta: dict) -> None:
                       "PSA: platform is on 4.0 now. The 4Gi bump advice is obsolete - DLQ drains on its own within "
                       "10 min, if it does not, it's a real poison message. Do not raise memory.")
     a_dlq_old = ctx.assert_(
-        subject="TOPIC:dlq_mem_quota", topic="dlq_mem_quota",
+        subject="TOPIC:dlq_mem_quota", topic="dlq_mem_quota", about_entity_kind="topic",
         statement="Kafka DLQ on volga.train.events drains if consumer memory is raised to 4Gi (platform 3.4).",
         valid_from=D(t_dlq), valid_to=D(_dt(2026, 5, 12)),
         source={"type": "teams_message", "ref": m_s1["message_id"], "detail": "SRE-Infra",
                 "by": "sanna", "recorded_iid": D(t_dlq)},
         confidence="high", status="superseded", qualifiers={"platform_version": "3.4"})
     a_dlq_new = ctx.assert_(
-        subject="TOPIC:dlq_mem_quota", topic="dlq_mem_quota",
+        subject="TOPIC:dlq_mem_quota", topic="dlq_mem_quota", about_entity_kind="topic",
         statement="On platform 4.0+, DLQ drains within 10 min without memory changes; persistent DLQ = poison "
                   "message, do not raise memory.",
         valid_from=D(_dt(2026, 5, 12)), valid_to=None,
@@ -758,9 +794,9 @@ def build(meta: dict) -> None:
         subject="KMAX-4K", topic="mw_throughput",
         statement="Do not power-cycle a KMAX-4K: it reboots into config-recovery and loses the channel plan unless "
                   "the config was exported first. Check dish alignment, escalate, or get approval.",
-        valid_from=D(t_conf) + 3, valid_to=None,
+        valid_from=m_c2["created_iid"], valid_to=None,
         source={"type": "teams_message", "ref": m_c2["message_id"], "detail": "Access-North",
-                "by": "juhani", "recorded_iid": D(t_conf) + 3},
+                "by": "juhani", "recorded_iid": m_c2["created_iid"]},
         confidence="high", status="disputed", qualifiers={"step": "escalate"},
         contradicts=[a_conf_1])
     ctx.contradictions.append({
@@ -832,11 +868,12 @@ def build(meta: dict) -> None:
                     "by": who, "recorded_iid": D(when)},
             confidence="medium", status="believed_true" if resolution != "replace_again" else "disputed",
             qualifiers={"observed_model": model, "resolution": resolution},
-            contradicts=[a_fwd] if resolution == "replace_again" else [])
+            contradicts=[a_fwd] if resolution == "replace_again" else [],
+            corroborates=[a_fwd] if resolution == "bounce" else [])
         if resolution == "replace_again":
             ctx.contradictions.append({
                 "id": "CONFLICT-002",
-                "assertions": [a_fwd, ctx.assertions[-1]],
+                "assertions": [a_fwd, ctx.assertions[-1]["assertion_id"]],
                 "topic": "forwarding_state_after_sfp_swap",
                 "summary": "The bounce recipe failed on a TNC-3X node; SFP replacement was needed. Either the "
                            "known issue does not always apply, or the root cause was a faulty SFP. Unresolved.",
@@ -898,21 +935,24 @@ def build(meta: dict) -> None:
     m_bar2 = ch_field.msg(t_barrier + dt.timedelta(minutes=14), ctx.p("pekka"),
                           "The padlock key is on my keyring, I'll bring it. It's NOT in the key box, that is for "
                           "another gate.", reaction="\U0001F605")
+    # (a 2025 message cannot know about the 2026 lock change; it only notes the register gap)
     m_bar3 = ch_field.msg(t_barrier + dt.timedelta(minutes=25), ctx.p("heikki"),
-                          "Note the barrier was repaired summer 2026, and the lock changed to a code lock. "
-                          "The new code is with the security lead, not the old key system.")
+                          "Kemi is not in the access register at all. Someone should add the gate and who "
+                          "holds the key, otherwise the next person gets stuck like this.")
+    t_lock_change = _dt(2026, 8, 3)  # barrier repair: padlock replaced by a code lock
     a_bar_old = ctx.assert_(
         subject=kemi_seg_id, topic="access_keys",
         statement="Kemi transport room gate is locked with a padlock; key is on Pekka Hämäläinen's keyring "
                   "(not in the key box at the office).",
-        valid_from=D(t_barrier), valid_to=D(_dt(2026, 7, 1)),
+        valid_from=D(t_barrier + dt.timedelta(minutes=14)), valid_to=D(t_lock_change),
         source={"type": "teams_message", "ref": m_bar2["message_id"], "detail": "Field-Ops-FI",
                 "by": "pekka", "recorded_iid": D(t_barrier + dt.timedelta(minutes=14))},
         confidence="high", status="superseded", about_entity_kind="segment",
         qualifiers={"lock_type": "padlock"})
     ctx.access_rows.append({"segment_id": kemi_seg_id, "site": "Kemi", "barrier": "gate",
-                            "valid_from": c.ts_s(D(t_barrier)),
-                            "valid_to": c.ts_s(D(_dt(2026, 7, 1))), "lock": "padlock",
+                            "valid_from": c.ts_s(D(t_barrier + dt.timedelta(minutes=14))),
+                            "valid_to": c.ts_s(D(t_lock_change)), "recorded_at": c.ts_s(D(t_barrier + dt.timedelta(minutes=14))),
+                            "lock": "padlock",
                             "holder": "Pekka Hämäläinen", "where": "keyring",
                             "source": m_bar2["message_id"]})
 
@@ -920,8 +960,8 @@ def build(meta: dict) -> None:
     t_code = _dt(2026, 8, 18, 10, 20)
     em_code = email("kemi-new-lock", t_code, "Kemi site: new code lock installed (action for field ops)",
                     "timo", ["heikki", "pekka", "veikko"], ["markku", "liisa"],
-                    "Hello,\n\nThe Kemi transport room gate lock was changed to a code lock during the summer "
-                    "barrier repair. The new code is handed out by site security. Please update the access "
+                    "Hello,\n\nThe Kemi transport room gate lock was changed to a code lock during the barrier "
+                    "repair on 3 August. The new code is handed out by site security. Please update the access "
                     "register; I have not been able to access the register so this email is the source.\n\n"
                     "Timo", folder="Sent Items")
     # code is written obliquely (not a plain secret in the chat tool) but is in this email
@@ -932,15 +972,16 @@ def build(meta: dict) -> None:
                      "There is no gate key any more.\n\nHeikki", folder="Inbox")
     a_bar_new = ctx.assert_(
         subject=kemi_seg_id, topic="access_keys",
-        statement="Kemi transport room gate is a code lock (installed 2026-08). There is no physical key. The "
+        statement="Kemi transport room gate is a code lock (installed 2026-08-03). There is no physical key. The "
                   "code is held by site security / Heikki Lehtonen; the 'Pekka has the key' advice is obsolete.",
-        valid_from=D(t_code), valid_to=None,
+        valid_from=D(t_lock_change), valid_to=None,
         source={"type": "email", "ref": em_code["msg_id"], "detail": "Kemi site: new code lock installed",
                 "by": "timo", "recorded_iid": D(t_code)},
         confidence="high", status="believed_true", supersedes=a_bar_old, about_entity_kind="segment",
         qualifiers={"lock_type": "code_lock", "code_custodian": "Heikki Lehtonen"})
     ctx.access_rows.append({"segment_id": kemi_seg_id, "site": "Kemi", "barrier": "gate",
-                            "valid_from": c.ts_s(D(t_code)), "valid_to": None, "lock": "code_lock",
+                            "valid_from": c.ts_s(D(t_lock_change)), "valid_to": None,
+                            "recorded_at": c.ts_s(D(t_code)), "lock": "code_lock",
                             "holder": "Heikki Lehtonen", "where": "email/site security",
                             "source": em_code["msg_id"]})
     ctx.contradictions.append({
@@ -948,7 +989,8 @@ def build(meta: dict) -> None:
         "summary": "Two access instructions disagree: the padlock key is (per Teams) on Pekka's keyring, but the "
                    "gate was replaced by a code lock (per email).",
         "resolution_hint": "The later email wins by recency; the old Teams knowledge is a trap for a field agent "
-                           "dispatched to Kemi after 2026-08.",
+                           "dispatched to Kemi after 2026-08-03. Between 2026-08-03 (lock changed) and 2026-08-18 "
+                           "(email) the padlock record was already invalid but nobody had recorded that yet.",
         "severity": "high", "kind": "outdated_vs_new",
     })
 
@@ -977,18 +1019,19 @@ def build(meta: dict) -> None:
                       "the local contractor (call the Rovaniemi field team).",
             valid_from=D(_dt(2024, 6, 12)), valid_to=None,
             source={"type": "email", "ref": em_ivalo["msg_id"], "detail": "Ivalo site access",
-                    "by": "pekka", "recorded_iid": D(_dt(2025, 10, 28))},
+                    "by": "pekka", "recorded_iid": D(_dt(2025, 10, 28, 8, 10))},
             confidence="high", status="believed_true", about_entity_kind="segment")
         ctx.access_rows.append({"segment_id": ivalo_seg_id, "site": "Ivalo", "barrier": "none",
-                                "valid_from": c.ts_s(D(_dt(2024, 6, 12))), "valid_to": None, "lock": "none",
+                                "valid_from": c.ts_s(D(_dt(2024, 6, 12))), "valid_to": None,
+                                "recorded_at": c.ts_s(D(_dt(2025, 10, 28, 8, 10))), "lock": "none",
                                 "holder": None, "where": "open", "source": em_ivalo["msg_id"]})
 
     # other private-road segments: put a line in the access register (no explicit knowledge -> a trap)
     for seg in net["physical_segments"]:
         if seg.get("private_road") and seg["segment_id"] not in {r["segment_id"] for r in ctx.access_rows}:
             ctx.access_rows.append({"segment_id": seg["segment_id"], "site": seg["name"].split()[0],
-                                    "barrier": seg.get("barrier") or "gate", "valid_from": None,
-                                    "valid_to": None, "lock": "unknown", "holder": None, "where": None,
+                                    "barrier": seg.get("barrier") or "gate", "valid_from": seg["valid_from"],
+                                    "valid_to": seg["valid_to"], "recorded_at": seg["valid_from"], "lock": "unknown", "holder": None, "where": None,
                                     "source": None, "derived": "as_built flag private_road=true"})
 
     # ================================================================ 7. SERVICE-HANDOFF KNOWLEDGE
@@ -1000,14 +1043,21 @@ def build(meta: dict) -> None:
                             "customer is refunded.")
     m_sv2 = ch_services.msg(t_svc + dt.timedelta(minutes=3), ctx.p("sanna"), "Ok, noted, our alerting should not "
                                                                            "auto-close those.")
+    # The sales freeze is announced *before* it starts and is a bounded window: after 2026-01-05 it is
+    # expired (not superseded - nothing replaced it). Who approves a night-time emergency change is
+    # still never written down (QA-034 stays not_documented).
+    t_frz = _dt(2025, 12, 15, 9, 30)
+    m_frz = ch_services.msg(t_frz, ctx.p("markku"),
+                            "Heads-up: sales freeze from 20 Dec to 5 Jan. No network changes without a named "
+                            "change approval; send approval requests to me.")
     a_svc = ctx.assert_(
         subject="TOPIC:maintenance_freeze", topic="maintenance_freeze",
         statement="During the sales freeze (Dec 20 - Jan 5) no network changes are allowed without a named change "
                   "approval; change-approval requests go to the service manager.",
         valid_from=D(_dt(2025, 12, 20)), valid_to=D(_dt(2026, 1, 5)),
-        source={"type": "teams_message", "ref": m_sv1["message_id"], "detail": "Service-Ops",
-                "by": "markku", "recorded_iid": D(t_svc)},
-        confidence="medium", status="believed_true")
+        source={"type": "teams_message", "ref": m_frz["message_id"], "detail": "Service-Ops",
+                "by": "markku", "recorded_iid": D(t_frz)},
+        confidence="medium", status="expired", about_entity_kind="topic")
 
     # ================================================================ 8. HIGH-VOLUME CHATTER
     chatter_rng = c.rng_for("chatter")
@@ -1073,7 +1123,7 @@ def build(meta: dict) -> None:
         valid_from=D(_dt(2026, 9, 1)), valid_to=D(_dt(2026, 9, 4)),
         source={"type": "email", "ref": em_meter["msg_id"], "detail": "meter swap notice", "by": "liisa",
                 "recorded_iid": D(t_meter)},
-        confidence="high", status="believed_true", qualifiers={"metric": "grid_power_mw"})
+        confidence="high", status="expired", qualifiers={"metric": "grid_power_mw"})
     ctx.insights.append({
         "id": "INSIGHT-003", "title": "DC1 September spikes are planned meter-swap artefacts",
         "needs_layers": ["telemetry", "context"],
@@ -1116,14 +1166,38 @@ def build(meta: dict) -> None:
         valid_from=D(_dt(2025, 12, 15)), valid_to=D(t_m2),
         source={"type": "confluence", "ref": "documents/confluence/kb-002_mtu_policy.html",
                 "detail": "Core MTU policy", "by": "Confluence", "recorded_iid": D(_dt(2025, 12, 15))},
-        confidence="low", status="superseded", qualifiers={"mtu": 9114})
+        confidence="low", status="superseded", superseded_by=a_mtu_new, qualifiers={"mtu": 9114})
     a_kb_bess = ctx.assert_(
         subject="FI-TRE-DC2", topic="bess_arbitrage",
         statement="KB: Winter mode holds BESS at 80% SOC for the Fingrid capacity market.",
-        valid_from=D(_dt(2025, 11, 10)), valid_to=D(t_new),
+        valid_from=D(_dt(2025, 11, 10)), valid_to=D(t_bess_switch),
         source={"type": "confluence", "ref": "documents/confluence/kb-004_bess_operating_modes.html",
                 "detail": "BESS operating modes", "by": "Confluence", "recorded_iid": D(_dt(2025, 11, 10))},
-        confidence="low", status="superseded", qualifiers={"soc_target_pct": 80})
+        confidence="low", status="superseded", superseded_by=a_bess_new, qualifiers={"soc_target_pct": 80})
+
+    # ITSM KB articles (itsm/knowledge_articles.jsonl). The export only has a published date; the gold
+    # layer records when each stale article stopped being true and what replaced it.
+    itsm = {a["article_id"]: a for a in c.ITSM_KB_ARTICLES}
+    itsm_gold = [
+        # article, subject, topic, statement, valid_to, superseded_by, kind, corroborates
+        ("KB0017001", "TRN-042", "forwarding_state_after_sfp_swap",
+         "ITSM KB: TRN-042-only known issue; workaround is to reboot the whole node.", D(case_t),
+         a_fwd, "node", []),
+        ("KB0018222", "CR-001", "mtu_change", "ITSM KB: core links use MTU 9114.", D(t_m2), a_mtu_new, "node",
+         [a_mtu_old, a_kb_mtu]),
+        ("KB0018420", kemi_seg_id, "access_keys", "ITSM KB: Kemi site is behind a private-road gate; ask Pekka "
+         "for the key.", D(t_lock_change), a_bar_new, "segment", [a_bar_old]),
+        ("KB0018501", "FI-TRE-DC2", "bess_arbitrage", "ITSM KB: BESS winter mode holds 80% SOC.",
+         D(t_bess_switch), a_bess_new, "node", [a_bess_old, a_kb_bess]),
+    ]
+    for art, subj, topic, st, until, succ, kind, same in itsm_gold:
+        published = D(dt.datetime.fromisoformat(itsm[art]["valid_from"]).replace(tzinfo=c.UTC))
+        ctx.assert_(
+            subject=subj, topic=topic, statement=st, valid_from=published, valid_to=until,
+            source={"type": "itsm", "ref": f"itsm/knowledge_articles.jsonl#{art}", "detail": itsm[art]["title"],
+                    "by": "ITSM", "recorded_iid": published},
+            confidence="low", status="superseded", superseded_by=succ, about_entity_kind=kind,
+            corroborates=same)
 
     # ================================================================ 11. write channels
     for ch in channels:
@@ -1152,6 +1226,16 @@ def build(meta: dict) -> None:
                 ["channel", "captured_items", "capture_status", "note"], drop)
 
     # KB only 4 pages - a hint for a pipeline 'completeness' report
+    # (created last so earlier assertion ids stay stable)
+    ctx.assert_(
+        subject="TOPIC:job_requeue_policy", topic="job_requeue_policy",
+        statement="Big-window jobs that will not finish before the service window ends must be requeued to the "
+                  "next window, not killed; a killed job means a customer refund.",
+        valid_from=D(t_svc), valid_to=None,
+        source={"type": "teams_message", "ref": m_sv1["message_id"], "detail": "Service-Ops",
+                "by": "markku", "recorded_iid": D(t_svc)},
+        confidence="medium", status="believed_true", about_entity_kind="topic")
+    ctx.finalize()
     return ctx
 
 
@@ -1237,9 +1321,26 @@ def _schema() -> dict:
             "source_ref": {"type": "string"},
             "confidence": {"enum": ["low", "medium", "high"]},
             "status": {"enum": ["believed_true", "superseded", "disputed", "expired", "unverified"]},
-            "supersedes": {"type": "string"},
-            "contradicts": {"type": "array", "items": {"type": "string"}},
+            "recorded_at": {"type": "string", "format": "date-time",
+                            "description": "when the knowledge was first written down (transaction time); "
+                                           "may be later than valid_from (e.g. a lock changed before anyone "
+                                           "emailed about it) or earlier (e.g. a change announced in advance)"},
+            "supersedes": {"type": ["string", "null"], "description": "assertion this one replaced"},
+            "superseded_by": {"type": ["string", "null"],
+                              "description": "set iff status=superseded; its valid_from == this valid_to"},
+            "contradicts": {"type": "array", "items": {"type": "string"}, "description": "symmetric"},
+            "corroborates": {"type": "array", "items": {"type": "string"},
+                             "description": "symmetric; same knowledge from another source"},
         },
+        "x-temporal-rules": [
+            "valid_from <= valid_to (when valid_to is set); valid_to is exclusive",
+            "status=believed_true|disputed|unverified -> valid_to is null or after the snapshot "
+            f"({c.SNAPSHOT_AT})",
+            "status=superseded -> superseded_by is set and successor.valid_from == valid_to",
+            "status=expired -> valid_to <= snapshot and no successor (a bounded window that ended)",
+            "status=disputed -> contradicts is non-empty",
+            "the subject entity exists (entities.jsonl) at valid_from",
+        ],
     }
 
 

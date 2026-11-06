@@ -14,7 +14,9 @@
     "commissioned": "2020-06-01",
     "warranty_end": "2027-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2020-06-01T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "CR-002",
@@ -31,7 +33,9 @@
     "commissioned": "2021-09-22",
     "warranty_end": "2027-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2021-09-22T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "CR-003",
@@ -48,7 +52,9 @@
     "commissioned": "2021-09-22",
     "warranty_end": "2027-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2021-09-22T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "CR-004",
@@ -65,7 +71,9 @@
     "commissioned": "2020-06-01",
     "warranty_end": "2027-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2020-06-01T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "CR-005",
@@ -82,7 +90,9 @@
     "commissioned": "2019-03-14",
     "warranty_end": "2027-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2019-03-14T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "CR-006",
@@ -99,7 +109,9 @@
     "commissioned": "2019-03-14",
     "warranty_end": "2027-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2019-03-14T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "TRN-001",
@@ -116,7 +128,9 @@
     "commissioned": "2022-03-07",
     "warranty_end": "2028-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2022-03-07T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "TRN-002",
@@ -133,7 +147,9 @@
     "commissioned": "2024-01-15",
     "warranty_end": "2028-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2024-01-15T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "TRN-003",
@@ -150,7 +166,9 @@
     "commissioned": "2024-09-03",
     "warranty_end": "2028-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2024-09-03T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "TRN-004",
@@ -167,7 +185,9 @@
     "commissioned": "2019-02-20",
     "warranty_end": "2026-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2019-02-20T00:00:00Z",
+    "valid_to": "2026-05-11T00:00:00Z"
   },
   {
     "device_id": "TRN-005",
@@ -184,7 +204,9 @@
     "commissioned": "2019-08-30",
     "warranty_end": "2026-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2019-08-30T00:00:00Z",
+    "valid_to": "2026-07-15T00:00:00Z"
   },
   {
     "device_id": "TRN-006",
@@ -201,7 +223,9 @@
     "commissioned": "2025-02-26",
     "warranty_end": "2028-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2025-02-26T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "TRN-042",
@@ -218,7 +242,9 @@
     "commissioned": "2019-04-18",
     "warranty_end": "2026-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2019-04-18T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "TRN-007",
@@ -235,7 +261,9 @@
     "commissioned": "2019-02-20",
     "warranty_end": "2026-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2019-02-20T00:00:00Z",
+    "valid_to": "2026-07-27T00:00:00Z"
   },
   {
     "device_id": "TRN-008",
@@ -252,7 +280,9 @@
     "commissioned": "2024-09-03",
     "warranty_end": "2028-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2024-09-03T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "TRN-009",
@@ -269,7 +299,9 @@
     "commissioned": "2025-02-26",
     "warranty_end": "2028-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2025-02-26T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "TRN-010",
@@ -286,7 +318,9 @@
     "commissioned": "2022-11-18",
     "warranty_end": "2028-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2022-11-18T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "TRN-011",
@@ -303,7 +337,9 @@
     "commissioned": "2022-03-07",
     "warranty_end": "2028-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2022-03-07T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "TRN-012",
@@ -320,7 +356,9 @@
     "commissioned": "2022-11-18",
     "warranty_end": "2028-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2022-11-18T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "TRN-013",
@@ -337,7 +375,9 @@
     "commissioned": "2019-02-20",
     "warranty_end": "2026-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2019-02-20T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "TRN-014",
@@ -354,7 +394,9 @@
     "commissioned": "2019-02-20",
     "warranty_end": "2026-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2019-02-20T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "TRN-015",
@@ -371,7 +413,9 @@
     "commissioned": "2024-09-03",
     "warranty_end": "2028-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2024-09-03T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "TRN-016",
@@ -388,7 +432,9 @@
     "commissioned": "2022-11-18",
     "warranty_end": "2028-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2022-11-18T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "TRN-017",
@@ -405,7 +451,9 @@
     "commissioned": "2019-08-30",
     "warranty_end": "2026-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2019-08-30T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "TRN-018",
@@ -422,7 +470,9 @@
     "commissioned": "2019-08-30",
     "warranty_end": "2026-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2019-08-30T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "TRN-019",
@@ -439,7 +489,9 @@
     "commissioned": "2018-05-11",
     "warranty_end": "2026-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2018-05-11T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "TRN-020",
@@ -456,7 +508,9 @@
     "commissioned": "2022-03-07",
     "warranty_end": "2028-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2022-03-07T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "TRN-021",
@@ -473,7 +527,9 @@
     "commissioned": "2022-11-18",
     "warranty_end": "2028-12-31",
     "status": "in_service",
-    "country": "FI"
+    "country": "FI",
+    "valid_from": "2022-11-18T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-001",
@@ -491,7 +547,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-001"
+    "nearest_uplink": "TRN-001",
+    "valid_from": "2019-04-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-002",
@@ -509,7 +567,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "ACC-001"
+    "nearest_uplink": "ACC-001",
+    "valid_from": "2019-09-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-003",
@@ -527,7 +587,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "ACC-002"
+    "nearest_uplink": "ACC-002",
+    "valid_from": "2019-04-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-004",
@@ -545,7 +607,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "ACC-003"
+    "nearest_uplink": "ACC-003",
+    "valid_from": "2019-03-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-005",
@@ -563,7 +627,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "ACC-004"
+    "nearest_uplink": "ACC-004",
+    "valid_from": "2019-06-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-006",
@@ -581,7 +647,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "ACC-005"
+    "nearest_uplink": "ACC-005",
+    "valid_from": "2019-11-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-007",
@@ -599,7 +667,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-002"
+    "nearest_uplink": "TRN-002",
+    "valid_from": "2019-06-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-008",
@@ -617,7 +687,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "ACC-007"
+    "nearest_uplink": "ACC-007",
+    "valid_from": "2019-06-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-009",
@@ -635,7 +707,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "ACC-008"
+    "nearest_uplink": "ACC-008",
+    "valid_from": "2019-03-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-010",
@@ -653,7 +727,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-007"
+    "nearest_uplink": "TRN-007",
+    "valid_from": "2019-02-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-011",
@@ -671,7 +747,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "ACC-010"
+    "nearest_uplink": "ACC-010",
+    "valid_from": "2019-12-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-012",
@@ -689,7 +767,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "ACC-011"
+    "nearest_uplink": "ACC-011",
+    "valid_from": "2019-10-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-013",
@@ -707,7 +787,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "ACC-012"
+    "nearest_uplink": "ACC-012",
+    "valid_from": "2019-10-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-014",
@@ -725,7 +807,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-003"
+    "nearest_uplink": "TRN-003",
+    "valid_from": "2019-05-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-015",
@@ -743,7 +827,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "ACC-014"
+    "nearest_uplink": "ACC-014",
+    "valid_from": "2019-03-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-016",
@@ -761,7 +847,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "ACC-015"
+    "nearest_uplink": "ACC-015",
+    "valid_from": "2019-10-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-017",
@@ -779,7 +867,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "ACC-016"
+    "nearest_uplink": "ACC-016",
+    "valid_from": "2019-07-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-018",
@@ -797,7 +887,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-004"
+    "nearest_uplink": "TRN-004",
+    "valid_from": "2019-10-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-019",
@@ -815,7 +907,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "ACC-018"
+    "nearest_uplink": "ACC-018",
+    "valid_from": "2019-02-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-020",
@@ -833,7 +927,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "ACC-019"
+    "nearest_uplink": "ACC-019",
+    "valid_from": "2019-04-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-021",
@@ -851,7 +947,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-005"
+    "nearest_uplink": "TRN-005",
+    "valid_from": "2019-02-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-022",
@@ -869,7 +967,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-005"
+    "nearest_uplink": "TRN-005",
+    "valid_from": "2019-07-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-023",
@@ -887,7 +987,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-005"
+    "nearest_uplink": "TRN-005",
+    "valid_from": "2019-04-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-024",
@@ -905,7 +1007,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-008"
+    "nearest_uplink": "TRN-008",
+    "valid_from": "2019-02-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-025",
@@ -923,7 +1027,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-008"
+    "nearest_uplink": "TRN-008",
+    "valid_from": "2019-02-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-026",
@@ -941,7 +1047,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-009"
+    "nearest_uplink": "TRN-009",
+    "valid_from": "2019-10-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-027",
@@ -959,7 +1067,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-009"
+    "nearest_uplink": "TRN-009",
+    "valid_from": "2019-08-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-028",
@@ -977,7 +1087,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-010"
+    "nearest_uplink": "TRN-010",
+    "valid_from": "2019-09-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-029",
@@ -995,7 +1107,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-010"
+    "nearest_uplink": "TRN-010",
+    "valid_from": "2019-07-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-030",
@@ -1013,7 +1127,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-006"
+    "nearest_uplink": "TRN-006",
+    "valid_from": "2019-01-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-031",
@@ -1031,7 +1147,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-006"
+    "nearest_uplink": "TRN-006",
+    "valid_from": "2019-12-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-032",
@@ -1049,7 +1167,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-042"
+    "nearest_uplink": "TRN-042",
+    "valid_from": "2019-01-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-033",
@@ -1067,7 +1187,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-042"
+    "nearest_uplink": "TRN-042",
+    "valid_from": "2019-10-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-034",
@@ -1085,7 +1207,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-011"
+    "nearest_uplink": "TRN-011",
+    "valid_from": "2019-02-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-035",
@@ -1103,7 +1227,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-012"
+    "nearest_uplink": "TRN-012",
+    "valid_from": "2019-01-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-036",
@@ -1121,7 +1247,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-012"
+    "nearest_uplink": "TRN-012",
+    "valid_from": "2019-12-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-037",
@@ -1139,7 +1267,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-013"
+    "nearest_uplink": "TRN-013",
+    "valid_from": "2019-08-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-038",
@@ -1157,7 +1287,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-013"
+    "nearest_uplink": "TRN-013",
+    "valid_from": "2019-05-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-039",
@@ -1175,7 +1307,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-014"
+    "nearest_uplink": "TRN-014",
+    "valid_from": "2019-05-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-040",
@@ -1193,7 +1327,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-015"
+    "nearest_uplink": "TRN-015",
+    "valid_from": "2019-03-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-041",
@@ -1211,7 +1347,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-016"
+    "nearest_uplink": "TRN-016",
+    "valid_from": "2019-07-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-042",
@@ -1229,7 +1367,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-017"
+    "nearest_uplink": "TRN-017",
+    "valid_from": "2019-12-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-043",
@@ -1247,7 +1387,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-017"
+    "nearest_uplink": "TRN-017",
+    "valid_from": "2019-03-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-044",
@@ -1265,7 +1407,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-018"
+    "nearest_uplink": "TRN-018",
+    "valid_from": "2019-09-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-045",
@@ -1283,7 +1427,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-019"
+    "nearest_uplink": "TRN-019",
+    "valid_from": "2019-11-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-046",
@@ -1301,7 +1447,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-019"
+    "nearest_uplink": "TRN-019",
+    "valid_from": "2019-08-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-047",
@@ -1319,7 +1467,9 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-020"
+    "nearest_uplink": "TRN-020",
+    "valid_from": "2019-08-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "device_id": "ACC-048",
@@ -1337,6 +1487,8 @@
     "warranty_end": "2025-12-31",
     "status": "in_service",
     "country": "FI",
-    "nearest_uplink": "TRN-021"
+    "nearest_uplink": "TRN-021",
+    "valid_from": "2019-10-23T00:00:00Z",
+    "valid_to": null
   }
 ]

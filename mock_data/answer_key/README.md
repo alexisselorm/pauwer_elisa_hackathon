@@ -41,7 +41,7 @@ limits of the documentation?
 
 ## Where the knowledge really lives (corpus map)
 
-* `teams/messages/*.jsonl` — 800 messages in 6 channels, threaded, with attachments
+* `teams/messages/*.jsonl` — 801 messages in 6 channels, threaded, with attachments
 * `email_outlook/Inbox` + `Sent Items` — 148 real Outlook `.msg` files (+ attachments)
 * `documents/expert_notes/*.pdf` — 2 scanned expert notes
 * `documents/confluence/*.html` — 4 KB pages (**stale in places**)

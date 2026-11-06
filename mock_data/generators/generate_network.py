@@ -313,14 +313,24 @@ def build_runtime(net: dict):
     supersession_schedule = {}
     for did, meta in trn_meta.items():
         default_slug = hw_slug(meta["model"])
-        add_snap("2019-01-01T00:00:00Z", {"node_id": did, "kind": "optical_transport"}, default_slug, None, True)
+        # a node's first physical record is valid from the day it was commissioned, not before
+        commissioned = c.date_to_instant(meta["commissioned"])
+        add_snap(commissioned, {"node_id": did, "kind": "optical_transport"}, default_slug, None, True)
         if meta["model"] in plan_variants and rng.random() < 0.55:
-            changed = rng.choice(["2023-04-03T08:00:00Z", "2024-06-17T09:30:00Z", "2025-11-20T08:00:00Z",
-                                  "2026-02-09T07:15:00Z", "2026-05-27T10:00:00Z"])
+            # a record can only be superseded after it started being valid
+            candidates = [t for t in ["2023-04-03T08:00:00Z", "2024-06-17T09:30:00Z", "2025-11-20T08:00:00Z",
+                                      "2026-02-09T07:15:00Z", "2026-05-27T10:00:00Z"] if t > commissioned]
+            changed = rng.choice(candidates)
             alternates = [s for s in plan_variants[meta["model"]] if s != default_slug]
             first = snapshots[-1]
+            first["valid_to"] = changed  # closed by its successor
             add_snap(changed, {"node_id": did, "kind": "optical_transport"}, rng.choice(alternates), first["physical_node_id"])
             supersession_schedule[did] = changed
+    # decommissioned nodes: their last physical record ends on the decommission date
+    decom = {d["node_id"]: c.date_to_instant(d["decommissioned"]) for d in net["decommissioned"]}
+    for snap in snapshots:
+        if snap["valid_to"] is None and snap["physical_name"] in decom:
+            snap["valid_to"] = decom[snap["physical_name"]]
 
     # ---------------- links
     link_rng = c.rng_for("links")
@@ -335,10 +345,12 @@ def build_runtime(net: dict):
                 "mtu": 9216, "status": "up", "redundant": l["redundant"],
                 "media": "fibre" if l["layer"] != "access" or "MW" not in l["link_id"] else "microwave",
             })
-    # add one retired link (TRN-012 uplink was microwave between 2019 and 2024)
+    # add one retired link (TRN-012 uplink was microwave between 2019 and 2024). It is replaced by
+    # TRN-012's current transport uplink, whatever core node that design link goes to.
+    trn012_up = next((l["link_id"] for l in current_links if l["end_a"] == "TRN-012"), None)
     retired_links.append({"link_id": "LINK-TRN-012-MW-UP", "end_a": "TRN-012", "end_b": "CR-006",
                           "capacity_gbps": 10, "media": "microwave", "retired_at": "2024-04-11",
-                          "superseded_by": "LINK-TRN-012-CR-006"})
+                          "superseded_by": trn012_up})
 
     return {
         "current_nodes": current_nodes,
@@ -484,11 +496,52 @@ def build_alarms(net: dict, events: list[dict]):
                   "bounce_iid": base_iid + 408, "device": "TRN-042"}
 
 
+def apply_validity(net: dict, rt: dict) -> None:
+    """Stamp valid_from / valid_to on every graph-layer record (see common.py for the convention).
+
+    Runs after all random draws so it never changes the rest of the generated data.
+    """
+    decom = {d["node_id"]: c.date_to_instant(d["decommissioned"]) for d in net["decommissioned"]}
+    dev_from = {d["device_id"]: c.date_to_instant(d["commissioned"]) for d in net["physical_devices"]}
+    for code in (s["code"] for s in net["sites"]):
+        dev_from.setdefault(code, c.NETWORK_EPOCH)
+
+    def stamp(row: dict, valid_from: str | None, valid_to: str | None) -> None:
+        row["valid_from"] = valid_from or c.NETWORK_EPOCH
+        row["valid_to"] = valid_to
+
+    def link_window(end_a: str, end_b: str) -> tuple[str, str | None]:
+        # a link exists once both ends exist, and ends when either end is decommissioned
+        starts = [dev_from.get(e, c.NETWORK_EPOCH) for e in (end_a, end_b)]
+        ends = [decom[e] for e in (end_a, end_b) if e in decom]
+        return max(starts), (min(ends) if ends else None)
+
+    for s in net["sites"]:
+        stamp(s, c.NETWORK_EPOCH, None)
+    for d in net["physical_devices"]:
+        stamp(d, dev_from[d["device_id"]], decom.get(d["device_id"]))
+    for n in net["design_nodes"]:
+        stamp(n, dev_from.get(n["node_id"]), decom.get(n["node_id"]))
+    for seg in net["physical_segments"]:
+        _, until = link_window(seg["end_a"], seg["end_b"])
+        stamp(seg, c.date_to_instant(seg.get("installed")) or dev_from.get(seg["end_a"]), until)
+    for n in rt["current_nodes"]:
+        stamp(n, dev_from[n["node_id"]], decom.get(n["node_id"]))
+    retired = {l["superseded_by"]: c.date_to_instant(l["retired_at"]) for l in rt["retired_links"]}
+    for l in rt["current_links"]:
+        start, until = link_window(l["end_a"], l["end_b"])
+        stamp(l, max(start, retired.get(l["link_id"], start)), until)
+    for l in rt["retired_links"]:
+        start, _ = link_window(l["end_a"], l["end_b"])
+        stamp(l, start, c.date_to_instant(l["retired_at"]))
+
+
 def main() -> None:
     net = build_network()
     rt = build_runtime(net)
     events = build_device_events(net)
     alarms, case = build_alarms(net, events)
+    apply_validity(net, rt)
 
     c.write_json(["network", "as_designed", "nodes_designed.json"], net["design_nodes"])
     cols = ["link_id", "layer", "end_a", "end_b", "design_capacity_gbps", "redundant"]

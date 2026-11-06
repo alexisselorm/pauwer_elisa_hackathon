@@ -73,14 +73,46 @@
         "unverified"
       ]
     },
+    "recorded_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "when the knowledge was first written down (transaction time); may be later than valid_from (e.g. a lock changed before anyone emailed about it) or earlier (e.g. a change announced in advance)"
+    },
     "supersedes": {
-      "type": "string"
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "assertion this one replaced"
+    },
+    "superseded_by": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "set iff status=superseded; its valid_from == this valid_to"
     },
     "contradicts": {
       "type": "array",
       "items": {
         "type": "string"
-      }
+      },
+      "description": "symmetric"
+    },
+    "corroborates": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "symmetric; same knowledge from another source"
     }
-  }
+  },
+  "x-temporal-rules": [
+    "valid_from <= valid_to (when valid_to is set); valid_to is exclusive",
+    "status=believed_true|disputed|unverified -> valid_to is null or after the snapshot (2026-11-07T00:00:00Z)",
+    "status=superseded -> superseded_by is set and successor.valid_from == valid_to",
+    "status=expired -> valid_to <= snapshot and no successor (a bounded window that ended)",
+    "status=disputed -> contradicts is non-empty",
+    "the subject entity exists (entities.jsonl) at valid_from"
+  ]
 }

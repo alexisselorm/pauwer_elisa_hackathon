@@ -59,6 +59,11 @@ def main() -> int:
     if rc:
         print("ERROR: .msg integrity check failed")
         return rc
+    import verify_temporal
+    rc = verify_temporal.main(HERE)
+    if rc:
+        print("ERROR: valid_from/valid_to check failed")
+        return rc
 
     total = 0
     for dirpath, _dirs, files in os.walk(HERE):

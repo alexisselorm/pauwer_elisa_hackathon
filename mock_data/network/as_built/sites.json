@@ -8,7 +8,9 @@
     "role": "primary",
     "grid_power_mw": 78.0,
     "racks": 168,
-    "gpu_nodes": 220
+    "gpu_nodes": 220,
+    "valid_from": "2018-01-01T00:00:00Z",
+    "valid_to": null
   },
   {
     "code": "FI-TRE-DC2",
@@ -19,7 +21,9 @@
     "role": "secondary",
     "grid_power_mw": 46.0,
     "racks": 92,
-    "gpu_nodes": 115
+    "gpu_nodes": 115,
+    "valid_from": "2018-01-01T00:00:00Z",
+    "valid_to": null
   },
   {
     "code": "FI-OUL-DC3",
@@ -30,7 +34,9 @@
     "role": "tertiary",
     "grid_power_mw": 22.0,
     "racks": 44,
-    "gpu_nodes": 52
+    "gpu_nodes": 52,
+    "valid_from": "2018-01-01T00:00:00Z",
+    "valid_to": null
   },
   {
     "code": "FI-KEM-DC4",
@@ -41,6 +47,8 @@
     "role": "cold_storage",
     "grid_power_mw": 9.0,
     "racks": 16,
-    "gpu_nodes": 0
+    "gpu_nodes": 0,
+    "valid_from": "2018-01-01T00:00:00Z",
+    "valid_to": null
   }
 ]

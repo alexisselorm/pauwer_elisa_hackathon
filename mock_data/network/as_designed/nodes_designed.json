@@ -18,7 +18,9 @@
       "Maintenance domain"
     ],
     "commissioned": null,
-    "design_capacity_gbps": 9600
+    "design_capacity_gbps": 9600,
+    "valid_from": "2020-06-01T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "CR-002",
@@ -39,7 +41,9 @@
       "Maintenance domain"
     ],
     "commissioned": null,
-    "design_capacity_gbps": 9600
+    "design_capacity_gbps": 9600,
+    "valid_from": "2021-09-22T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "CR-003",
@@ -60,7 +64,9 @@
       "Maintenance domain"
     ],
     "commissioned": null,
-    "design_capacity_gbps": 9600
+    "design_capacity_gbps": 9600,
+    "valid_from": "2021-09-22T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "CR-004",
@@ -81,7 +87,9 @@
       "Maintenance domain"
     ],
     "commissioned": null,
-    "design_capacity_gbps": 9600
+    "design_capacity_gbps": 9600,
+    "valid_from": "2020-06-01T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "CR-005",
@@ -102,7 +110,9 @@
       "Maintenance domain"
     ],
     "commissioned": null,
-    "design_capacity_gbps": 9600
+    "design_capacity_gbps": 9600,
+    "valid_from": "2019-03-14T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "CR-006",
@@ -123,7 +133,9 @@
       "Maintenance domain"
     ],
     "commissioned": null,
-    "design_capacity_gbps": 9600
+    "design_capacity_gbps": 9600,
+    "valid_from": "2019-03-14T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-001",
@@ -145,7 +157,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 200,
-    "access_capacity_gbps": 600
+    "access_capacity_gbps": 600,
+    "valid_from": "2022-03-07T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-002",
@@ -167,7 +181,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 400,
-    "access_capacity_gbps": 300
+    "access_capacity_gbps": 300,
+    "valid_from": "2024-01-15T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-003",
@@ -189,7 +205,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 400,
-    "access_capacity_gbps": 400
+    "access_capacity_gbps": 400,
+    "valid_from": "2024-09-03T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-004",
@@ -211,7 +229,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 200,
-    "access_capacity_gbps": 300
+    "access_capacity_gbps": 300,
+    "valid_from": "2019-02-20T00:00:00Z",
+    "valid_to": "2026-05-11T00:00:00Z"
   },
   {
     "node_id": "TRN-005",
@@ -233,7 +253,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 200,
-    "access_capacity_gbps": 300
+    "access_capacity_gbps": 300,
+    "valid_from": "2019-08-30T00:00:00Z",
+    "valid_to": "2026-07-15T00:00:00Z"
   },
   {
     "node_id": "TRN-006",
@@ -255,7 +277,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 400,
-    "access_capacity_gbps": 200
+    "access_capacity_gbps": 200,
+    "valid_from": "2025-02-26T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-042",
@@ -277,7 +301,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 200,
-    "access_capacity_gbps": 200
+    "access_capacity_gbps": 200,
+    "valid_from": "2019-04-18T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-007",
@@ -299,7 +325,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 200,
-    "access_capacity_gbps": 400
+    "access_capacity_gbps": 400,
+    "valid_from": "2019-02-20T00:00:00Z",
+    "valid_to": "2026-07-27T00:00:00Z"
   },
   {
     "node_id": "TRN-008",
@@ -321,7 +349,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 400,
-    "access_capacity_gbps": 200
+    "access_capacity_gbps": 200,
+    "valid_from": "2024-09-03T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-009",
@@ -343,7 +373,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 400,
-    "access_capacity_gbps": 200
+    "access_capacity_gbps": 200,
+    "valid_from": "2025-02-26T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-010",
@@ -365,7 +397,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 200,
-    "access_capacity_gbps": 200
+    "access_capacity_gbps": 200,
+    "valid_from": "2022-11-18T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-011",
@@ -387,7 +421,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 200,
-    "access_capacity_gbps": 100
+    "access_capacity_gbps": 100,
+    "valid_from": "2022-03-07T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-012",
@@ -409,7 +445,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 200,
-    "access_capacity_gbps": 200
+    "access_capacity_gbps": 200,
+    "valid_from": "2022-11-18T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-013",
@@ -431,7 +469,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 200,
-    "access_capacity_gbps": 200
+    "access_capacity_gbps": 200,
+    "valid_from": "2019-02-20T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-014",
@@ -453,7 +493,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 200,
-    "access_capacity_gbps": 100
+    "access_capacity_gbps": 100,
+    "valid_from": "2019-02-20T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-015",
@@ -475,7 +517,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 400,
-    "access_capacity_gbps": 100
+    "access_capacity_gbps": 100,
+    "valid_from": "2024-09-03T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-016",
@@ -497,7 +541,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 200,
-    "access_capacity_gbps": 100
+    "access_capacity_gbps": 100,
+    "valid_from": "2022-11-18T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-017",
@@ -519,7 +565,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 200,
-    "access_capacity_gbps": 200
+    "access_capacity_gbps": 200,
+    "valid_from": "2019-08-30T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-018",
@@ -541,7 +589,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 200,
-    "access_capacity_gbps": 100
+    "access_capacity_gbps": 100,
+    "valid_from": "2019-08-30T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-019",
@@ -563,7 +613,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 200,
-    "access_capacity_gbps": 200
+    "access_capacity_gbps": 200,
+    "valid_from": "2018-05-11T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-020",
@@ -585,7 +637,9 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 200,
-    "access_capacity_gbps": 100
+    "access_capacity_gbps": 100,
+    "valid_from": "2022-03-07T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-021",
@@ -607,6 +661,8 @@
     ],
     "commissioned": null,
     "design_capacity_gbps": 200,
-    "access_capacity_gbps": 100
+    "access_capacity_gbps": 100,
+    "valid_from": "2022-11-18T00:00:00Z",
+    "valid_to": null
   }
 ]

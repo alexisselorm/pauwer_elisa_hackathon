@@ -11,7 +11,9 @@
     ],
     "site": "Helsinki core hall",
     "commissioned": "2020-06-01",
-    "generation": null
+    "generation": null,
+    "valid_from": "2020-06-01T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "CR-002",
@@ -25,7 +27,9 @@
     ],
     "site": "Espoo core hall",
     "commissioned": "2021-09-22",
-    "generation": null
+    "generation": null,
+    "valid_from": "2021-09-22T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "CR-003",
@@ -39,7 +43,9 @@
     ],
     "site": "Tampere core hall",
     "commissioned": "2021-09-22",
-    "generation": null
+    "generation": null,
+    "valid_from": "2021-09-22T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "CR-004",
@@ -53,7 +59,9 @@
     ],
     "site": "Turku core hall",
     "commissioned": "2020-06-01",
-    "generation": null
+    "generation": null,
+    "valid_from": "2020-06-01T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "CR-005",
@@ -67,7 +75,9 @@
     ],
     "site": "Oulu core hall",
     "commissioned": "2019-03-14",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-03-14T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "CR-006",
@@ -81,7 +91,9 @@
     ],
     "site": "Rovaniemi core hall",
     "commissioned": "2019-03-14",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-03-14T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-001",
@@ -95,7 +107,9 @@
     ],
     "site": "Helsinki transport room",
     "commissioned": "2022-03-07",
-    "generation": "Gen2"
+    "generation": "Gen2",
+    "valid_from": "2022-03-07T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-002",
@@ -109,7 +123,9 @@
     ],
     "site": "Espoo transport room",
     "commissioned": "2024-01-15",
-    "generation": "Gen3"
+    "generation": "Gen3",
+    "valid_from": "2024-01-15T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-003",
@@ -123,7 +139,9 @@
     ],
     "site": "Tampere transport room",
     "commissioned": "2024-09-03",
-    "generation": "Gen3"
+    "generation": "Gen3",
+    "valid_from": "2024-09-03T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-004",
@@ -137,7 +155,9 @@
     ],
     "site": "Turku transport room",
     "commissioned": "2019-02-20",
-    "generation": "Gen1"
+    "generation": "Gen1",
+    "valid_from": "2019-02-20T00:00:00Z",
+    "valid_to": "2026-05-11T00:00:00Z"
   },
   {
     "node_id": "TRN-005",
@@ -151,7 +171,9 @@
     ],
     "site": "Oulu transport room",
     "commissioned": "2019-08-30",
-    "generation": "Gen1"
+    "generation": "Gen1",
+    "valid_from": "2019-08-30T00:00:00Z",
+    "valid_to": "2026-07-15T00:00:00Z"
   },
   {
     "node_id": "TRN-006",
@@ -165,7 +187,9 @@
     ],
     "site": "Rovaniemi transport room",
     "commissioned": "2025-02-26",
-    "generation": "Gen3"
+    "generation": "Gen3",
+    "valid_from": "2025-02-26T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-042",
@@ -179,7 +203,9 @@
     ],
     "site": "Kemi transport room",
     "commissioned": "2019-04-18",
-    "generation": "Gen1"
+    "generation": "Gen1",
+    "valid_from": "2019-04-18T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-007",
@@ -193,7 +219,9 @@
     ],
     "site": "Vantaa transport room",
     "commissioned": "2019-02-20",
-    "generation": "Gen1"
+    "generation": "Gen1",
+    "valid_from": "2019-02-20T00:00:00Z",
+    "valid_to": "2026-07-27T00:00:00Z"
   },
   {
     "node_id": "TRN-008",
@@ -207,7 +235,9 @@
     ],
     "site": "Jyväskylä transport room",
     "commissioned": "2024-09-03",
-    "generation": "Gen3"
+    "generation": "Gen3",
+    "valid_from": "2024-09-03T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-009",
@@ -221,7 +251,9 @@
     ],
     "site": "Kuopio transport room",
     "commissioned": "2025-02-26",
-    "generation": "Gen3"
+    "generation": "Gen3",
+    "valid_from": "2025-02-26T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-010",
@@ -235,7 +267,9 @@
     ],
     "site": "Lahti transport room",
     "commissioned": "2022-11-18",
-    "generation": "Gen2"
+    "generation": "Gen2",
+    "valid_from": "2022-11-18T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-011",
@@ -249,7 +283,9 @@
     ],
     "site": "Ivalo transport room",
     "commissioned": "2022-03-07",
-    "generation": "Gen2"
+    "generation": "Gen2",
+    "valid_from": "2022-03-07T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-012",
@@ -263,7 +299,9 @@
     ],
     "site": "Joensuu transport room",
     "commissioned": "2022-11-18",
-    "generation": "Gen2"
+    "generation": "Gen2",
+    "valid_from": "2022-11-18T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-013",
@@ -277,7 +315,9 @@
     ],
     "site": "Vaasa transport room",
     "commissioned": "2019-02-20",
-    "generation": "Gen1"
+    "generation": "Gen1",
+    "valid_from": "2019-02-20T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-014",
@@ -291,7 +331,9 @@
     ],
     "site": "Seinäjoki transport room",
     "commissioned": "2019-02-20",
-    "generation": "Gen1"
+    "generation": "Gen1",
+    "valid_from": "2019-02-20T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-015",
@@ -305,7 +347,9 @@
     ],
     "site": "Kajaani transport room",
     "commissioned": "2024-09-03",
-    "generation": "Gen3"
+    "generation": "Gen3",
+    "valid_from": "2024-09-03T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-016",
@@ -319,7 +363,9 @@
     ],
     "site": "Mikkeli transport room",
     "commissioned": "2022-11-18",
-    "generation": "Gen2"
+    "generation": "Gen2",
+    "valid_from": "2022-11-18T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-017",
@@ -333,7 +379,9 @@
     ],
     "site": "Pori transport room",
     "commissioned": "2019-08-30",
-    "generation": "Gen1"
+    "generation": "Gen1",
+    "valid_from": "2019-08-30T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-018",
@@ -347,7 +395,9 @@
     ],
     "site": "Kokkola transport room",
     "commissioned": "2019-08-30",
-    "generation": "Gen1"
+    "generation": "Gen1",
+    "valid_from": "2019-08-30T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-019",
@@ -361,7 +411,9 @@
     ],
     "site": "Lappeenranta transport room",
     "commissioned": "2018-05-11",
-    "generation": "Gen1"
+    "generation": "Gen1",
+    "valid_from": "2018-05-11T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-020",
@@ -375,7 +427,9 @@
     ],
     "site": "Hämeenlinna transport room",
     "commissioned": "2022-03-07",
-    "generation": "Gen2"
+    "generation": "Gen2",
+    "valid_from": "2022-03-07T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "TRN-021",
@@ -389,7 +443,9 @@
     ],
     "site": "Sodankylä transport room",
     "commissioned": "2022-11-18",
-    "generation": "Gen2"
+    "generation": "Gen2",
+    "valid_from": "2022-11-18T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-001",
@@ -402,7 +458,9 @@
     ],
     "site": "Helsinki hotspot 1",
     "commissioned": "2019-04-05",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-04-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-002",
@@ -415,7 +473,9 @@
     ],
     "site": "Helsinki hotspot 2",
     "commissioned": "2019-09-05",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-09-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-003",
@@ -428,7 +488,9 @@
     ],
     "site": "Helsinki hotspot 3",
     "commissioned": "2019-04-17",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-04-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-004",
@@ -441,7 +503,9 @@
     ],
     "site": "Helsinki hotspot 4",
     "commissioned": "2019-03-23",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-03-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-005",
@@ -454,7 +518,9 @@
     ],
     "site": "Helsinki hotspot 5",
     "commissioned": "2019-06-05",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-06-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-006",
@@ -467,7 +533,9 @@
     ],
     "site": "Helsinki hotspot 6",
     "commissioned": "2019-11-05",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-11-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-007",
@@ -480,7 +548,9 @@
     ],
     "site": "Espoo hotspot 1",
     "commissioned": "2019-06-05",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-06-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-008",
@@ -493,7 +563,9 @@
     ],
     "site": "Espoo hotspot 2",
     "commissioned": "2019-06-23",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-06-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-009",
@@ -506,7 +578,9 @@
     ],
     "site": "Espoo hotspot 3",
     "commissioned": "2019-03-05",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-03-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-010",
@@ -519,7 +593,9 @@
     ],
     "site": "Vantaa hotspot 1",
     "commissioned": "2019-02-05",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-02-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-011",
@@ -532,7 +608,9 @@
     ],
     "site": "Vantaa hotspot 2",
     "commissioned": "2019-12-23",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-12-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-012",
@@ -545,7 +623,9 @@
     ],
     "site": "Vantaa hotspot 3",
     "commissioned": "2019-10-17",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-10-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-013",
@@ -558,7 +638,9 @@
     ],
     "site": "Vantaa hotspot 4",
     "commissioned": "2019-10-05",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-10-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-014",
@@ -571,7 +653,9 @@
     ],
     "site": "Tampere hotspot 1",
     "commissioned": "2019-05-23",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-05-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-015",
@@ -584,7 +668,9 @@
     ],
     "site": "Tampere hotspot 2",
     "commissioned": "2019-03-23",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-03-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-016",
@@ -597,7 +683,9 @@
     ],
     "site": "Tampere hotspot 3",
     "commissioned": "2019-10-23",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-10-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-017",
@@ -610,7 +698,9 @@
     ],
     "site": "Tampere hotspot 4",
     "commissioned": "2019-07-05",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-07-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-018",
@@ -623,7 +713,9 @@
     ],
     "site": "Turku hotspot 1",
     "commissioned": "2019-10-17",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-10-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-019",
@@ -636,7 +728,9 @@
     ],
     "site": "Turku hotspot 2",
     "commissioned": "2019-02-17",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-02-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-020",
@@ -649,7 +743,9 @@
     ],
     "site": "Turku hotspot 3",
     "commissioned": "2019-04-23",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-04-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-021",
@@ -662,7 +758,9 @@
     ],
     "site": "Oulu hotspot 1",
     "commissioned": "2019-02-05",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-02-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-022",
@@ -675,7 +773,9 @@
     ],
     "site": "Oulu hotspot 2",
     "commissioned": "2019-07-17",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-07-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-023",
@@ -688,7 +788,9 @@
     ],
     "site": "Oulu hotspot 3",
     "commissioned": "2019-04-05",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-04-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-024",
@@ -701,7 +803,9 @@
     ],
     "site": "Jyväskylä hotspot 1",
     "commissioned": "2019-02-17",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-02-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-025",
@@ -714,7 +818,9 @@
     ],
     "site": "Jyväskylä hotspot 2",
     "commissioned": "2019-02-05",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-02-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-026",
@@ -727,7 +833,9 @@
     ],
     "site": "Kuopio hotspot 1",
     "commissioned": "2019-10-05",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-10-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-027",
@@ -740,7 +848,9 @@
     ],
     "site": "Kuopio hotspot 2",
     "commissioned": "2019-08-17",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-08-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-028",
@@ -753,7 +863,9 @@
     ],
     "site": "Lahti hotspot 1",
     "commissioned": "2019-09-23",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-09-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-029",
@@ -766,7 +878,9 @@
     ],
     "site": "Lahti hotspot 2",
     "commissioned": "2019-07-17",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-07-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-030",
@@ -779,7 +893,9 @@
     ],
     "site": "Rovaniemi hotspot 1",
     "commissioned": "2019-01-23",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-01-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-031",
@@ -792,7 +908,9 @@
     ],
     "site": "Rovaniemi hotspot 2",
     "commissioned": "2019-12-23",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-12-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-032",
@@ -805,7 +923,9 @@
     ],
     "site": "Kemi hotspot 1",
     "commissioned": "2019-01-05",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-01-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-033",
@@ -818,7 +938,9 @@
     ],
     "site": "Kemi hotspot 2",
     "commissioned": "2019-10-23",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-10-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-034",
@@ -831,7 +953,9 @@
     ],
     "site": "Ivalo hotspot 1",
     "commissioned": "2019-02-23",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-02-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-035",
@@ -844,7 +968,9 @@
     ],
     "site": "Joensuu hotspot 1",
     "commissioned": "2019-01-23",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-01-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-036",
@@ -857,7 +983,9 @@
     ],
     "site": "Joensuu hotspot 2",
     "commissioned": "2019-12-17",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-12-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-037",
@@ -870,7 +998,9 @@
     ],
     "site": "Vaasa hotspot 1",
     "commissioned": "2019-08-05",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-08-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-038",
@@ -883,7 +1013,9 @@
     ],
     "site": "Vaasa hotspot 2",
     "commissioned": "2019-05-05",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-05-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-039",
@@ -896,7 +1028,9 @@
     ],
     "site": "Seinäjoki hotspot 1",
     "commissioned": "2019-05-17",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-05-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-040",
@@ -909,7 +1043,9 @@
     ],
     "site": "Kajaani hotspot 1",
     "commissioned": "2019-03-23",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-03-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-041",
@@ -922,7 +1058,9 @@
     ],
     "site": "Mikkeli hotspot 1",
     "commissioned": "2019-07-23",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-07-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-042",
@@ -935,7 +1073,9 @@
     ],
     "site": "Pori hotspot 1",
     "commissioned": "2019-12-23",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-12-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-043",
@@ -948,7 +1088,9 @@
     ],
     "site": "Pori hotspot 2",
     "commissioned": "2019-03-23",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-03-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-044",
@@ -961,7 +1103,9 @@
     ],
     "site": "Kokkola hotspot 1",
     "commissioned": "2019-09-23",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-09-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-045",
@@ -974,7 +1118,9 @@
     ],
     "site": "Lappeenranta hotspot 1",
     "commissioned": "2019-11-17",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-11-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-046",
@@ -987,7 +1133,9 @@
     ],
     "site": "Lappeenranta hotspot 2",
     "commissioned": "2019-08-05",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-08-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-047",
@@ -1000,7 +1148,9 @@
     ],
     "site": "Hämeenlinna hotspot 1",
     "commissioned": "2019-08-23",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-08-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "node_id": "ACC-048",
@@ -1013,6 +1163,8 @@
     ],
     "site": "Sodankylä hotspot 1",
     "commissioned": "2019-10-23",
-    "generation": null
+    "generation": null,
+    "valid_from": "2019-10-23T00:00:00Z",
+    "valid_to": null
   }
 ]

@@ -102,22 +102,9 @@ def itsm(net, events, alarms, ctx_files=None):
                 row[k] = c.ts_s(row[k])
 
     # ITSM KB: mostly anodyne, but includes one contradicted entry
-    kb = [
-        {"article_id": "KB0012345", "title": "How to replace an SFP on a transmission node",
-         "body": "Power down the port, swap module, verify optics. If traffic does not return, open a vendor "
-                 "case.", "valid_from": "2022-01-10", "status": "published"},
-        {"article_id": "KB0017001", "title": "TRN-042 known issue: no traffic after SFP replacement",
-         "body": "Known issue on TRN-042 only. Workaround: reboot the whole node (we saw it fix it twice).",
-         "valid_from": "2024-03-02", "status": "published"},
-        {"article_id": "KB0018222", "title": "MTU values for core links", "body": "9114 bytes, see change "
-                                                                                "approval for exceptions.",
-         "valid_from": "2025-12-15", "status": "published"},
-        {"article_id": "KB0018420", "title": "Kemi site access", "body": "Private road, gate. Ask Pekka for "
-                                                                        "the key.",
-         "valid_from": "2023-06-30", "status": "published"},
-        {"article_id": "KB0018501", "title": "BESS winter operating mode", "body": "Hold 80% SOC.",
-         "valid_from": "2025-11-10", "status": "published"},
-    ]
+    # Source-system view: published date only, no valid_to (a stale KB does not know it is stale).
+    # The gold context layer (knowledge_graph/assertions.jsonl) records when each one stopped being true.
+    kb = [dict(a) for a in c.ITSM_KB_ARTICLES]
     # KB conflicts (this is the 'structured systems are stale' lesson):
     kb_conflicts = {
         "KB0017001": "CONFLICT with Teams/email: reboot is the wrong action; bounce the port. Also the issue is "

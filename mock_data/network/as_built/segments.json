@@ -10,7 +10,9 @@
     "cable_ref": "FIB-HEL-199",
     "installed": "2022-03-07",
     "notes": "",
-    "private_road": false
+    "private_road": false,
+    "valid_from": "2022-03-07T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-002",
@@ -23,7 +25,9 @@
     "cable_ref": "FIB-ESP-430",
     "installed": "2024-01-15",
     "notes": "",
-    "private_road": false
+    "private_road": false,
+    "valid_from": "2024-01-15T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-003",
@@ -36,7 +40,9 @@
     "cable_ref": "FIB-TAM-275",
     "installed": "2024-09-03",
     "notes": "",
-    "private_road": false
+    "private_road": false,
+    "valid_from": "2024-09-03T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-004",
@@ -49,7 +55,9 @@
     "cable_ref": "FIB-TUR-362",
     "installed": "2019-02-20",
     "notes": "",
-    "private_road": false
+    "private_road": false,
+    "valid_from": "2019-02-20T00:00:00Z",
+    "valid_to": "2026-05-11T00:00:00Z"
   },
   {
     "segment_id": "SEG-005",
@@ -62,7 +70,9 @@
     "cable_ref": "FIB-OUL-832",
     "installed": "2019-08-30",
     "notes": "",
-    "private_road": false
+    "private_road": false,
+    "valid_from": "2019-08-30T00:00:00Z",
+    "valid_to": "2026-07-15T00:00:00Z"
   },
   {
     "segment_id": "SEG-006",
@@ -75,7 +85,9 @@
     "cable_ref": "FIB-ROV-271",
     "installed": "2025-02-26",
     "notes": "",
-    "private_road": false
+    "private_road": false,
+    "valid_from": "2025-02-26T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-042",
@@ -90,7 +102,9 @@
     "notes": "duct route shared with chain operator",
     "private_road": true,
     "barrier": "boom",
-    "access_notes": "site reachable only via private road; see access register"
+    "access_notes": "site reachable only via private road; see access register",
+    "valid_from": "2019-04-18T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-007",
@@ -103,7 +117,9 @@
     "cable_ref": "FIB-VAN-816",
     "installed": "2019-02-20",
     "notes": "",
-    "private_road": false
+    "private_road": false,
+    "valid_from": "2019-02-20T00:00:00Z",
+    "valid_to": "2026-07-27T00:00:00Z"
   },
   {
     "segment_id": "SEG-008",
@@ -116,7 +132,9 @@
     "cable_ref": "FIB-JYV-796",
     "installed": "2024-09-03",
     "notes": "",
-    "private_road": false
+    "private_road": false,
+    "valid_from": "2024-09-03T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-009",
@@ -129,7 +147,9 @@
     "cable_ref": "FIB-KUO-637",
     "installed": "2025-02-26",
     "notes": "",
-    "private_road": false
+    "private_road": false,
+    "valid_from": "2025-02-26T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-010",
@@ -142,7 +162,9 @@
     "cable_ref": "FIB-LAH-634",
     "installed": "2022-11-18",
     "notes": "",
-    "private_road": false
+    "private_road": false,
+    "valid_from": "2022-11-18T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-011",
@@ -157,7 +179,9 @@
     "notes": "",
     "private_road": true,
     "barrier": "boom",
-    "access_notes": "site reachable only via private road; see access register"
+    "access_notes": "site reachable only via private road; see access register",
+    "valid_from": "2022-03-07T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-012",
@@ -170,7 +194,9 @@
     "cable_ref": "FIB-JOE-121",
     "installed": "2022-11-18",
     "notes": "",
-    "private_road": false
+    "private_road": false,
+    "valid_from": "2022-11-18T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-013",
@@ -183,7 +209,9 @@
     "cable_ref": "FIB-VAA-607",
     "installed": "2019-02-20",
     "notes": "",
-    "private_road": false
+    "private_road": false,
+    "valid_from": "2019-02-20T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-014",
@@ -196,7 +224,9 @@
     "cable_ref": "FIB-SEI-471",
     "installed": "2019-02-20",
     "notes": "",
-    "private_road": false
+    "private_road": false,
+    "valid_from": "2019-02-20T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-015",
@@ -211,7 +241,9 @@
     "notes": "",
     "private_road": true,
     "barrier": "gate",
-    "access_notes": "site reachable only via private road; see access register"
+    "access_notes": "site reachable only via private road; see access register",
+    "valid_from": "2024-09-03T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-016",
@@ -224,7 +256,9 @@
     "cable_ref": "FIB-MIK-445",
     "installed": "2022-11-18",
     "notes": "",
-    "private_road": false
+    "private_road": false,
+    "valid_from": "2022-11-18T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-017",
@@ -237,7 +271,9 @@
     "cable_ref": "FIB-POR-901",
     "installed": "2019-08-30",
     "notes": "",
-    "private_road": false
+    "private_road": false,
+    "valid_from": "2019-08-30T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-018",
@@ -250,7 +286,9 @@
     "cable_ref": "FIB-KOK-318",
     "installed": "2019-08-30",
     "notes": "",
-    "private_road": false
+    "private_road": false,
+    "valid_from": "2019-08-30T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-019",
@@ -263,7 +301,9 @@
     "cable_ref": "FIB-LAP-926",
     "installed": "2018-05-11",
     "notes": "",
-    "private_road": false
+    "private_road": false,
+    "valid_from": "2018-05-11T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-020",
@@ -276,7 +316,9 @@
     "cable_ref": "FIB-HÄM-656",
     "installed": "2022-03-07",
     "notes": "",
-    "private_road": false
+    "private_road": false,
+    "valid_from": "2022-03-07T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-021",
@@ -291,7 +333,9 @@
     "notes": "",
     "private_road": true,
     "barrier": "boom",
-    "access_notes": "site reachable only via private road; see access register"
+    "access_notes": "site reachable only via private road; see access register",
+    "valid_from": "2022-11-18T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0001",
@@ -305,7 +349,9 @@
     "installed": "2019-04-05",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-04-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0002",
@@ -319,7 +365,9 @@
     "installed": "2019-09-05",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-09-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0003",
@@ -333,7 +381,9 @@
     "installed": "2019-04-17",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-04-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0004",
@@ -347,7 +397,9 @@
     "installed": "2019-03-23",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-03-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0005",
@@ -361,7 +413,9 @@
     "installed": "2019-06-05",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-06-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0006",
@@ -375,7 +429,9 @@
     "installed": "2019-11-05",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-11-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0007",
@@ -389,7 +445,9 @@
     "installed": "2019-06-05",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-06-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0008",
@@ -403,7 +461,9 @@
     "installed": "2019-06-23",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-06-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0009",
@@ -417,7 +477,9 @@
     "installed": "2019-03-05",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-03-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0010",
@@ -431,7 +493,9 @@
     "installed": "2019-02-05",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-02-05T00:00:00Z",
+    "valid_to": "2026-07-27T00:00:00Z"
   },
   {
     "segment_id": "SEG-ACC-0011",
@@ -445,7 +509,9 @@
     "installed": "2019-12-23",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-12-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0012",
@@ -459,7 +525,9 @@
     "installed": "2019-10-17",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-10-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0013",
@@ -473,7 +541,9 @@
     "installed": "2019-10-05",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-10-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0014",
@@ -487,7 +557,9 @@
     "installed": "2019-05-23",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-05-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0015",
@@ -501,7 +573,9 @@
     "installed": "2019-03-23",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-03-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0016",
@@ -515,7 +589,9 @@
     "installed": "2019-10-23",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-10-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0017",
@@ -529,7 +605,9 @@
     "installed": "2019-07-05",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-07-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0018",
@@ -543,7 +621,9 @@
     "installed": "2019-10-17",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-10-17T00:00:00Z",
+    "valid_to": "2026-05-11T00:00:00Z"
   },
   {
     "segment_id": "SEG-ACC-0019",
@@ -557,7 +637,9 @@
     "installed": "2019-02-17",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-02-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0020",
@@ -571,7 +653,9 @@
     "installed": "2019-04-23",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-04-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0021",
@@ -585,7 +669,9 @@
     "installed": "2019-02-05",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-02-05T00:00:00Z",
+    "valid_to": "2026-07-15T00:00:00Z"
   },
   {
     "segment_id": "SEG-ACC-0022",
@@ -599,7 +685,9 @@
     "installed": "2019-07-17",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-07-17T00:00:00Z",
+    "valid_to": "2026-07-15T00:00:00Z"
   },
   {
     "segment_id": "SEG-ACC-0023",
@@ -613,7 +701,9 @@
     "installed": "2019-04-05",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-04-05T00:00:00Z",
+    "valid_to": "2026-07-15T00:00:00Z"
   },
   {
     "segment_id": "SEG-ACC-0024",
@@ -627,7 +717,9 @@
     "installed": "2019-02-17",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-02-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0025",
@@ -641,7 +733,9 @@
     "installed": "2019-02-05",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-02-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0026",
@@ -655,7 +749,9 @@
     "installed": "2019-10-05",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-10-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0027",
@@ -669,7 +765,9 @@
     "installed": "2019-08-17",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-08-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0028",
@@ -683,7 +781,9 @@
     "installed": "2019-09-23",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-09-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0029",
@@ -697,7 +797,9 @@
     "installed": "2019-07-17",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-07-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0030",
@@ -711,7 +813,9 @@
     "installed": "2019-01-23",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-01-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0031",
@@ -725,7 +829,9 @@
     "installed": "2019-12-23",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-12-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0032",
@@ -739,7 +845,9 @@
     "installed": "2019-01-05",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-01-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0033",
@@ -753,7 +861,9 @@
     "installed": "2019-10-23",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-10-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0034",
@@ -767,7 +877,9 @@
     "installed": "2019-02-23",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-02-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0035",
@@ -781,7 +893,9 @@
     "installed": "2019-01-23",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-01-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0036",
@@ -795,7 +909,9 @@
     "installed": "2019-12-17",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-12-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0037",
@@ -809,7 +925,9 @@
     "installed": "2019-08-05",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-08-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0038",
@@ -823,7 +941,9 @@
     "installed": "2019-05-05",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-05-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0039",
@@ -837,7 +957,9 @@
     "installed": "2019-05-17",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-05-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0040",
@@ -851,7 +973,9 @@
     "installed": "2019-03-23",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-03-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0041",
@@ -865,7 +989,9 @@
     "installed": "2019-07-23",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-07-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0042",
@@ -879,7 +1005,9 @@
     "installed": "2019-12-23",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-12-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0043",
@@ -893,7 +1021,9 @@
     "installed": "2019-03-23",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-03-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0044",
@@ -907,7 +1037,9 @@
     "installed": "2019-09-23",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-09-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0045",
@@ -921,7 +1053,9 @@
     "installed": "2019-11-17",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-11-17T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0046",
@@ -935,7 +1069,9 @@
     "installed": "2019-08-05",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-08-05T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0047",
@@ -949,7 +1085,9 @@
     "installed": "2019-08-23",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-08-23T00:00:00Z",
+    "valid_to": null
   },
   {
     "segment_id": "SEG-ACC-0048",
@@ -963,6 +1101,8 @@
     "installed": "2019-10-23",
     "notes": "",
     "private_road": false,
-    "barrier": null
+    "barrier": null,
+    "valid_from": "2019-10-23T00:00:00Z",
+    "valid_to": null
   }
 ]

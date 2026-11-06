@@ -28,6 +28,46 @@ SLOT_SECONDS = 15 * 60
 START = dt.datetime(2025, 10, 1, 0, 0, tzinfo=UTC)
 END = dt.datetime(2026, 11, 7, 0, 0, tzinfo=UTC)  # exclusive
 
+# ---------------------------------------------------------------- validity (valid_from / valid_to)
+# Every graph-layer record (as-designed, as-built, as-running, context) carries
+#   valid_from: ISO-8601 instant from which the record is true in the world
+#   valid_to:   ISO-8601 instant at which it stopped being true (exclusive); null = still believed true
+# Raw source systems (Teams, email, ITSM, CMDB, Jira) deliberately do NOT: inferring validity from
+# them is the pipeline's job. Event-stream rows are point-in-time (record time = event time).
+#
+# NETWORK_EPOCH is the assumed start of validity for things that exist before the network history
+# does and have no date of their own (sites, hardware models, topics). It is an assumption, not data.
+NETWORK_EPOCH = "2018-01-01T00:00:00Z"
+# The data snapshot is taken at END: a valid_to <= SNAPSHOT_AT is in the past.
+SNAPSHOT_AT = END.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def date_to_instant(d: str | None) -> str | None:
+    """'2019-04-18' -> '2019-04-18T00:00:00Z'; full instants pass through; None stays None."""
+    if d is None:
+        return None
+    return d if "T" in d else f"{d}T00:00:00Z"
+
+
+# ITSM knowledge articles. Shared between the ITSM export (generate_structured) and the gold
+# context layer (generate_context), which records when each stale article stopped being true.
+ITSM_KB_ARTICLES = [
+    {"article_id": "KB0012345", "title": "How to replace an SFP on a transmission node",
+     "body": "Power down the port, swap module, verify optics. If traffic does not return, open a vendor "
+             "case.", "valid_from": "2022-01-10", "status": "published"},
+    {"article_id": "KB0017001", "title": "TRN-042 known issue: no traffic after SFP replacement",
+     "body": "Known issue on TRN-042 only. Workaround: reboot the whole node (we saw it fix it twice).",
+     "valid_from": "2024-03-02", "status": "published"},
+    {"article_id": "KB0018222", "title": "MTU values for core links", "body": "9114 bytes, see change "
+                                                                            "approval for exceptions.",
+     "valid_from": "2025-12-15", "status": "published"},
+    {"article_id": "KB0018420", "title": "Kemi site access", "body": "Private road, gate. Ask Pekka for "
+                                                                    "the key.",
+     "valid_from": "2023-06-30", "status": "published"},
+    {"article_id": "KB0018501", "title": "BESS winter operating mode", "body": "Hold 80% SOC.",
+     "valid_from": "2025-11-10", "status": "published"},
+]
+
 global_rng = random.Random(SEED)
 
 
