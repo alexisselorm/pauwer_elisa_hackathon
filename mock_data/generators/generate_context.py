@@ -46,6 +46,14 @@ def _dt(y, m, d, hh=0, mm=0, ss=0) -> dt.datetime:
     return dt.datetime(y, m, d, hh, mm, ss, tzinfo=c.UTC)
 
 
+def _stated_day(y, m, d) -> dt.datetime:
+    """A calendar date stated in a source's text ("on 3 August", "until 20 November"): 00:00
+    Europe/Helsinki on that day, in UTC (plan 001 R3/R4a, as in eval/heldout H-02/H-03/H-08).
+    Not for platform timestamps (document dates, publish dates), which stay as exported."""
+    from zoneinfo import ZoneInfo
+    return dt.datetime(y, m, d, tzinfo=ZoneInfo("Europe/Helsinki")).astimezone(c.UTC)
+
+
 def mt(m: dict) -> dt.datetime:
     """Exact send time of a Teams message or email record."""
     return c.parse_iso(m["created_at"] if "created_at" in m else m["sent_at"])
@@ -874,7 +882,7 @@ def build(meta: dict) -> None:
     m_bar3 = ch_field.msg(t_barrier + dt.timedelta(minutes=25), ctx.p("heikki"), reply_in=m_bar1["conversation_id"], text=
                           "Kemi is not in the access register at all. Someone should add the gate and who "
                           "holds the key, otherwise the next person gets stuck like this.")
-    t_lock_change = _dt(2026, 8, 3)  # barrier repair: padlock replaced by a code lock
+    t_lock_change = _stated_day(2026, 8, 3)  # barrier repair: padlock replaced by a code lock
     a_bar_old = ctx.assert_(
         subject=kemi_seg_id, topic="access_keys",
         statement="Kemi transport room gate is locked with a padlock; key is on Pekka Hämäläinen's keyring "
@@ -953,12 +961,12 @@ def build(meta: dict) -> None:
             subject=ivalo_seg_id, topic="access_keys",
             statement="Ivalo gate is unlocked; the 1.4 km gravel road is snowed in Oct-May and must be cleared by "
                       "the local contractor (call the Rovaniemi field team).",
-            valid_from=_dt(2024, 6, 12), valid_to=None,   # the attached access drawing is dated 2024-06-12
+            valid_from=_stated_day(2024, 6, 12), valid_to=None,   # the attached access drawing is dated 2024-06-12
             source={"type": "email", "ref": em_ivalo["msg_id"], "detail": "Ivalo site access",
                     "by": "pekka", "recorded_at": mt(em_ivalo)},
             confidence="high", status="believed_true", about_entity_kind="segment")
         ctx.access_rows.append({"segment_id": ivalo_seg_id, "site": "Ivalo", "barrier": "gate",
-                                "valid_from": c.iso(_dt(2024, 6, 12)), "valid_to": None,
+                                "valid_from": c.iso(_stated_day(2024, 6, 12)), "valid_to": None,
                                 "recorded_at": em_ivalo["sent_at"], "lock": "none",
                                 "holder": None, "where": "gate unlocked; road snowed in Oct-May, call the contractor", "source": em_ivalo["msg_id"]})
 
@@ -992,7 +1000,7 @@ def build(meta: dict) -> None:
         subject="TOPIC:maintenance_freeze", topic="maintenance_freeze",
         statement="During the sales freeze (Dec 20 - Jan 5) no network changes are allowed without a named change "
                   "approval; change-approval requests go to the service manager.",
-        valid_from=_dt(2025, 12, 20), valid_to=_dt(2026, 1, 5),   # the window stated in the message
+        valid_from=_stated_day(2025, 12, 20), valid_to=_stated_day(2026, 1, 5),   # the window stated in the message
         source={"type": "teams_message", "ref": m_frz["message_id"], "detail": "Service-Ops",
                 "by": "markku", "recorded_at": mt(m_frz)},
         confidence="medium", status="expired", about_entity_kind="topic")

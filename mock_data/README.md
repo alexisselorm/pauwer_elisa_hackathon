@@ -195,6 +195,12 @@ Following Elisa's reference architecture, every **graph-layer** record has valid
   (2024-06-12).
 * Sales freeze: announced 2025-12-15 for the window 2025-12-20 → 2026-01-05 (now `expired`).
 
+A calendar date stated in a source's text ("on 3 August", "until 20 November", "from 20 Dec to 5 Jan") means
+**00:00 Europe/Helsinki** on that day, stored in UTC (plan 001 R3/R4a, the same convention as `eval/heldout`):
+the Kemi change is `2026-08-02T21:00:00Z` (EEST), the freeze window `2025-12-19T22:00Z` → `2026-01-04T22:00Z`
+(EET; `valid_to` is exclusive, so "to 5 Jan" ends as 5 Jan begins, like H-03's "until 20 November").
+Platform dates (document `last_edited`, KB publish dates, commissioning dates) stay as exported.
+
 Everywhere else `valid_from` = `recorded_at` = the source message's exact send time.
 
 Stale knowledge-base pages (Confluence *and* ITSM) have gold assertions with `valid_to` set and
