@@ -19,7 +19,6 @@
 {"change_id": "CHG1450046", "ci": "ACC-022", "start": "2026-06-16T05:43:25Z", "end": "2026-06-16T19:21:41Z", "description": "Antenna alignment / dish check on ACC-022", "approved": true, "risk": "low"}
 {"change_id": "CHG2276105", "ci": "ACC-034", "start": "2026-06-20T05:12:23Z", "end": "2026-06-20T15:13:05Z", "description": "Replaced PSU in ACC-034 cabinet", "approved": true, "risk": "low"}
 {"change_id": "CHG0119710", "ci": "CR-003", "start": "2026-06-24T22:31:40Z", "end": "2026-06-25T16:10:23Z", "description": "Planned maintenance window CR-003", "approved": true, "risk": "low"}
-{"change_id": "CHG2895007", "ci": "TRN-004", "start": "2026-06-26T04:08:20Z", "end": "2026-06-26T21:37:08Z", "description": "SFP replacement on TRN-004 port 1/1/6", "approved": true, "risk": "low"}
 {"change_id": "CHG3752944", "ci": "CR-006", "start": "2026-07-06T22:43:45Z", "end": "2026-07-07T16:08:30Z", "description": "Planned maintenance window CR-006", "approved": true, "risk": "low"}
 {"change_id": "CHG7094273", "ci": "TRN-005", "start": "2026-07-10T05:14:38Z", "end": "2026-07-10T22:36:26Z", "description": "SFP replacement on TRN-005 port 1/1/4", "approved": true, "risk": "low"}
 {"change_id": "CHG7920514", "ci": "TRN-005", "start": "2026-07-14T00:14:02Z", "end": "2026-07-18T00:02:36Z", "description": "TRN-005 decommissioned, replaced by TNC-3X", "approved": true, "risk": "low"}

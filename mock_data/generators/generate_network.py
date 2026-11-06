@@ -412,13 +412,30 @@ def build_device_events(net: dict):
         end = c.slot_event(off, r["end_time_iid"])
         r["_start"], r["_end"] = start, max(end, start + dt.timedelta(minutes=1))
     rows.sort(key=lambda r: (r["_start"], r["device_id"]))
+    alive = []
     for i, r in enumerate(rows):
         start, end = r.pop("_start"), r.pop("_end")
         r["event_id"] = f"EVT-{262000 + i:06d}"
         r["record_time"] = r["event_time"] = c.iso(start)
         r["end_time"] = c.iso(end)
         r["event_time_iid"], r["end_time_iid"] = c.instant(start), c.instant(end)
-    return rows
+        # Work can't happen on a device that isn't in service (the decommission work itself
+        # is recorded on its last day, before valid_to). Dropped after numbering, so every
+        # other event keeps its id.
+        if _alive(net, r["device_id"], start):
+            alive.append(r)
+    return alive
+
+
+def _alive(net: dict, device_id: str, at: dt.datetime) -> bool:
+    """True if the device is in service at `at`: commissioned <= at < decommissioned."""
+    dev = next((d for d in net["physical_devices"] if d["device_id"] == device_id), None)
+    if dev is None:
+        return True
+    start = dt.datetime.fromisoformat(dev["commissioned"]).replace(tzinfo=c.UTC)
+    end = next((dt.datetime.fromisoformat(x["decommissioned"]).replace(tzinfo=c.UTC)
+                for x in net["decommissioned"] if x["node_id"] == device_id), None)
+    return start <= at and (end is None or at < end)
 
 
 def _evt(rng, device_id, etype, start, end, outcome, desc, team, payload) -> dict:
@@ -509,7 +526,13 @@ def build_alarms(net: dict, events: list[dict]):
         if iid + dur > c.END_IID:
             dur = 1
         raised = c.slot_event(off, iid)
-        emit(dev, typ, sev, raised, f"{text} on {dev}", cause, cleared=c.slot_event(off, iid + dur))
+        cleared = c.slot_event(off, iid + dur)
+        if not _alive(net, dev, raised):
+            # No alarms from a device that isn't in service. The number is skipped (not
+            # reused) so every other alarm keeps its id.
+            alarm_no += 1
+            continue
+        emit(dev, typ, sev, raised, f"{text} on {dev}", cause, cleared=cleared)
 
     rows.sort(key=lambda r: (r["_raised"], r["alarm_id"]))
     for r in rows:
@@ -548,8 +571,13 @@ def apply_validity(net: dict, rt: dict) -> None:
     for n in net["design_nodes"]:
         stamp(n, dev_from.get(n["node_id"]), decom.get(n["node_id"]))
     for seg in net["physical_segments"]:
-        _, until = link_window(seg["end_a"], seg["end_b"])
-        stamp(seg, c.date_to_instant(seg.get("installed")) or dev_from.get(seg["end_a"]), until)
+        # A segment exists once it is installed AND both ends exist (an access drop can't
+        # connect to an uplink that isn't commissioned yet).
+        both_ends, until = link_window(seg["end_a"], seg["end_b"])
+        installed = c.date_to_instant(seg.get("installed")) or both_ends
+        start = max(installed, both_ends)
+        seg["installed"] = start[:10]
+        stamp(seg, start, until)
     for n in rt["current_nodes"]:
         stamp(n, dev_from[n["node_id"]], decom.get(n["node_id"]))
     retired = {l["superseded_by"]: c.date_to_instant(l["retired_at"]) for l in rt["retired_links"]}

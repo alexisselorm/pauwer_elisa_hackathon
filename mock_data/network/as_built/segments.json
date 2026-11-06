@@ -346,11 +346,11 @@
     "length_km": 11.77,
     "owner": "Elisa",
     "cable_ref": "FIB-HEL-617",
-    "installed": "2019-04-05",
+    "installed": "2022-03-07",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-04-05T00:00:00Z",
+    "valid_from": "2022-03-07T00:00:00Z",
     "valid_to": null
   },
   {
@@ -378,11 +378,11 @@
     "length_km": 1.63,
     "owner": "Elisa",
     "cable_ref": "FIB-HEL-645",
-    "installed": "2019-04-17",
+    "installed": "2019-09-05",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-04-17T00:00:00Z",
+    "valid_from": "2019-09-05T00:00:00Z",
     "valid_to": null
   },
   {
@@ -394,11 +394,11 @@
     "length_km": 1.47,
     "owner": "Elisa",
     "cable_ref": "FIB-HEL-880",
-    "installed": "2019-03-23",
+    "installed": "2019-04-17",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-03-23T00:00:00Z",
+    "valid_from": "2019-04-17T00:00:00Z",
     "valid_to": null
   },
   {
@@ -442,11 +442,11 @@
     "length_km": 5.85,
     "owner": "Elisa",
     "cable_ref": "FIB-ESP-910",
-    "installed": "2019-06-05",
+    "installed": "2024-01-15",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-06-05T00:00:00Z",
+    "valid_from": "2024-01-15T00:00:00Z",
     "valid_to": null
   },
   {
@@ -474,11 +474,11 @@
     "length_km": 0.75,
     "owner": "Elisa",
     "cable_ref": "FIB-ESP-523",
-    "installed": "2019-03-05",
+    "installed": "2019-06-23",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-03-05T00:00:00Z",
+    "valid_from": "2019-06-23T00:00:00Z",
     "valid_to": null
   },
   {
@@ -490,11 +490,11 @@
     "length_km": 1.3,
     "owner": "Elisa",
     "cable_ref": "FIB-VAN-428",
-    "installed": "2019-02-05",
+    "installed": "2019-02-20",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-02-05T00:00:00Z",
+    "valid_from": "2019-02-20T00:00:00Z",
     "valid_to": "2026-07-27T00:00:00Z"
   },
   {
@@ -522,11 +522,11 @@
     "length_km": 16.19,
     "owner": "Elisa",
     "cable_ref": "FIB-VAN-264",
-    "installed": "2019-10-17",
+    "installed": "2019-12-23",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-10-17T00:00:00Z",
+    "valid_from": "2019-12-23T00:00:00Z",
     "valid_to": null
   },
   {
@@ -538,11 +538,11 @@
     "length_km": 11.37,
     "owner": "Elisa",
     "cable_ref": "FIB-VAN-412",
-    "installed": "2019-10-05",
+    "installed": "2019-10-17",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-10-05T00:00:00Z",
+    "valid_from": "2019-10-17T00:00:00Z",
     "valid_to": null
   },
   {
@@ -554,11 +554,11 @@
     "length_km": 0.45,
     "owner": "Elisa",
     "cable_ref": "FIB-TAM-784",
-    "installed": "2019-05-23",
+    "installed": "2024-09-03",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-05-23T00:00:00Z",
+    "valid_from": "2024-09-03T00:00:00Z",
     "valid_to": null
   },
   {
@@ -570,11 +570,11 @@
     "length_km": 5.32,
     "owner": "Elisa",
     "cable_ref": "FIB-TAM-710",
-    "installed": "2019-03-23",
+    "installed": "2019-05-23",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-03-23T00:00:00Z",
+    "valid_from": "2019-05-23T00:00:00Z",
     "valid_to": null
   },
   {
@@ -602,11 +602,11 @@
     "length_km": 2.42,
     "owner": "Elisa",
     "cable_ref": "FIB-TAM-755",
-    "installed": "2019-07-05",
+    "installed": "2019-10-23",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-07-05T00:00:00Z",
+    "valid_from": "2019-10-23T00:00:00Z",
     "valid_to": null
   },
   {
@@ -634,11 +634,11 @@
     "length_km": 14.43,
     "owner": "Elisa",
     "cable_ref": "FIB-TUR-688",
-    "installed": "2019-02-17",
+    "installed": "2019-10-17",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-02-17T00:00:00Z",
+    "valid_from": "2019-10-17T00:00:00Z",
     "valid_to": null
   },
   {
@@ -666,11 +666,11 @@
     "length_km": 1.21,
     "owner": "Elisa",
     "cable_ref": "FIB-OUL-515",
-    "installed": "2019-02-05",
+    "installed": "2019-08-30",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-02-05T00:00:00Z",
+    "valid_from": "2019-08-30T00:00:00Z",
     "valid_to": "2026-07-15T00:00:00Z"
   },
   {
@@ -682,11 +682,11 @@
     "length_km": 10.28,
     "owner": "Elisa",
     "cable_ref": "FIB-OUL-263",
-    "installed": "2019-07-17",
+    "installed": "2019-08-30",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-07-17T00:00:00Z",
+    "valid_from": "2019-08-30T00:00:00Z",
     "valid_to": "2026-07-15T00:00:00Z"
   },
   {
@@ -698,11 +698,11 @@
     "length_km": 1.13,
     "owner": "Elisa",
     "cable_ref": "FIB-OUL-187",
-    "installed": "2019-04-05",
+    "installed": "2019-08-30",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-04-05T00:00:00Z",
+    "valid_from": "2019-08-30T00:00:00Z",
     "valid_to": "2026-07-15T00:00:00Z"
   },
   {
@@ -714,11 +714,11 @@
     "length_km": 7.32,
     "owner": "Elisa",
     "cable_ref": "FIB-JYV-565",
-    "installed": "2019-02-17",
+    "installed": "2024-09-03",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-02-17T00:00:00Z",
+    "valid_from": "2024-09-03T00:00:00Z",
     "valid_to": null
   },
   {
@@ -730,11 +730,11 @@
     "length_km": 3.1,
     "owner": "Elisa",
     "cable_ref": "FIB-JYV-459",
-    "installed": "2019-02-05",
+    "installed": "2024-09-03",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-02-05T00:00:00Z",
+    "valid_from": "2024-09-03T00:00:00Z",
     "valid_to": null
   },
   {
@@ -746,11 +746,11 @@
     "length_km": 0.67,
     "owner": "Elisa",
     "cable_ref": "FIB-KUO-834",
-    "installed": "2019-10-05",
+    "installed": "2025-02-26",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-10-05T00:00:00Z",
+    "valid_from": "2025-02-26T00:00:00Z",
     "valid_to": null
   },
   {
@@ -762,11 +762,11 @@
     "length_km": 2.64,
     "owner": "Elisa",
     "cable_ref": "FIB-KUO-522",
-    "installed": "2019-08-17",
+    "installed": "2025-02-26",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-08-17T00:00:00Z",
+    "valid_from": "2025-02-26T00:00:00Z",
     "valid_to": null
   },
   {
@@ -778,11 +778,11 @@
     "length_km": 0.34,
     "owner": "Elisa",
     "cable_ref": "FIB-LAH-669",
-    "installed": "2019-09-23",
+    "installed": "2022-11-18",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-09-23T00:00:00Z",
+    "valid_from": "2022-11-18T00:00:00Z",
     "valid_to": null
   },
   {
@@ -794,11 +794,11 @@
     "length_km": 11.42,
     "owner": "Elisa",
     "cable_ref": "FIB-LAH-657",
-    "installed": "2019-07-17",
+    "installed": "2022-11-18",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-07-17T00:00:00Z",
+    "valid_from": "2022-11-18T00:00:00Z",
     "valid_to": null
   },
   {
@@ -810,11 +810,11 @@
     "length_km": 0.41,
     "owner": "Elisa",
     "cable_ref": "FIB-ROV-761",
-    "installed": "2019-01-23",
+    "installed": "2025-02-26",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-01-23T00:00:00Z",
+    "valid_from": "2025-02-26T00:00:00Z",
     "valid_to": null
   },
   {
@@ -826,11 +826,11 @@
     "length_km": 15.37,
     "owner": "Elisa",
     "cable_ref": "FIB-ROV-161",
-    "installed": "2019-12-23",
+    "installed": "2025-02-26",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-12-23T00:00:00Z",
+    "valid_from": "2025-02-26T00:00:00Z",
     "valid_to": null
   },
   {
@@ -842,11 +842,11 @@
     "length_km": 1.34,
     "owner": "Elisa",
     "cable_ref": "FIB-KEM-264",
-    "installed": "2019-01-05",
+    "installed": "2019-04-18",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-01-05T00:00:00Z",
+    "valid_from": "2019-04-18T00:00:00Z",
     "valid_to": null
   },
   {
@@ -874,11 +874,11 @@
     "length_km": 1.76,
     "owner": "Elisa",
     "cable_ref": "FIB-IVA-264",
-    "installed": "2019-02-23",
+    "installed": "2022-03-07",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-02-23T00:00:00Z",
+    "valid_from": "2022-03-07T00:00:00Z",
     "valid_to": null
   },
   {
@@ -890,11 +890,11 @@
     "length_km": 10.13,
     "owner": "Elisa",
     "cable_ref": "FIB-JOE-500",
-    "installed": "2019-01-23",
+    "installed": "2022-11-18",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-01-23T00:00:00Z",
+    "valid_from": "2022-11-18T00:00:00Z",
     "valid_to": null
   },
   {
@@ -906,11 +906,11 @@
     "length_km": 14.57,
     "owner": "Elisa",
     "cable_ref": "FIB-JOE-312",
-    "installed": "2019-12-17",
+    "installed": "2022-11-18",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-12-17T00:00:00Z",
+    "valid_from": "2022-11-18T00:00:00Z",
     "valid_to": null
   },
   {
@@ -970,11 +970,11 @@
     "length_km": 6.22,
     "owner": "Elisa",
     "cable_ref": "FIB-KAJ-576",
-    "installed": "2019-03-23",
+    "installed": "2024-09-03",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-03-23T00:00:00Z",
+    "valid_from": "2024-09-03T00:00:00Z",
     "valid_to": null
   },
   {
@@ -986,11 +986,11 @@
     "length_km": 3.5,
     "owner": "Elisa",
     "cable_ref": "FIB-MIK-709",
-    "installed": "2019-07-23",
+    "installed": "2022-11-18",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-07-23T00:00:00Z",
+    "valid_from": "2022-11-18T00:00:00Z",
     "valid_to": null
   },
   {
@@ -1018,11 +1018,11 @@
     "length_km": 11.48,
     "owner": "Elisa",
     "cable_ref": "FIB-POR-436",
-    "installed": "2019-03-23",
+    "installed": "2019-08-30",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-03-23T00:00:00Z",
+    "valid_from": "2019-08-30T00:00:00Z",
     "valid_to": null
   },
   {
@@ -1082,11 +1082,11 @@
     "length_km": 5.98,
     "owner": "Elisa",
     "cable_ref": "FIB-HÄM-349",
-    "installed": "2019-08-23",
+    "installed": "2022-03-07",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-08-23T00:00:00Z",
+    "valid_from": "2022-03-07T00:00:00Z",
     "valid_to": null
   },
   {
@@ -1098,11 +1098,11 @@
     "length_km": 14.27,
     "owner": "Elisa",
     "cable_ref": "FIB-SOD-299",
-    "installed": "2019-10-23",
+    "installed": "2022-11-18",
     "notes": "",
     "private_road": false,
     "barrier": null,
-    "valid_from": "2019-10-23T00:00:00Z",
+    "valid_from": "2022-11-18T00:00:00Z",
     "valid_to": null
   }
 ]

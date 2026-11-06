@@ -35,6 +35,8 @@ def _t(rng, sec_rng, day_lo=0, day_hi=None, h_lo=5, h_hi=20) -> dt.datetime:
 # --------------------------------------------------------------------------- ITSM
 def itsm(net, events, alarms, ctx_files=None):
     rng = c.rng_for("itsm")
+    # Separate stream: the alarm count can change without reshuffling every other ticket field.
+    alarm_rng = c.rng_for("itsm-related-alarm")
     sec = c.rng_for("itsm-seconds")
     devs = [d["device_id"] for d in net["physical_devices"] if d["kind"] != "router"]
     short = ["TRN", "OPT", "MW", "ACC", "KB", "SVC"]
@@ -60,7 +62,7 @@ def itsm(net, events, alarms, ctx_files=None):
                 "resolved_at": None if state in ("In Progress", "Awaiting Info") else
                 c.iso(c.jitter(sec, when + dt.timedelta(minutes=15 * rng.randint(1, 200)), 899)),
                 "resolution_notes": "auto-generated noise" if rng.random() < 0.85 else "",
-                "related_alarm": rng.choice(alarms)["alarm_id"] if alarms else None,
+                "related_alarm": alarm_rng.choice(alarms)["alarm_id"] if alarms else None,
             })
         elif kind == "request":
             when = _t(rng, sec)
