@@ -1,0 +1,26 @@
+From: Erkki Expert
+To: Veikko Vikkelä
+Subject: RE: TRN-042 traffic not recovering after SFP replacement
+
+Hi Veikko,
+
+That sounds like the behaviour we have seen with some of the older transmission units.
+
+The confusing part is that everything can look normal after replacing the optical module:
+
+- interface status = UP
+- optical levels = OK
+- alarms = cleared
+
+...but traffic still doesn't recover.
+
+Before replacing the SFP again or rebooting the unit, check the traffic counters.
+
+If the interface is UP but the counters remain at zero, try disabling and enabling the interface once.
+
+This has solved the issue in several cases I've seen.
+
+I don't think this is written in the normal field instructions. It is one of those things we have learned from experience.
+
+Regards,
+Erkki

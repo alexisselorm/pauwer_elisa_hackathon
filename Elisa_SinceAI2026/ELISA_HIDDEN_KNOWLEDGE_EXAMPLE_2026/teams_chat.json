@@ -1,0 +1,100 @@
+{
+  "channel": "teams",
+  "note": "Example provided by Elisa. Names and node IDs are illustrative. Times only; no date was given.",
+  "participants": [
+    {
+      "name": "Veikko Vikkelä",
+      "role": "Field Engineer"
+    },
+    {
+      "name": "Erkki Expert",
+      "role": "Network Expert"
+    }
+  ],
+  "messages": [
+    {
+      "seq": 1,
+      "time": "09:14",
+      "author": "Veikko Vikkelä",
+      "role": "Field Engineer",
+      "text": "Hi Erkki, I'm at the site now. Changed the SFP on transmission node TRN-042.\nLink is up and alarms cleared, but traffic is still not coming back. Have you seen this before?"
+    },
+    {
+      "seq": 2,
+      "time": "09:16",
+      "author": "Erkki Expert",
+      "role": "Network Expert",
+      "text": "Yes. Is this one of the older units?"
+    },
+    {
+      "seq": 3,
+      "time": "09:16",
+      "author": "Veikko Vikkelä",
+      "role": "Field Engineer",
+      "text": "Yes, installed around 2019 I think."
+    },
+    {
+      "seq": 4,
+      "time": "09:18",
+      "author": "Erkki Expert",
+      "role": "Network Expert",
+      "text": "Ok. Don't trust the green link status on those.\nSometimes after changing the SFP the interface comes up normally, but the forwarding state doesn't recover correctly."
+    },
+    {
+      "seq": 5,
+      "time": "09:18",
+      "author": "Veikko Vikkelä",
+      "role": "Field Engineer",
+      "text": "So another SFP?"
+    },
+    {
+      "seq": 6,
+      "time": "09:19",
+      "author": "Erkki Expert",
+      "role": "Network Expert",
+      "text": "No. Usually the SFP is fine.\nCheck whether the traffic counters are actually increasing. If they stay at zero even though the interface is UP, it's probably the issue I've seen before."
+    },
+    {
+      "seq": 7,
+      "time": "09:21",
+      "author": "Veikko Vikkelä",
+      "role": "Field Engineer",
+      "text": "Yes. Link UP. RX power looks normal. Counters basically zero."
+    },
+    {
+      "seq": 8,
+      "time": "09:22",
+      "author": "Erkki Expert",
+      "role": "Network Expert",
+      "text": "That's it.\nDisable the interface, wait a little, then enable it again. Don't reboot the whole unit unless that fails."
+    },
+    {
+      "seq": 9,
+      "time": "09:25",
+      "author": "Veikko Vikkelä",
+      "role": "Field Engineer",
+      "text": "Did that. Traffic is back 👍"
+    },
+    {
+      "seq": 10,
+      "time": "09:25",
+      "author": "Erkki Expert",
+      "role": "Network Expert",
+      "text": "Good. These old units sometimes behave like this after an optical module replacement."
+    },
+    {
+      "seq": 11,
+      "time": "09:26",
+      "author": "Veikko Vikkelä",
+      "role": "Field Engineer",
+      "text": "Is this documented somewhere?"
+    },
+    {
+      "seq": 12,
+      "time": "09:27",
+      "author": "Erkki Expert",
+      "role": "Network Expert",
+      "text": "Not that I know of 😄\nWe've just learned it over the years."
+    }
+  ]
+}
