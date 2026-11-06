@@ -17,7 +17,7 @@ Depends on [`001-backend-setup.md`](001-backend-setup.md) (time rules R1–R10, 
 | Decision | Reason |
 |---|---|
 | **Slack Bolt for Python 1.30.0 (MIT) in Socket Mode** (pypi.org/pypi/slack-bolt, 2026-11-06) | No public URL or tunnel is needed for a laptop demo. The Python stack is shared with the backend. |
-| **Official MCP Python SDK `mcp` 2.3.0 (MIT)** with Streamable HTTP, mounted in the FastAPI app at `/mcp`, plus stdio for local clients (pypi.org/pypi/mcp, 2026-11-06) | It's the reference SDK, so any MCP client works. One process serves REST, MCP and the graph driver. |
+| **Official MCP Python SDK `mcp` 1.30.0 (MIT)** with Streamable HTTP (stateless), served by the FastAPI app at `/mcp`, plus stdio for local clients. Not 2.x: `langchain-mcp-adapters` 0.3.2, the latest, requires `mcp<2`, and our ops agent shares the venv (checked on pypi.org, 2026-11-06). | It's the reference SDK, and the wire protocol doesn't depend on the SDK version, so any MCP client works. One process serves REST, MCP and the graph driver. |
 | **`langchain-mcp-adapters` 0.3.2 (MIT)** for our ops agent (pypi.org/pypi/langchain-mcp-adapters, 2026-11-06) | Our agent sees only MCP tools, the same as Elisa's agent would. |
 | **Bearer token per agent** (`MCP_TOKENS` maps agent_id to token) | Every write is attributable (001 §7). OAuth is post-hackathon. |
 | **No web UI.** Graph visuals use Neo4j Browser with saved Cypher. Time travel uses the Slack App Home date picker. | Less to build. The judges see the product where the users are. |
