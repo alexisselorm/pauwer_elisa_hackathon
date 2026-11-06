@@ -183,8 +183,26 @@ async def test_featherless_request_on_the_wire(make_settings: Callable[..., Sett
 # --- Chat models -------------------------------------------------------------------------------
 
 
+def test_default_models_come_from_featherless(make_settings: Callable[..., Settings]) -> None:
+    s = make_settings(featherless_api_key="fl-test-key")
+    for role in ModelRole:
+        name, kwargs = chat_model_kwargs(s, role)
+        assert name.startswith("openai:")  # Featherless's OpenAI-compatible API
+        assert kwargs["base_url"] == "https://api.featherless.ai/v1"
+        assert not FORBIDDEN_KWARGS & kwargs.keys()
+    model = get_chat_model(s, ModelRole.CHAT)
+    assert getattr(model, "model_name", None) == "moonshotai/Kimi-K2-Instruct-0905"
+    assert getattr(model, "temperature", "unset") is None
+    fast = get_chat_model(s, ModelRole.FAST)
+    assert getattr(fast, "model_name", None) == "Qwen/Qwen3-4B-Instruct-2507"
+
+
 def test_chat_models_never_set_sampling_parameters(make_settings: Callable[..., Settings]) -> None:
-    s = make_settings(anthropic_api_key="sk-ant-test")
+    s = make_settings(
+        chat_model="anthropic:claude-sonnet-5-5",
+        fast_model="anthropic:claude-haiku-5-5",
+        anthropic_api_key="sk-ant-test",
+    )
     for role in ModelRole:
         name, kwargs = chat_model_kwargs(s, role)
         assert name.startswith("anthropic:")
@@ -209,5 +227,7 @@ def test_featherless_chat_goes_through_the_openai_compatible_api(
 
 
 def test_missing_chat_key_is_a_clear_error(make_settings: Callable[..., Settings]) -> None:
-    with pytest.raises(ChatModelUnavailableError, match="anthropic"):
+    with pytest.raises(ChatModelUnavailableError, match="featherless"):
         chat_model_kwargs(make_settings(), ModelRole.CHAT)
+    with pytest.raises(ChatModelUnavailableError, match="anthropic"):
+        chat_model_kwargs(make_settings(chat_model="anthropic:claude-sonnet-5-5"), ModelRole.CHAT)

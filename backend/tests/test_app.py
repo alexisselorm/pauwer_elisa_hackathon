@@ -69,7 +69,7 @@ def test_readyz_is_503_when_neo4j_is_down(client: TestClient) -> None:
     assert body["checks"]["schema"]["status"] == "down"
     assert body["checks"]["llm"] == {
         "status": "degraded",
-        "missing": ["ANTHROPIC_API_KEY", "FEATHERLESS_API_KEY"],
+        "missing": ["FEATHERLESS_API_KEY"],
     }
 
 

@@ -47,8 +47,10 @@ class Settings(BaseSettings):
     neo4j_retry_max_s: float = Field(default=30.0, gt=0)
 
     # --- LLMs (optional: missing keys degrade /readyz, they don't stop the app) -------
-    chat_model: str = "anthropic:claude-sonnet-5-5"
-    fast_model: str = "anthropic:claude-haiku-5-5"
+    # Featherless by default (one key for chat and embeddings). Both models were checked live
+    # for tool calling and json_schema structured output on 2026-11-07.
+    chat_model: str = "featherless:moonshotai/Kimi-K2-Instruct-0905"
+    fast_model: str = "featherless:Qwen/Qwen3-4B-Instruct-2507"
     anthropic_api_key: SecretStr | None = None
     openai_api_key: SecretStr | None = None
 

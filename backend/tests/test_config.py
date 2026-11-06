@@ -96,10 +96,12 @@ def test_model_provider_must_be_supported(make_settings: Callable[..., Settings]
 
 
 def test_missing_llm_keys(make_settings: Callable[..., Settings]) -> None:
+    # Default: Featherless serves chat and embeddings, so one key covers everything.
     s = make_settings()
-    assert s.missing_llm_keys() == ["ANTHROPIC_API_KEY", "FEATHERLESS_API_KEY"]
-    s = make_settings(anthropic_api_key="k", featherless_api_key="k")
-    assert s.missing_llm_keys() == []
+    assert s.missing_llm_keys() == ["FEATHERLESS_API_KEY"]
+    assert make_settings(featherless_api_key="k").missing_llm_keys() == []
+    s = make_settings(chat_model="anthropic:claude-sonnet-5-5", featherless_api_key="k")
+    assert s.missing_llm_keys() == ["ANTHROPIC_API_KEY"]
     s = make_settings(chat_model="openai:gpt-x", fast_model="openai:gpt-y", featherless_api_key="k")
     assert s.missing_llm_keys() == ["OPENAI_API_KEY"]
 
