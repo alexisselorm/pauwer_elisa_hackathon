@@ -24,5 +24,8 @@ def test_no_semicolons_in_comments() -> None:
 
 
 def test_vector_indexes_use_the_default_embedding_dim() -> None:
-    text = (MIGRATIONS_DIR / "V0001__schema.cypher").read_text(encoding="utf-8")
-    assert re.findall(r"`vector\.dimensions`: (\d+)", text) == ["1024", "1024"]
+    dims: list[str] = []
+    for path in MIGRATIONS_DIR.glob("*.cypher"):
+        dims += re.findall(r"`vector\.dimensions`: (\d+)", path.read_text(encoding="utf-8"))
+    assert dims
+    assert set(dims) == {"1024"}

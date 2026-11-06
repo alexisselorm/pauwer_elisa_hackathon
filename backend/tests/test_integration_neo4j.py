@@ -12,6 +12,7 @@ from neo4j import GraphDatabase
 
 from silentctx.config import Settings
 from silentctx.graph import schema
+from silentctx.graph.cypher import vector
 from silentctx.main import create_app
 
 NEO4J_IMAGE = "neo4j:2026.10.1-community"  # same image as docker-compose.yml
@@ -95,14 +96,15 @@ def test_schema_is_applied_and_api_is_ready(neo4j_url: str, settings: Settings) 
     }
     for name in RANGE_INDEXES:
         assert indexes[name]["type"] == "RANGE", name
-    for name, label in [
-        ("assertion_embedding", "ContextAssertion"),
-        ("chunk_embedding", "SourceChunk"),
+    for name, label, properties in [
+        # V0002: `status` is declared on the index so SEARCH can pre-filter on it.
+        ("assertion_embedding", "ContextAssertion", ["embedding", "status"]),
+        ("chunk_embedding", "SourceChunk", ["embedding"]),
     ]:
         index = indexes[name]
         assert index["type"] == "VECTOR"
         assert index["labelsOrTypes"] == [label]
-        assert index["properties"] == ["embedding"]
+        assert index["properties"] == properties
         config = index["options"]["indexConfig"]
         assert config["vector.dimensions"] == 1024
         assert config["vector.similarity_function"].lower() == "cosine"
@@ -115,7 +117,7 @@ async def test_rerunning_migrations_is_a_no_op(neo4j_url: str, settings: Setting
         neo4j_url,
         "MATCH (m:__Neo4jMigration) WHERE m.version <> 'BASELINE' RETURN m.version AS v",
     )
-    assert [r["v"] for r in versions] == ["0001"]
+    assert sorted(r["v"] for r in versions) == ["0001", "0002"]
 
 
 def test_restart_applies_nothing_and_is_ready(settings: Settings) -> None:
@@ -138,3 +140,71 @@ def test_embedding_dim_mismatch_refuses_readiness(
     assert ready["checks"]["neo4j"] == {"status": "ok"}
     assert ready["checks"]["schema"]["status"] == "down"
     assert "EMBEDDING_DIM=4096" in ready["checks"]["schema"]["error"]
+
+
+# --- Vector search (BE-1.2) ------------------------------------------------------------------
+
+
+def _unit(i: int, dim: int = 1024, *, mix: tuple[int, float] | None = None) -> list[float]:
+    v = [0.0] * dim
+    v[i] = 1.0
+    if mix:
+        v[mix[0]] = mix[1]
+    return v
+
+
+async def test_vector_search_and_scoped_ranking(neo4j_url: str, settings: Settings) -> None:
+    from neo4j import AsyncGraphDatabase
+
+    await schema.apply_migrations(settings)
+    rows = [
+        {"id": "VEC-a", "status": "believed_true", "e": _unit(0)},
+        {"id": "VEC-b", "status": "disputed", "e": _unit(0, mix=(1, 0.1))},
+        {"id": "VEC-c", "status": "believed_true", "e": _unit(1)},
+        {"id": "VEC-d", "status": "believed_true", "e": None},
+    ]
+    q = _unit(0)
+    async with AsyncGraphDatabase.driver(neo4j_url, auth=("neo4j", PASSWORD)) as driver:
+        await driver.execute_query(
+            "UNWIND $rows AS r CREATE (:ContextAssertion "
+            "{assertion_id: r.id, status: r.status, embedding: r.e})",
+            rows=rows,
+        )
+        await driver.execute_query("CALL db.awaitIndexes(60)")
+        try:
+            hits = await vector.search(driver, "neo4j", vector.ASSERTIONS, q, 2)
+            assert [h.id for h in hits] == ["VEC-a", "VEC-b"]
+
+            # Pre-filter inside SEARCH: the best disputed match, even though it isn't top-1.
+            hits = await vector.search(
+                driver, "neo4j", vector.ASSERTIONS, q, 1, status_in=["disputed"]
+            )
+            assert [h.id for h in hits] == ["VEC-b"]
+
+            # The deprecated procedure path gives the same answer.
+            hits = await vector._search_procedure(
+                driver, "neo4j", vector.ASSERTIONS, q, 1, ["disputed"]
+            )
+            assert [h.id for h in hits] == ["VEC-b"]
+
+            # Scoped ranking: the trap case. SEARCH with a MATCH filter would return nothing
+            # here (post-filter of the global top-1); exact ranking returns VEC-c.
+            hits = await vector.rank_candidates(
+                driver, "neo4j", vector.ASSERTIONS, ["VEC-c", "VEC-d"], q, 1
+            )
+            assert [h.id for h in hits] == ["VEC-c"]
+            assert await vector.rank_candidates(driver, "neo4j", vector.ASSERTIONS, [], q, 1) == []
+        finally:
+            await driver.execute_query(
+                "MATCH (n:ContextAssertion) WHERE n.assertion_id STARTS WITH 'VEC-' DETACH DELETE n"
+            )
+
+
+async def test_vector_search_rejects_bad_arguments(settings: Settings) -> None:
+    from neo4j import AsyncGraphDatabase
+
+    async with AsyncGraphDatabase.driver(settings.neo4j_uri, auth=("neo4j", PASSWORD)) as driver:
+        with pytest.raises(ValueError, match="k must be"):
+            await vector.search(driver, "neo4j", vector.ASSERTIONS, _unit(0), 0)
+        with pytest.raises(ValueError, match="can't filter"):
+            await vector.search(driver, "neo4j", vector.CHUNKS, _unit(0), 1, status_in=["x"])
