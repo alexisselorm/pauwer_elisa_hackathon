@@ -330,3 +330,20 @@ async def test_the_network_is_watched_even_without_an_alarm_channel_setting() ->
     await ops.post_fault(client, FAULT[2])  # type: ignore[arg-type]
     assert client.posted == []  # nowhere to post: logged, and no LLM call wasted
     assert answerer.asked == []
+
+
+async def test_with_no_known_expert_the_channel_is_asked() -> None:
+    message = {
+        "channel": "CASK",
+        "ts": "5.000001",
+        "blocks": a.answer_blocks(
+            UNKNOWN.model_copy(update={"gap_routed_to": None}), question="Kajaani gate code?"
+        ),
+    }
+    client = Client()
+    await _ops().on_gap(_ack, _click(message, a.GAP_ASK), client)  # type: ignore[arg-type]
+    [ask] = client.posted
+    assert ask["channel"] == "CASK"  # no SLACK_GAP_CHANNEL: where it was asked
+    assert ask["text"].startswith(":question: Does anyone know? <@U5> asked something")
+    assert "Anyone" not in ask["text"]
+    assert client.updated[0]["text"].startswith("Asked in <#CASK> (")

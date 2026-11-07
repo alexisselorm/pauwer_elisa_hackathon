@@ -329,17 +329,20 @@ class OpsActions:
         else:
             expert = await self._slack_user(client, v.get("routed_to"))
             target = self.gap_channel or channel
-            who = f"<@{expert}>" if expert else (v.get("routed_to") or "Anyone")
+            who = f"<@{expert}>" if expert else v.get("routed_to")
+            # No known expert yet (nobody has written about this entity): ask the channel.
+            opener = f"{who}, <@{user}> asked" if who else f"Does anyone know? <@{user}> asked"
             posted = await client.chat_postMessage(
                 channel=target,
                 text=(
-                    f":question: {who}, <@{user}> asked something that isn't documented yet:\n"
+                    f":question: {opener} something that isn't documented yet:\n"
                     f"> {v['question']}\nA reply in this thread is all it takes "
                     f"(knowledge gap {v['gap_id']})."
                 ),
             )
             link = await client.chat_getPermalink(channel=target, message_ts=posted["ts"])
-            note = f"Asked {who} (<{link['permalink']}|thread>) for <@{user}>."
+            asked = who or f"in <#{target}>"
+            note = f"Asked {asked} (<{link['permalink']}|thread>) for <@{user}>."
         await client.chat_update(
             channel=channel, ts=ts, text=note, blocks=replace_actions(blocks, GAP_BLOCK, note)
         )
