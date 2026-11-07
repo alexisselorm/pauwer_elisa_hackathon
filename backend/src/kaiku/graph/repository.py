@@ -727,11 +727,19 @@ class ContextRepository:
         return await self._tx(work)
 
     async def correct(
-        self, wrong_id: str, fixed: AssertionIn, correction_event_id: str
+        self,
+        wrong_id: str,
+        fixed: AssertionIn,
+        correction_event_id: str,
+        *,
+        validity: tuple[datetime, datetime | None] | None = None,
     ) -> AssertionOut:
         """R6(ii), a person fixing an extraction mistake. The wrong version is retracted at the
         correction's event_time; the fixed version keeps its validity window (not a change in
-        the world, so no SUPERSEDES) and is recorded at the correction."""
+        the world, so no SUPERSEDES) and is recorded at the correction.
+
+        `validity` is for a person only (the Slack ✏️ Fix, never MCP): when the extraction
+        read the window wrong, the fix carries the (valid_from, valid_to) the person gave."""
 
         async def work(tx: AsyncManagedTransaction) -> AssertionOut:
             wrong = await _state(tx, wrong_id)
@@ -743,6 +751,10 @@ class ContextRepository:
             if at is None:
                 raise WriteRejectedError(f"unknown correction event {correction_event_id!r}")
             _, fixed_state = _rule(rules.correct, wrong, py(at))
+            if validity is not None:
+                fixed_state = _rule(
+                    fixed_state.replace, valid_from=validity[0], valid_to=validity[1]
+                )
             sources = list(fixed.sources)
             if correction_event_id not in {src.event_id for src in sources}:
                 sources.append(SourceIn(event_id=correction_event_id))
@@ -793,13 +805,30 @@ class ContextRepository:
 
         return await self._tx(work)
 
-    async def retract(self, assertion_id: str, at: datetime) -> AssertionOut:
+    async def retract(
+        self,
+        assertion_id: str,
+        at: datetime | None = None,
+        *,
+        by: str | None = None,
+        event_id: str | None = None,
+    ) -> AssertionOut:
         """Withdraw an assertion from what is known from `at` on (R6: nothing is deleted).
-        Retracting again at the same instant is a no-op."""
+        Retracting again at the same instant is a no-op.
+
+        A person's 🚫 passes the click's `event_id` instead of a time: it is retracted at
+        that event's time, the event RETRACTS it and `retracted_by` names the person."""
 
         async def work(tx: AsyncManagedTransaction) -> AssertionOut:
             state = await _state(tx, assertion_id)
-            at_utc = rules.ensure_utc(at)
+            when = at
+            if event_id is not None:
+                when = await _event_time(tx, event_id, by)
+                if at is not None and rules.ensure_utc(at) != when:
+                    raise WriteRejectedError("the retraction time is not its event's time")
+            if when is None:
+                raise WriteRejectedError("a retraction needs its time or its event")
+            at_utc = rules.ensure_utc(when)
             if state.retracted_at is not None:
                 if state.retracted_at != at_utc:
                     raise WriteRejectedError(f"{assertion_id} is already retracted")
@@ -807,9 +836,15 @@ class ContextRepository:
             else:
                 _rule(state.replace, retracted_at=at_utc)
                 await tx.run(
-                    "MATCH (a:ContextAssertion {assertion_id: $id}) SET a.retracted_at = $at",
+                    "MATCH (a:ContextAssertion {assertion_id: $id}) "
+                    "SET a.retracted_at = $at, a.retracted_by = $by "
+                    "WITH a OPTIONAL MATCH (e:Event {event_id: $event}) "
+                    "FOREACH (_ IN CASE WHEN e IS NULL THEN [] ELSE [1] END | "
+                    "  CREATE (e)-[:RETRACTS]->(a))",
                     id=assertion_id,
                     at=at_utc,
+                    by=by,
+                    event=event_id,
                 )
                 # BE-1.8: what it superseded, with no other live successor, is believed
                 # again. Its old valid_to and the SUPERSEDES edge stay on record (R6, R10).
@@ -853,19 +888,37 @@ class ContextRepository:
 
         return await self._tx(work)
 
-    async def confirm(self, assertion_id: str) -> AssertionOut:
-        """A person's ✅ on the Slack card: unverified -> believed_true. Disputed, superseded
-        and retracted versions keep their status (the click is still an event upstream)."""
+    async def confirm(self, assertion_id: str, by: str, event_id: str) -> AssertionOut:
+        """A person's ✅ on the Slack card (people only, never MCP): unverified ->
+        believed_true. The click is the event that records it (R1): it CONFIRMS the version,
+        and `confirmed_by` / `confirmed_at` say who and when. Confirming a believed version
+        again changes nothing. A removed, superseded or expired version is rejected, and so
+        is a disputed one: a ✅ doesn't settle a dispute, a ✏️ Fix or 🚫 does."""
 
         async def work(tx: AsyncManagedTransaction) -> AssertionOut:
             state = await _state(tx, assertion_id)
-            if state.retracted_at is None and state.status is AssertionStatus.UNVERIFIED:
-                await tx.run(
-                    "MATCH (a:ContextAssertion {assertion_id: $id}) SET a.status = $s",
-                    id=assertion_id,
-                    s=AssertionStatus.BELIEVED_TRUE.value,
+            at = await _event_time(tx, event_id, by)
+            if state.retracted_at is not None:
+                raise WriteRejectedError(f"{assertion_id} was removed; nothing to confirm")
+            if state.status is AssertionStatus.BELIEVED_TRUE:
+                return await _out(tx, assertion_id, replayed=True)
+            if state.status is not AssertionStatus.UNVERIFIED:
+                raise WriteRejectedError(
+                    f"{assertion_id} is {state.status.value}; only unverified knowledge can "
+                    "be confirmed"
                 )
-                await _check_v5(tx, [assertion_id])
+            if at < state.recorded_at:
+                raise WriteRejectedError("a confirmation can't be before the knowledge (R2)")
+            await tx.run(
+                "MATCH (a:ContextAssertion {assertion_id: $id}), (e:Event {event_id: $event}) "
+                "SET a.status = $s, a.confirmed_by = $by, a.confirmed_at = e.event_time "
+                "CREATE (e)-[:CONFIRMS]->(a)",
+                id=assertion_id,
+                event=event_id,
+                by=by,
+                s=AssertionStatus.BELIEVED_TRUE.value,
+            )
+            await _check_v5(tx, [assertion_id])
             return await _out(tx, assertion_id, replayed=False)
 
         return await self._tx(work)
@@ -1334,6 +1387,21 @@ async def _state(tx: AsyncManagedTransaction, assertion_id: str) -> rules.Tempor
     a["review_due"] = bool(a.get("review_due"))
     a["status"] = a.get("status") or AssertionStatus.UNVERIFIED
     return rules.TemporalState.model_validate(a)
+
+
+async def _event_time(tx: AsyncManagedTransaction, event_id: str, by: str | None) -> datetime:
+    """The time of a person's write event (R1), which must be theirs when it names an author."""
+    row = await _single(
+        tx,
+        "MATCH (e:Event {event_id: $id}) RETURN e { .event_time, .author } AS e",
+        id=event_id,
+    )
+    if row is None:
+        raise WriteRejectedError(f"unknown event {event_id!r}")
+    row = py(row)
+    if by is not None and row.get("author") not in (None, by):
+        raise WriteRejectedError(f"{event_id} is not {by}'s")
+    return rules.ensure_utc(row["event_time"])
 
 
 async def _out(tx: AsyncManagedTransaction, assertion_id: str, *, replayed: bool) -> AssertionOut:

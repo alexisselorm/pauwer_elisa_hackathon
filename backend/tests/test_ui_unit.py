@@ -265,3 +265,15 @@ async def test_mcp_tools_keep_their_schema_and_record_each_call() -> None:
     # ping is not an agent's work: not recorded.
     await server.call_tool("ping", {})
     assert len(recorded) == 1
+
+
+@pytest.mark.asyncio
+async def test_people_only_writes_are_not_mcp_tools() -> None:
+    """Confirm, retract, correct and edit validity are the Slack card's, never an agent's
+    (plan 001 §7, plan 002 §4.2): the MCP tool list has the four agent writes only."""
+    server = create_mcp_server({"tester": SecretStr("x" * 32)}, ServiceHolder())
+    names = {t.name for t in await server.list_tools()}
+    assert names >= {"report_outcome", "open_knowledge_gap", "propose_assertion", "flag_assertion"}
+    people_only = {"confirm", "retract", "correct", "supersede", "assert", "set", "edit", "delete"}
+    assert [n for n in names if n.split("_")[0] in people_only] == []
+    assert not [n for n in names if "valid" in n]  # no tool sets validity

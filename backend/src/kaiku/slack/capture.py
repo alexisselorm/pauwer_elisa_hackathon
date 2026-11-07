@@ -15,13 +15,13 @@ import asyncio
 import json
 import re
 from collections import Counter
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from datetime import UTC, datetime
 from typing import Any
 
 from slack_sdk.web.async_client import AsyncWebClient
 
-from kaiku.context.models import AssertionIn, AssertionView, BindingIn, Scope
+from kaiku.context.models import AssertionIn, AssertionOut, AssertionView, BindingIn, Scope
 from kaiku.domain.models import AssertionStatus
 from kaiku.errors import WriteRejectedError
 from kaiku.extraction.graph import CaptureResult
@@ -40,6 +40,7 @@ CARD_FIX = "card_fix"
 CARD_RETRACT = "card_retract"
 CARD_BIND = "card_bind"
 CARD_FIX_VIEW = "card_fix_modal"
+VALID_FROM, VALID_TO = "valid_from", "valid_to"  # the fix modal's validity fields
 CARD_ACTIONS = (CARD_CONFIRM, CARD_FIX, CARD_RETRACT, CARD_BIND)
 CAPTURE_SHORTCUT = "capture_message"  # slack/manifest.yaml
 LOG_CHANNEL_NAME = "context-log"
@@ -228,7 +229,6 @@ def fix_modal(view: AssertionView, thread_id: str) -> dict[str, Any]:
         }
 
     by = {s: ", ".join(b.entity_id for b in view.bindings if b.scope is s) for s in _SCOPE_FIELDS}
-    until = f"{view.valid_to:%Y-%m-%d %H:%M} UTC" if view.valid_to else "still true"
     return {
         "type": "modal",
         "callback_id": CARD_FIX_VIEW,
@@ -240,9 +240,11 @@ def fix_modal(view: AssertionView, thread_id: str) -> dict[str, Any]:
             field("observed_on", "Seen on (entity ids)", by[Scope.OBSERVED_ON]),
             field("applies_to", "Applies to (models, generations)", by[Scope.APPLIES_TO]),
             field("activity", "During (activity)", by[Scope.ACTIVITY]),
+            field(VALID_FROM, "Valid from (UTC)", _when(view.valid_from)),
+            field(VALID_TO, "Valid until (UTC, empty = still true)", _when(view.valid_to)),
             context(
-                f"Valid {view.valid_from:%Y-%m-%d %H:%M} UTC → {until}. A fix corrects what was "
-                "captured; it keeps this validity (it was always so)."
+                "A fix corrects what was captured; it doesn't record a change in the world. "
+                "Leave the dates as they are unless the capture read them wrong."
             ),
         ],
     }
@@ -250,6 +252,49 @@ def fix_modal(view: AssertionView, thread_id: str) -> dict[str, Any]:
 
 def _ids(text: str | None) -> list[str]:
     return [p.strip() for p in (text or "").replace(";", ",").split(",") if p.strip()]
+
+
+def _when(at: datetime | None) -> str:
+    """A validity bound as the fix modal shows it: UTC to the minute, empty = still true."""
+    return f"{at:%Y-%m-%d %H:%M} UTC" if at is not None else ""
+
+
+class FixError(ValueError):
+    """A fix-modal field the person has to change; shown under that field."""
+
+    def __init__(self, block_id: str, message: str) -> None:
+        super().__init__(message)
+        self.block_id, self.message = block_id, message
+
+
+def _parse_when(block_id: str, text: str) -> datetime:
+    raw = text.strip().removesuffix("UTC").removesuffix("Z").strip()
+    try:
+        at = datetime.fromisoformat(raw)
+    except ValueError:
+        raise FixError(block_id, "Use YYYY-MM-DD HH:MM (UTC)") from None
+    return at.replace(tzinfo=UTC) if at.tzinfo is None else at.astimezone(UTC)
+
+
+def fixed_validity(
+    values: Mapping[str, str | None], old: AssertionView
+) -> tuple[datetime, datetime | None] | None:
+    """The validity the person saved, or None when they left it as captured (the fix then
+    keeps the original window, R6 ii). A field left as shown keeps its exact value."""
+    vf_text, vt_text = values.get(VALID_FROM), values.get(VALID_TO)
+    valid_from = old.valid_from
+    if vf_text is not None and vf_text.strip() != _when(old.valid_from):
+        if not vf_text.strip():
+            raise FixError(VALID_FROM, "Say when it starts to hold")
+        valid_from = _parse_when(VALID_FROM, vf_text)
+    valid_to = old.valid_to
+    if vt_text is not None and vt_text.strip() != _when(old.valid_to):
+        valid_to = _parse_when(VALID_TO, vt_text) if vt_text.strip() else None
+    if valid_to is not None and valid_to <= valid_from:
+        raise FixError(VALID_TO, "Must be after valid from")
+    if (valid_from, valid_to) == (old.valid_from, old.valid_to):
+        return None
+    return valid_from, valid_to
 
 
 class CaptureCards:
@@ -361,35 +406,69 @@ class CaptureCards:
         return None
 
     # --- Buttons ---------------------------------------------------------------------------
+    # People-only writes (plan 001 §7: confirm, retract and edit validity are not on MCP).
+    # The slackbot calls the repository directly, as the clicking Slack user: each click is
+    # first recorded as a CardAction event by that user (R1), and the write cites it. A
+    # rejected write (422) is shown to that person, never swallowed.
 
-    async def _click(self, body: dict[str, Any], action: str) -> tuple[dict[str, str], datetime]:
+    async def _click(self, body: dict[str, Any], action: str) -> tuple[dict[str, str], str, str]:
+        """Record the click as an event; returns (button value, event id, Slack user)."""
         v: dict[str, str] = json.loads(body["actions"][0]["value"])
         at = self.clock()
         click = body["actions"][0].get("action_ts", at.timestamp())
+        user = str(body["user"]["id"])
+        event_id = f"card:{v['a']}:{action}:{click}"
         await self.store.record_card_action(
-            event_id=f"card:{v['a']}:{action}:{click}",
-            at=at,
-            author=body["user"]["id"],
-            action=action,
-            thread_id=v["t"],
+            event_id=event_id, at=at, author=user, action=action, thread_id=v["t"]
         )
-        return v, at
+        return v, event_id, user
 
-    async def on_confirm(self, ack: Any, body: dict[str, Any]) -> None:
+    async def _rejected(
+        self,
+        client: AsyncWebClient,
+        body: dict[str, Any],
+        v: dict[str, str],
+        exc: WriteRejectedError,
+    ) -> None:
+        """Tell the person who clicked why nothing changed (only they see it)."""
+        log.info("card_write_rejected", assertion_id=v["a"], detail=exc.detail)
+        channel = (body.get("channel") or {}).get("id")
+        thread_ts = (body.get("message") or {}).get("thread_ts")
+        if channel is None:
+            thread = await self.store.thread(v["t"])
+            channel, thread_ts = thread.slack_channel, thread.slack_thread_ts
+        if channel is None:
+            return
+        await client.chat_postEphemeral(
+            channel=channel,
+            user=body["user"]["id"],
+            thread_ts=thread_ts,
+            text=f":warning: Not saved: {exc.detail or exc.title}",
+        )
+
+    async def on_confirm(self, ack: Any, body: dict[str, Any], client: AsyncWebClient) -> None:
+        """✅ Correct: unverified -> believed_true, confirmed by the clicking user."""
         await ack()
-        v, _ = await self._click(body, "confirm")
-        await self.repo.confirm(v["a"])
+        v, event_id, user = await self._click(body, "confirm")
+        try:
+            await self.repo.confirm(v["a"], user, event_id)
+        except WriteRejectedError as exc:
+            await self._rejected(client, body, v, exc)
         await self.refresh(v["t"])
 
-    async def on_retract(self, ack: Any, body: dict[str, Any]) -> None:
+    async def on_retract(self, ack: Any, body: dict[str, Any], client: AsyncWebClient) -> None:
+        """🚫 Not knowledge: retracted at the click's event time, by the clicking user."""
         await ack()
-        v, at = await self._click(body, "retract")
-        await self.repo.retract(v["a"], at)
+        v, event_id, user = await self._click(body, "retract")
+        try:
+            await self.repo.retract(v["a"], by=user, event_id=event_id)
+        except WriteRejectedError as exc:
+            await self._rejected(client, body, v, exc)
         await self.refresh(v["t"])
 
     async def on_bind(self, ack: Any, body: dict[str, Any]) -> None:
         await ack()
-        v, _ = await self._click(body, "bind")
+        v, _, _ = await self._click(body, "bind")
         try:
             await self.repo.bind_candidate(v["a"], v["e"])
         except WriteRejectedError:
@@ -404,10 +483,32 @@ class CaptureCards:
             await client.views_open(trigger_id=body["trigger_id"], view=fix_modal(found[0], v["t"]))
 
     async def on_fix_submit(self, ack: Any, body: dict[str, Any], view: dict[str, Any]) -> None:
-        """Saving the modal is a correction (R6 ii): the old version is retracted at the
-        click, the fix keeps the original validity, and there is no SUPERSEDES (ST-05)."""
+        """Saving the modal is a correction (R6 ii), by the person who saved it: the old
+        version is retracted at the submission's event time, the fix keeps the original
+        validity unless the person changed it, and there is no SUPERSEDES. The write
+        runs before the ack so that a rejection (422) is shown in the modal: Slack waits 3 s
+        for the ack, and the write takes milliseconds."""
         meta = json.loads(view["private_metadata"])
         values = {k: v["v"].get("value") for k, v in view["state"]["values"].items()}
+        try:
+            out = await self._save_fix(meta, values, body["user"]["id"], view)
+        except FixError as exc:
+            await ack(response_action="errors", errors={exc.block_id: exc.message})
+            return
+        except Exception as exc:
+            log.exception("fix_failed", assertion_id=meta["a"])
+            await ack(
+                response_action="errors",
+                errors={"statement": f"Couldn't save the fix ({type(exc).__name__})"},
+            )
+            return
+        await ack()
+        await self.store.replace_assertion(meta["a"], out.assertion_id)
+        await self.refresh(meta["t"])
+
+    async def _save_fix(
+        self, meta: dict[str, str], values: dict[str, str | None], user: str, view: dict[str, Any]
+    ) -> AssertionOut:
         bindings = [
             BindingIn(entity_id=e, scope=s, surface_form="fixed in Slack")
             for s in _SCOPE_FIELDS
@@ -421,14 +522,16 @@ class CaptureCards:
                 "observed_on",
             )
             msg = f"Unknown: {', '.join(unknown)}" if unknown else "Name at least one entity"
-            await ack(response_action="errors", errors={block: msg})
-            return
-        await ack()
-        old = (await self.repo.assertions([meta["a"]]))[0]
+            raise FixError(block, msg)
+        found = await self.repo.assertions([meta["a"]])
+        if not found:
+            raise FixError("statement", "This knowledge is no longer on record")
+        old = found[0]
+        validity = fixed_validity(values, old)
         at = self.clock()
         event_id = f"card:{meta['a']}:fix:{view.get('id', at.timestamp())}"
         await self.store.record_card_action(
-            event_id=event_id, at=at, author=body["user"]["id"], action="fix", thread_id=meta["t"]
+            event_id=event_id, at=at, author=user, action="fix", thread_id=meta["t"]
         )
         fixed = AssertionIn(
             statement=values.get("statement") or old.statement,
@@ -439,12 +542,11 @@ class CaptureCards:
             sources=await self.repo.sources(meta["a"]),
         )
         try:
-            out = await self.repo.correct(meta["a"], fixed, event_id)
-        except WriteRejectedError:
-            log.exception("fix_rejected", assertion_id=meta["a"])
-            return
-        await self.store.replace_assertion(meta["a"], out.assertion_id)
-        await self.refresh(meta["t"])
+            return await self.repo.correct(meta["a"], fixed, event_id, validity=validity)
+        except WriteRejectedError as exc:
+            log.info("fix_rejected", assertion_id=meta["a"], detail=exc.detail)
+            block = VALID_FROM if validity is not None else "statement"
+            raise FixError(block, f"Not saved: {exc.detail or exc.title}") from exc
 
 
 class CaptureHandlers:

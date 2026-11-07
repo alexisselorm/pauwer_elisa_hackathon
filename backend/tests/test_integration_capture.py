@@ -19,6 +19,7 @@ from kaiku.config import Settings
 from kaiku.context.models import AssertionIn, Match, Scope
 from kaiku.domain.models import Platform
 from kaiku.domain.time import datetime_to_slack_ts
+from kaiku.errors import WriteRejectedError
 from kaiku.extraction.graph import Extractor
 from kaiku.extraction.llm import ExtractionError
 from kaiku.extraction.models import Mention, RuleDraft, StatedTimeOut, TriageKind
@@ -72,6 +73,11 @@ class FakeSlack:
         self.posted: list[dict[str, Any]] = []
         self.updated: list[dict[str, Any]] = []
         self.views: list[dict[str, Any]] = []
+        self.ephemeral: list[dict[str, Any]] = []
+
+    async def chat_postEphemeral(self, **kw: Any) -> dict[str, Any]:
+        self.ephemeral.append(kw)
+        return {"ok": True}
 
     async def chat_postMessage(self, **kw: Any) -> dict[str, Any]:
         self.posted.append(kw)
@@ -529,6 +535,13 @@ async def test_card_buttons_confirm_fix_and_retract(driver: AsyncDriver) -> None
     await rig.cards.on_fix(ack, click, rig.slack)  # type: ignore[arg-type]
     modal = rig.slack.views[0]["view"]
     assert json.loads(modal["private_metadata"]) == {"a": aid, "t": thread_id}
+    prefilled = {
+        b.get("block_id"): b.get("element", {}).get("initial_value") for b in modal["blocks"]
+    }
+    (captured,) = await rig.repo.assertions([aid])
+    assert prefilled["observed_on"] == "TRN-042"
+    assert prefilled["valid_from"] == f"{captured.valid_from:%Y-%m-%d %H:%M} UTC"
+    assert prefilled["valid_to"] == ""  # still believed true
 
     def state(**fields: str) -> dict[str, Any]:
         return {"values": {k: {"v": {"value": v}} for k, v in fields.items()}}
@@ -566,9 +579,17 @@ async def test_card_buttons_confirm_fix_and_retract(driver: AsyncDriver) -> None
         **click,
         "actions": [{"value": json.dumps({"a": fixed, "t": thread_id}), "action_ts": "2.2"}],
     }
-    await rig.cards.on_retract(ack, click2)
+    await rig.cards.on_retract(ack, click2, rig.slack)  # type: ignore[arg-type]
     (gone,) = await rig.repo.assertions([fixed])
     assert gone.retracted_at is not None
+    # 🚫 is retracted at the click's event time, by the clicking user, and the click RETRACTS it.
+    (row,) = await rig.q(
+        "MATCH (e:CardAction {action: 'retract'})-[:RETRACTS]->(a:ContextAssertion {assertion_id: "
+        "$id}) RETURN a.retracted_at = e.event_time AS at_click, a.retracted_by AS by",
+        id=fixed,
+    )
+    assert row == {"at_click": True, "by": "U0ERKKI"}
+    assert rig.slack.ephemeral == []
     assert len(rig.slack.in_channel(CHANNEL)) == 1  # still one card, edited each time
     assert "Not knowledge: removed" in json.dumps(rig.slack.updated[-1]["blocks"])
     kinds = await rig.q("MATCH (e:CardAction) RETURN e.action AS a ORDER BY a")
@@ -632,9 +653,165 @@ async def test_confirm_and_the_one_clarifying_question(driver: AsyncDriver) -> N
             **body,
             "actions": [{"value": json.dumps({"a": aid, "t": thread_id}), "action_ts": "4.4"}],
         },
+        rig.slack,  # type: ignore[arg-type]
     )
     assert (await rig.repo.assertions([aid]))[0].status == "believed_true"
     assert len(rig.slack.posted) == 1
+
+
+def _card_click(aid: str, thread_id: str, action_ts: str, user: str = "U0ERKKI") -> dict[str, Any]:
+    """A block_actions payload for a card button, as Slack sends it from inside the thread."""
+    root = thread_id.rsplit(":", 1)[1]
+    return {
+        "user": {"id": user},
+        "trigger_id": "tr",
+        "channel": {"id": CHANNEL},
+        "message": {"ts": "1800000000.000001", "thread_ts": root},
+        "actions": [{"value": json.dumps({"a": aid, "t": thread_id}), "action_ts": action_ts}],
+    }
+
+
+def _modal_state(**fields: str) -> dict[str, Any]:
+    return {"values": {k: {"v": {"value": v}} for k, v in fields.items()}}
+
+
+async def test_confirm_is_the_clicking_persons_and_is_recorded_as_an_event(
+    driver: AsyncDriver,
+) -> None:
+    """✅ is a people-only write, as the clicking Slack user: the click is a CardAction event
+    (R1) that CONFIRMS the version, and confirmed_by / confirmed_at say who and when."""
+    rig = Rig(driver, FakeJudge())
+    aid = await _capture_elisa(rig)
+    thread_id = f"slack:{CHANNEL}:{slack_events()[0]['ts']}"
+
+    async def ack(**kw: Any) -> None:
+        return None
+
+    click = _card_click(aid, thread_id, "5.5", user="U0VEIKKO")
+    await rig.cards.on_confirm(ack, click, rig.slack)  # type: ignore[arg-type]
+    (row,) = await rig.q(
+        "MATCH (e:CardAction {action: 'confirm'})-[:CONFIRMS]->"
+        "(a:ContextAssertion {assertion_id: $id}) "
+        "RETURN a.status AS status, a.confirmed_by AS by, e.author AS author, "
+        "a.confirmed_at = e.event_time AS at_click",
+        id=aid,
+    )
+    assert row == {
+        "status": "believed_true",
+        "by": "U0VEIKKO",
+        "author": "U0VEIKKO",
+        "at_click": True,
+    }
+    assert ":white_check_mark: confirmed" in json.dumps(rig.slack.updated[-1]["blocks"])
+
+    # A second ✅ (a double click, a stale card) changes nothing and is no error.
+    await rig.cards.on_confirm(ack, _card_click(aid, thread_id, "6.6"), rig.slack)  # type: ignore[arg-type]
+    assert rig.slack.ephemeral == []
+    assert len(await rig.q("MATCH (:CardAction)-[c:CONFIRMS]->() RETURN c")) == 1
+
+    # The write needs a recorded event, and the event must be the confirming person's.
+    with pytest.raises(WriteRejectedError, match="unknown event"):
+        await rig.repo.confirm(aid, "U0VEIKKO", "card:no-such-click")
+    with pytest.raises(WriteRejectedError, match="not U0ERKKI's"):
+        await rig.repo.confirm(aid, "U0ERKKI", f"card:{aid}:confirm:5.5")
+
+
+async def test_rejected_card_writes_are_shown_to_the_person_not_swallowed(
+    driver: AsyncDriver,
+) -> None:
+    """A WriteRejectedError (422) reaches the person who clicked: an ephemeral message for a
+    button, the error inside the modal for ✏️ Fix. Nothing is written."""
+    rig = Rig(driver, FakeJudge())
+    aid = await _capture_elisa(rig)
+    thread_id = f"slack:{CHANNEL}:{slack_events()[0]['ts']}"
+    acks: list[dict[str, Any]] = []
+
+    async def ack(**kw: Any) -> None:
+        acks.append(kw)
+
+    await rig.cards.on_retract(ack, _card_click(aid, thread_id, "7.7"), rig.slack)  # type: ignore[arg-type]
+    assert rig.slack.ephemeral == []
+
+    # ✅ on the stale card of a removed version.
+    await rig.cards.on_confirm(
+        ack,
+        _card_click(aid, thread_id, "8.8", user="U0VEIKKO"),
+        rig.slack,  # type: ignore[arg-type]
+    )
+    (note,) = rig.slack.ephemeral
+    assert (note["channel"], note["user"]) == (CHANNEL, "U0VEIKKO")
+    assert note["thread_ts"] == slack_events()[0]["ts"]
+    assert "Not saved" in note["text"]
+    assert "removed" in note["text"]
+    assert (await rig.repo.assertions([aid]))[0].status == "unverified"
+
+    # 🚫 again from a later click; a payload without the channel finds it from the thread.
+    late = _card_click(aid, thread_id, "9.9")
+    del late["channel"], late["message"]
+    await rig.cards.on_retract(ack, late, rig.slack)  # type: ignore[arg-type]
+    assert "already retracted" in rig.slack.ephemeral[-1]["text"]
+    assert rig.slack.ephemeral[-1]["channel"] == CHANNEL
+
+    # ✏️ Fix saved from a modal opened before the removal: the modal shows why.
+    (old,) = await rig.repo.assertions([aid])
+    modal = cap.fix_modal(old, thread_id)
+    view = {**modal, "id": "V9", "state": _modal_state(statement="x", observed_on="TRN-042")}
+    await rig.cards.on_fix_submit(ack, _card_click(aid, thread_id, "10.1"), view)
+    assert acks[-1]["response_action"] == "errors"
+    assert "already retracted" in acks[-1]["errors"]["statement"]
+    assert await rig.q("MATCH (f)-[:CORRECTS]->() RETURN f") == []
+
+
+async def test_fix_can_correct_a_validity_window_the_capture_read_wrong(
+    driver: AsyncDriver,
+) -> None:
+    """Editing validity is for people only, through ✏️ Fix: still a correction (R6 ii, no
+    SUPERSEDES), and the fix carries the window the person gave."""
+    rig = Rig(driver, FakeJudge())
+    aid = await _capture_elisa(rig)
+    thread_id = f"slack:{CHANNEL}:{slack_events()[0]['ts']}"
+    acks: list[dict[str, Any]] = []
+
+    async def ack(**kw: Any) -> None:
+        acks.append(kw)
+
+    (old,) = await rig.repo.assertions([aid])
+    modal = cap.fix_modal(old, thread_id)
+    bad = {
+        **modal,
+        "id": "V1",
+        "state": _modal_state(
+            statement=old.statement, observed_on="TRN-042", valid_from="last Monday"
+        ),
+    }
+    await rig.cards.on_fix_submit(ack, _card_click(aid, thread_id, "1.1"), bad)
+    assert acks[-1] == {
+        "response_action": "errors",
+        "errors": {"valid_from": "Use YYYY-MM-DD HH:MM (UTC)"},
+    }
+
+    view = {
+        **modal,
+        "id": "V2",
+        "state": _modal_state(
+            statement=old.statement,
+            observed_on="TRN-042",
+            valid_from="2025-10-14 06:00",
+            valid_to="2025-12-01 00:00 UTC",
+        ),
+    }
+    await rig.cards.on_fix_submit(ack, _card_click(aid, thread_id, "2.2"), view)
+    assert acks[-1] == {}
+    (row,) = await rig.q(
+        "MATCH (f:ContextAssertion)-[:CORRECTS]->(w:ContextAssertion {assertion_id: $id}) "
+        "RETURN f.valid_from AS vf, f.valid_to AS vt, w.valid_from AS old_vf, "
+        "w.retracted_at IS NOT NULL AS retracted, EXISTS { (f)-[:SUPERSEDES]-() } AS sup",
+        id=aid,
+    )
+    assert row["vf"].to_native() == datetime(2025, 10, 14, 6, 0, tzinfo=UTC)
+    assert row["vt"].to_native() == datetime(2025, 12, 1, tzinfo=UTC)
+    assert row["old_vf"].to_native() == old.valid_from  # the wrong version stays on record
+    assert (row["retracted"], row["sup"]) == (True, False)
 
 
 async def test_backfill_is_idempotent_and_respects_the_demo_profile(driver: AsyncDriver) -> None:

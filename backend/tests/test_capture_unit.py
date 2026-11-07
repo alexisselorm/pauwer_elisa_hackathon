@@ -874,3 +874,59 @@ def test_card_says_who_fixed_it() -> None:
     rendered = json.dumps(cap.card_blocks([v], THREAD, {})[1])
     assert "fixed by <@U0ALEXIS>" in rendered
     assert "<@U0ERKKI> (this thread)" in rendered  # the source stays the expert
+
+
+# --- People-only writes from the card: the ✏️ Fix modal ---------------------------------
+
+
+def test_fix_modal_is_prefilled_with_scope_and_validity() -> None:
+    until = MSG8 + timedelta(days=30)
+    modal = cap.fix_modal(_view(valid_to=until), "slack:C1:1.0")
+    prefilled = {
+        b.get("block_id"): b.get("element", {}).get("initial_value") for b in modal["blocks"]
+    }
+    assert prefilled["statement"] == _view().statement
+    assert prefilled["observed_on"] == "TRN-042"
+    assert prefilled["applies_to"] == "TNC-1X, Gen1"
+    assert prefilled["activity"] == "TOPIC:sfp_replacement"
+    assert prefilled[cap.VALID_FROM] == "2025-10-14 06:22 UTC"
+    assert prefilled[cap.VALID_TO] == f"{until:%Y-%m-%d %H:%M} UTC"
+    still = cap.fix_modal(_view(), "slack:C1:1.0")
+    assert {b.get("block_id"): b for b in still["blocks"]}[cap.VALID_TO]["element"][
+        "initial_value"
+    ] == ""
+
+
+def test_a_fix_keeps_the_captured_window_unless_the_person_changed_it() -> None:
+    """R6 ii: the window shown is to the minute; left as shown, the fix keeps the exact
+    original (seconds included), so a scope-only fix keeps valid_from."""
+    old = _view()  # valid from 06:22:08, still true
+    shown = {cap.VALID_FROM: "2025-10-14 06:22 UTC", cap.VALID_TO: ""}
+    assert cap.fixed_validity(shown, old) is None
+    assert cap.fixed_validity({}, old) is None  # a modal without the fields
+    assert cap.fixed_validity({**shown, cap.VALID_FROM: " 2025-10-14 06:22 UTC "}, old) is None
+
+    earlier = cap.fixed_validity({**shown, cap.VALID_FROM: "2025-10-13 21:00"}, old)
+    assert earlier == (datetime(2025, 10, 13, 21, tzinfo=UTC), None)
+    ends = cap.fixed_validity({**shown, cap.VALID_TO: "2025-12-01T00:00:00+02:00"}, old)
+    assert ends == (MSG8, datetime(2025, 11, 30, 22, tzinfo=UTC))
+    # Clearing "valid until" makes it still believed true again.
+    closed = _view(valid_to=MSG8 + timedelta(days=1))
+    shown_closed = {cap.VALID_FROM: "2025-10-14 06:22 UTC", cap.VALID_TO: ""}
+    assert cap.fixed_validity(shown_closed, closed) == (MSG8, None)
+
+
+@pytest.mark.parametrize(
+    ("values", "field", "message"),
+    [
+        ({cap.VALID_FROM: "next Monday"}, cap.VALID_FROM, "Use YYYY-MM-DD HH:MM (UTC)"),
+        ({cap.VALID_FROM: ""}, cap.VALID_FROM, "Say when it starts to hold"),
+        ({cap.VALID_TO: "2025-10-14 06:00"}, cap.VALID_TO, "Must be after valid from"),
+    ],
+)
+def test_a_window_the_modal_cannot_save_is_shown_under_its_field(
+    values: dict[str, str | None], field: str, message: str
+) -> None:
+    with pytest.raises(cap.FixError) as err:
+        cap.fixed_validity(values, _view())
+    assert (err.value.block_id, err.value.message) == (field, message)

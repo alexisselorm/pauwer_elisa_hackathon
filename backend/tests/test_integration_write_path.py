@@ -272,3 +272,93 @@ async def test_a_fix_keeps_the_dispute_and_the_corroboration(driver: AsyncDriver
     assert view.contradicts == [other.assertion_id]
     assert view.corroborates == [agrees.assertion_id]
     assert view.status == "disputed"
+
+
+# --- People-only writes (the Slack card; never on MCP) -------------------------------------
+
+
+async def test_confirm_promotes_only_unverified_knowledge_and_cites_its_event(
+    driver: AsyncDriver,
+) -> None:
+    repo = ContextRepository(driver, "neo4j")
+    a = await repo.assert_(_item("key in the hut", 2))
+    with pytest.raises(WriteRejectedError, match="before the knowledge"):
+        await repo.confirm(a.assertion_id, "pekka", "WP-MSG-0")
+    out = await repo.confirm(a.assertion_id, "erkki", "WP-MSG-3")
+    assert (out.status, out.replayed) == ("believed_true", False)
+    rows = await _q(
+        driver,
+        "MATCH (e:Event)-[:CONFIRMS]->(a:ContextAssertion {assertion_id: $id}) "
+        "RETURN e.event_id AS ev, a.confirmed_by AS by, a.confirmed_at AS at",
+        id=a.assertion_id,
+    )
+    assert [(r["ev"], r["by"], r["at"].to_native()) for r in rows] == [
+        ("WP-MSG-3", "erkki", T0 + timedelta(hours=3))
+    ]
+    assert (await repo.confirm(a.assertion_id, "erkki", "WP-MSG-5")).replayed
+
+    # A ✅ doesn't settle a dispute, nor revive a superseded or removed version.
+    other = await repo.assert_(_item("gate is open", 1))
+    disputed = await repo.assert_(_item("gate is locked", 2, contradicts=[other.assertion_id]))
+    with pytest.raises(WriteRejectedError, match="is disputed"):
+        await repo.confirm(disputed.assertion_id, "erkki", "WP-MSG-3")
+    old = await repo.assert_(_item("padlock", 2))
+    await repo.supersede(old.assertion_id, _item("code lock", 4, valid_from=T0 + timedelta(days=1)))
+    with pytest.raises(WriteRejectedError, match="is superseded"):
+        await repo.confirm(old.assertion_id, "pekka", "WP-MSG-4")
+    await repo.retract(other.assertion_id, by="erkki", event_id="WP-MSG-5")
+    with pytest.raises(WriteRejectedError, match="removed"):
+        await repo.confirm(other.assertion_id, "erkki", "WP-MSG-5")
+    # Rejected confirmations leave no trace.
+    assert len(await _q(driver, "MATCH (:Event)-[c:CONFIRMS]->() RETURN c")) == 1
+
+
+async def test_retract_by_event_is_at_that_events_time_and_by_its_author(
+    driver: AsyncDriver,
+) -> None:
+    repo = ContextRepository(driver, "neo4j")
+    a = await repo.assert_(_item("reseat fixes it", 1))
+    with pytest.raises(WriteRejectedError, match="not pekka's"):
+        await repo.retract(a.assertion_id, by="pekka", event_id="WP-MSG-3")
+    with pytest.raises(WriteRejectedError, match="not its event's time"):
+        await repo.retract(a.assertion_id, T0, by="erkki", event_id="WP-MSG-3")
+    with pytest.raises(WriteRejectedError, match="needs its time or its event"):
+        await repo.retract(a.assertion_id)
+    out = await repo.retract(a.assertion_id, by="erkki", event_id="WP-MSG-3")
+    assert out.retracted_at == T0 + timedelta(hours=3)
+    rows = await _q(
+        driver,
+        "MATCH (e:Event)-[:RETRACTS]->(a:ContextAssertion {assertion_id: $id}) "
+        "RETURN e.event_id AS ev, a.retracted_by AS by",
+        id=a.assertion_id,
+    )
+    assert rows == [{"ev": "WP-MSG-3", "by": "erkki"}]
+
+
+async def test_a_person_can_correct_the_window_and_a_bad_one_is_rejected(
+    driver: AsyncDriver,
+) -> None:
+    repo = ContextRepository(driver, "neo4j")
+    start = T0 + timedelta(days=1)
+    pad = await repo.assert_(_item("padlock", 0))
+    code = await repo.supersede(pad.assertion_id, _item("code lock", 2, valid_from=start))
+    # A supersession boundary is a change in the world (R4b), not a reading to fix: the
+    # predecessor's end and the successor's start can't be moved apart by a correction.
+    with pytest.raises(WriteRejectedError, match="R4b"):
+        await repo.correct(
+            pad.assertion_id, _item("padlock", 0), "WP-MSG-4", validity=(T0, start + timedelta(1))
+        )
+    with pytest.raises(WriteRejectedError, match="R4b"):
+        await repo.correct(
+            code.assertion_id, _item("code lock", 2), "WP-MSG-4", validity=(T0, None)
+        )
+    # The gate code was read as open-ended; it was only valid until the end of the month.
+    gate = await repo.assert_(_item("gate code 1234", 1, valid_from=T0))
+    end = datetime(2026, 8, 31, tzinfo=UTC)
+    fixed = await repo.correct(
+        gate.assertion_id, _item("gate code 1234", 1), "WP-MSG-4", validity=(T0, end)
+    )
+    assert (fixed.valid_from, fixed.valid_to) == (T0, end)
+    assert fixed.recorded_at == T0 + timedelta(hours=4)  # still recorded at the correction
+    [old] = await repo.assertions([gate.assertion_id])
+    assert (old.valid_to, old.retracted_at) == (None, T0 + timedelta(hours=4))  # R6
