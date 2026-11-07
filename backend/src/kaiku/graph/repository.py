@@ -997,17 +997,23 @@ class ContextRepository:
         entity_ids: Sequence[str],
         t: datetime,
         extra_ids: Sequence[str] = (),
+        thread_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """V6 candidates: live assertions on the same topic, bound to one of the entities or
         found by vector search (`extra_ids`), valid at t, with where they came from.
         One that ends exactly at t and has no successor yet is included: a change announced
         in advance ("padlock until 30 Nov", "code lock from 1 Dec") starts where its
-        predecessor stops, and must still see it to supersede it (ST-24)."""
+        predecessor stops, and must still see it to supersede it (ST-24).
+        Knowledge already captured from the same thread (`thread_id`) is a candidate even if
+        it starts after t: the model lists a conversation's rules in no fixed order, and a
+        rule said at 11:00 must still meet the "don't" said at 11:12."""
         rows: list[dict[str, Any]] = py(
             await self._read(
                 "MATCH (a:ContextAssertion) WHERE a.retracted_at IS NULL "
-                "AND a.valid_from <= $t AND ($t < coalesce(a.valid_to, " + END_OF_TIME + ") "
+                "AND ($t < coalesce(a.valid_to, " + END_OF_TIME + ") "
                 "  OR (a.valid_to = $t AND a.superseded_by IS NULL)) "
+                "AND (a.valid_from <= $t OR ($thread IS NOT NULL "
+                "  AND EXISTS { (a)-[:DERIVED_FROM]->(:Event {thread_id: $thread}) })) "
                 "AND ((a.topic IS NOT NULL AND a.topic = $topic) OR a.assertion_id IN $extra "
                 "  OR EXISTS { MATCH (a)-[:ABOUT]->(e:Entity) WHERE e.entity_id IN $ids }) "
                 "RETURN a.assertion_id AS assertion_id, a.statement AS statement, "
@@ -1024,6 +1030,7 @@ class ContextRepository:
                 ids=list(entity_ids),
                 extra=list(extra_ids),
                 t=t,
+                thread=thread_id,
             )
         )
         return rows

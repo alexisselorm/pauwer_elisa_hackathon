@@ -314,7 +314,11 @@ class Extractor:
                 except Exception:  # vector search is a bonus: topic and entity still match
                     log.warning("vector_candidates_failed", exc_info=True)
             candidates = await self.repo.reconcile_candidates(
-                g.draft.topic, [b.entity_id for b in linked.bindings], g.valid_from, extra
+                g.draft.topic,
+                [b.entity_id for b in linked.bindings],
+                g.valid_from,
+                extra,
+                thread_id=thread.thread_id,
             )
             candidates.sort(
                 key=lambda c: reconcile.rank_key(

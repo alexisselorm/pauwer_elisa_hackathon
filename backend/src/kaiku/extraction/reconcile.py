@@ -158,7 +158,9 @@ def decide(
             d.skip_as = d.skip_as or c["assertion_id"]
         elif r.relation in (RelationKind.DUPLICATE, RelationKind.CORROBORATES):
             d.corroborates.append(c["assertion_id"])
-        elif r.relation is RelationKind.CORRECTS and same_thread:
+        # A correction replaces what was said before it; a sibling said later is a
+        # disagreement (the model lists a thread's rules in no fixed order).
+        elif r.relation is RelationKind.CORRECTS and same_thread and c["valid_from"] <= valid_from:
             d.correct = d.correct or c["assertion_id"]
         elif (
             r.relation is RelationKind.SUPERSEDES

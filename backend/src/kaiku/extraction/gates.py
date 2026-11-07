@@ -110,13 +110,25 @@ def ground(draft: RuleDraft, messages: Sequence[MessageView]) -> Grounded | str:
                 out.append((q, m))
         return out
 
-    if draft.action is None:
+    # A prohibition ("do NOT power-cycle the KMAX-4K") is a rule even with nothing to do
+    # instead: its avoid quote grounds it the way an action quote grounds the rest.
+    said_avoid = [
+        (q, m)
+        for q in (draft.avoid if draft.action is None else [])
+        if (m := locate(q.quote, messages)) is not None
+    ]
+    if draft.action is None and not said_avoid:
         return "V1: no action"
-    action_msg = locate(draft.action.quote, messages)
-    if action_msg is None:
-        return "V1: the action has no verbatim quote"
-    if is_question(draft.action.quote, action_msg):
-        return "V2: the action comes from a question, not an answer"
+    anchor: list[tuple[Quoted, MessageView]] = []
+    if draft.action is not None:
+        action_msg = locate(draft.action.quote, messages)
+        if action_msg is None:
+            return "V1: the action has no verbatim quote"
+        if is_question(draft.action.quote, action_msg):
+            return "V2: the action comes from a question, not an answer"
+        anchor = [(draft.action, action_msg)]
+    elif all(is_question(q.quote, m) for q, m in said_avoid):
+        return "V2: the prohibition comes from a question, not an answer"
     conditions = keep(draft.conditions, "condition")
     # Only what the model grounded counts as said: an avoid with a paraphrased quote is
     # dropped below, and must not stop the backstop from adding the rejected suggestion
@@ -128,7 +140,7 @@ def ground(draft: RuleDraft, messages: Sequence[MessageView]) -> Grounded | str:
     entities = [e for e in draft.entities if locate(e.surface_form, messages) is not None]
     dropped += [f"entity:{e.surface_form}" for e in draft.entities if e not in entities]
 
-    used = [(draft.action, action_msg), *conditions, *avoid]
+    used = [*anchor, *conditions, *avoid]
     sources: dict[str, SourceIn] = {}
     for q, m in used:
         if m.event_id in sources:

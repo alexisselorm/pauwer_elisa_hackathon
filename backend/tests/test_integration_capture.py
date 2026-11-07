@@ -873,6 +873,73 @@ async def test_two_experts_disagreeing_in_one_thread_are_both_disputed(
     assert y.contradicts == [one]
 
 
+_KMAX_T = datetime(2026, 6, 2, 11, tzinfo=UTC)
+_KMAX_ROWS = [
+    (
+        _KMAX_T,
+        "Heikki Lehtonen",
+        "Contractor Coordinator",
+        "RF alarm is up on the Kajaani hop. I usually just power-cycle the radio (the KMAX-4K).",
+    ),
+    (
+        _KMAX_T + timedelta(minutes=12),
+        "Juhani Virtanen",
+        "Access Engineer",
+        "Please do NOT power-cycle KMAX-4K. Escalate to the access engineer.",
+    ),
+]
+_POWER_CYCLE = _rule(
+    "Power-cycle a KMAX-4K on an RF alarm.",
+    ("power_cycle_radio", "power-cycle the radio"),
+    ["KMAX-4K"],
+)
+
+
+async def test_a_dont_listed_before_the_do_it_answers_still_disputes_it(
+    driver: AsyncDriver,
+) -> None:
+    """The model lists a thread's rules in no fixed order. The 11:12 "don't" comes first;
+    the 11:00 "do" must still meet it, although it starts later, and the do/avoid rule
+    disputes both without the judge's help."""
+    rig = Rig(driver, FakeJudge())  # the judge relates nothing
+    rig.judge.rules = [
+        _rule(
+            "Never power-cycle a KMAX-4K; escalate instead.",
+            ("escalate", "Escalate to the access engineer"),
+            ["KMAX-4K"],
+            avoid=[q("power_cycle_radio", "Please do NOT power-cycle KMAX-4K")],
+        ),
+        _POWER_CYCLE,
+    ]
+    await _thread(rig, "kmax-order", _KMAX_ROWS)
+    (r,) = await rig.loop.sweep_once()
+    dont, do = await rig.repo.assertions(r.assertion_ids)
+    assert do.valid_from < dont.valid_from
+    assert (dont.status, do.status) == ("disputed", "disputed")
+    assert do.contradicts == [dont.assertion_id]
+
+
+async def test_a_prohibition_with_nothing_to_do_instead_is_kept(driver: AsyncDriver) -> None:
+    """ "Do NOT power-cycle the KMAX-4K" is a rule on its own: grounded by its avoid quote,
+    stored with no action, and it disputes the power-cycle rule from the same thread."""
+    rig = Rig(driver, FakeJudge())
+    prohibition = RuleDraft(
+        statement="Do not power-cycle a KMAX-4K.",
+        topic="radio_restart",
+        action=None,
+        avoid=[q("power_cycle_radio", "Please do NOT power-cycle KMAX-4K")],
+        entities=[Mention(surface_form="KMAX-4K")],
+    )
+    rig.judge.rules = [_POWER_CYCLE, prohibition]
+    await _thread(rig, "kmax-dont", _KMAX_ROWS)
+    (r,) = await rig.loop.sweep_once()
+    do, dont = await rig.repo.assertions(r.assertion_ids)
+    assert dont.qualifiers["action"] is None
+    assert dont.qualifiers["avoid"] == ["power_cycle_radio"]
+    assert dont.recorded_at == _KMAX_T + timedelta(minutes=12)
+    assert (do.status, dont.status) == ("disputed", "disputed")
+
+
 async def test_vector_search_finds_a_candidate_topic_and_entity_would_miss(
     driver: AsyncDriver,
 ) -> None:

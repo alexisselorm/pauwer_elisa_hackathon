@@ -103,6 +103,31 @@ def test_v1_drops_a_rule_without_an_action_quote() -> None:
     assert gates.ground(ELISA_RULE.model_copy(update={"action": None}), []) == "V1: no action"
 
 
+def test_v1_keeps_a_prohibition_grounded_by_its_avoid_quote() -> None:
+    """A "don't" with nothing to do instead is still a rule; with no quote it is dropped."""
+    t = thread_of([(MSG8, "Juhani", "Access Engineer", "Please do NOT power-cycle KMAX-4K.")])
+    dont = ELISA_RULE.model_copy(
+        update={
+            "action": None,
+            "conditions": [],
+            "observed": [],
+            "avoid": [q("power_cycle_radio", "Please do NOT power-cycle KMAX-4K")],
+        }
+    )
+    g = gates.ground(dont, t.messages)
+    assert isinstance(g, gates.Grounded)
+    assert g.draft.action is None
+    assert g.recorded_at == g.valid_from == MSG8
+    assert [s.quote for s in g.sources] == ["Please do NOT power-cycle KMAX-4K"]
+    unquoted = dont.model_copy(update={"avoid": [q("power_cycle_radio", "never restart it")]})
+    assert gates.ground(unquoted, t.messages) == "V1: no action"
+    asked = thread_of([(MSG8, "Heikki", None, "Should we not power-cycle KMAX-4K?")])
+    question = dont.model_copy(
+        update={"avoid": [q("power_cycle_radio", "Should we not power-cycle KMAX-4K?")]}
+    )
+    assert str(gates.ground(question, asked.messages)).startswith("V2")
+
+
 def test_v2_a_question_is_not_a_rule() -> None:
     guess = ELISA_RULE.model_copy(update={"action": q("replace_sfp", "So another SFP?")})
     assert str(gates.ground(guess, elisa_thread().messages)).startswith("V2")
