@@ -133,17 +133,14 @@ class TelemetryStore:
         simulator being away is not an error: checks then see only history, so `unknown`."""
         if self._live_url is None:
             return
-        end = datetime.now(UTC)
+        now = datetime.now(UTC)
         try:
             async with (
                 aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as http,
                 http.get(
                     f"{self._live_url}/sim/samples",
-                    params={
-                        "ne_id": ne_id,
-                        "start": (end - LIVE_LOOKBACK).isoformat(),
-                        "end": end.isoformat(),
-                    },
+                    # No end: the simulator's own clock decides which intervals are complete.
+                    params={"ne_id": ne_id, "start": (now - LIVE_LOOKBACK).isoformat()},
                 ) as resp,
             ):
                 resp.raise_for_status()

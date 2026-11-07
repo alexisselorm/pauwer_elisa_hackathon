@@ -159,9 +159,11 @@ def create_app(sim: Simulator | None = None, settings: Settings | None = None) -
         return [_out(e) for e in events]
 
     @app.get("/sim/samples", tags=["sim"])
-    async def samples(ne_id: str, start: UtcDatetime, end: UtcDatetime) -> list[Sample]:
+    async def samples(
+        ne_id: str, start: UtcDatetime, end: UtcDatetime | None = None
+    ) -> list[Sample]:
         """Complete 15-minute samples (interval-start stamped) of every simulated port."""
-        return sim.samples(ne_id, start, end)
+        return sim.samples(ne_id, start, end or sim.clock())
 
     @app.get("/sim/live", tags=["sim"])
     async def live(

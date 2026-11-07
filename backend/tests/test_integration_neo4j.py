@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import time
 from collections.abc import Callable, Iterator
 from pathlib import Path
@@ -519,3 +520,136 @@ async def test_sim_events_reach_the_event_stream(neo4j_url: str, settings: Setti
     assert "Alarm" in rows[0]["labels"]
     assert "DeviceEvent" in rows[-1]["labels"]
     assert {r["port"] for r in rows} == {"1/1/2"}
+
+
+class _SimClock:
+    """Real time, plus whatever the test fast-forwards."""
+
+    def __init__(self) -> None:
+        from datetime import UTC, datetime, timedelta
+
+        self.offset = timedelta(0)
+        self._now = lambda: datetime.now(UTC)
+
+    def __call__(self) -> Any:
+        return self._now() + self.offset
+
+
+@contextlib.contextmanager
+def _sim_server(clock: _SimClock, settings: Settings) -> Iterator[str]:
+    """The simulator as a real HTTP server (the api pulls from it over the network)."""
+    import socket
+    import threading
+
+    import uvicorn
+
+    from silentctx.sim.app import create_app as create_sim_app
+    from silentctx.sim.network import Simulator
+
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    app = create_sim_app(Simulator(clock=clock), settings=settings)
+    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_config=None))
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    deadline = time.monotonic() + 10
+    while not server.started and time.monotonic() < deadline:
+        time.sleep(0.05)
+    try:
+        yield f"http://127.0.0.1:{port}"
+    finally:
+        server.should_exit = True
+        thread.join(timeout=10)
+
+
+def test_live_demo_fault_to_network_confirmed_outcome(
+    neo4j_url: str, make_settings: Callable[..., Settings]
+) -> None:
+    """ST-30 over MCP with the simulator at "now": a stall on TRN-017 1/1/2 meets all three
+    conditions of the TRN-042 rule (reached through TNC-1X), the fault events are on record,
+    a bounce recovers the counters, and the outcome is network-confirmed evidence."""
+    import asyncio
+    from datetime import timedelta
+
+    import httpx
+
+    from silentctx.seed.profiles import Profile
+    from silentctx.seed.service import SeedRequest, seed
+    from tests.conftest import AGENT_TOKEN
+
+    base = make_settings(neo4j_uri=neo4j_url, neo4j_password=PASSWORD, data_dir=MOCK_DATA)
+    assert (
+        asyncio.run(
+            seed(base, SeedRequest(network=True, gold=True, profile=Profile.FULL))
+        ).violations
+        == 0
+    )
+    clock = _SimClock()
+    node = {"node": "TRN-017", "port": "1/1/2"}
+
+    with _sim_server(clock, base) as sim_url:
+        settings = make_settings(
+            neo4j_uri=neo4j_url, neo4j_password=PASSWORD, data_dir=MOCK_DATA, sim_url=sim_url
+        )
+        with TestClient(create_app(settings)) as client:
+            assert _readyz(client, until_code=200)["code"] == 200
+            mcp = _Mcp(client, AGENT_TOKEN)
+
+            def conditions(at: Any) -> dict[str, Any]:
+                return mcp.call(
+                    "check_conditions",
+                    assertion_id="ASR-0001",
+                    entity_id="TRN-017",
+                    port="1/1/2",
+                    at=at.isoformat(),
+                )["structuredContent"]
+
+            healthy = conditions(clock())
+            assert {c["name"]: c["status"] for c in healthy["conditions"]}["counters_zero"] == (
+                "not_met"  # ST-31: normal counters, no bounce
+            )
+
+            fault = httpx.post(f"{sim_url}/sim/fault", json={**node, "kind": "sfp_swap_stall"})
+            assert fault.status_code == 200
+            before = conditions(clock())
+            assert before["all_met"] is True, before
+            assert [c["status"] for c in before["conditions"]] == ["met"] * 3
+
+            def event_types() -> list[str]:
+                got = mcp.call(
+                    "get_events",
+                    entity_id="TRN-017",
+                    start=(clock() - timedelta(hours=3)).isoformat(),
+                    end=(clock() + timedelta(minutes=1)).isoformat(),
+                )["structuredContent"]["events"]
+                return [e["type"] for e in got]
+
+            deadline = time.monotonic() + 15
+            while "OPTICAL_POWER_OK" not in event_types() and time.monotonic() < deadline:
+                time.sleep(0.5)  # the sim publishes to Neo4j every 2 s
+            assert {"MODULE_INSERTED", "LINK_UP", "OPTICAL_POWER_OK"} <= set(event_types())
+
+            bounced_at = clock()
+            r = httpx.post(f"{sim_url}/sim/action", json={**node, "action": "bounce_interface"})
+            assert [e["type"] for e in r.json()] == ["IF_DISABLED", "IF_ENABLED"]
+            outcome = mcp.call(
+                "report_outcome",
+                entity_id="TRN-017",
+                port="1/1/2",
+                action="bounce_interface",
+                result="resolved",
+                assertion_id="ASR-0001",
+                observed_at=bounced_at.isoformat(),
+                idempotency_key="it-live-outcome",
+            )["structuredContent"]
+            assert (outcome["evidence"], outcome["conditions_met"]) == ("SUPPORTS", True)
+
+            clock.offset = timedelta(minutes=31)  # a full interval of recovered traffic
+            after = conditions(clock())
+            assert after["all_met"] is False
+            assert {c["name"]: c["status"] for c in after["conditions"]}["counters_zero"] == (
+                "not_met"
+            )
+            history = mcp.call("get_history", assertion_id="ASR-0001")["structuredContent"]
+            assert outcome["event_id"] in [e["event_id"] for e in history["evidence"]]
