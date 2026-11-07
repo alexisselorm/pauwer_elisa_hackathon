@@ -34,6 +34,7 @@ from kaiku.ui.models import (
     EvalReportView,
     GraphOut,
     Meta,
+    ResetOut,
     SourceQuote,
     ThreadMessage,
     ToolCallView,
@@ -43,6 +44,7 @@ from kaiku.ui.queries import RUN_GAP, UiQueries, short
 
 log = get_logger(__name__)
 router = APIRouter(prefix="/api/ui", tags=["console"])
+_resetting = asyncio.Lock()
 
 _MENTION = re.compile(r"<@([UW][A-Z0-9]+)>")
 _LINK = re.compile(r"<(https?://[^|>]+)\|([^>]+)>")
@@ -81,6 +83,25 @@ async def meta(console: ConsoleDep) -> Meta:
         now=datetime.now(UTC),
         phoenix_url=s.phoenix_public_url,
         phoenix_project=s.phoenix_project_name,
+    )
+
+
+@router.post("/reset")
+async def reset(console: ConsoleDep) -> ResetOut:
+    """Reset the graph to the demo baseline: everything captured or recorded since seeding
+    is deleted, then the network and the gold knowledge are seeded again (kaiku.seed.reset).
+    The live stream then tells every open console to refetch."""
+    from kaiku.seed.reset import reset as run_reset
+
+    if _resetting.locked():
+        raise HTTPException(409, "a reset is already running")
+    async with _resetting:
+        out = await run_reset(console.settings)
+    gold = out.seed.gold
+    return ResetOut(
+        deleted_nodes=out.deleted_nodes,
+        assertions=gold.gold_assertions if gold else 0,
+        violations=out.seed.violations,
     )
 
 

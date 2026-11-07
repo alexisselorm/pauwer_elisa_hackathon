@@ -74,7 +74,12 @@ and triages it at the next sweep. Email captures are posted to `#context-log`, n
 channels; a Slack card the email corroborates shows "+1 source (email)". The 145 `.msg` files
 in `mock_data/email_outlook/` come in with `kaiku backfill`.
 
-**Reset:** `docker compose down -v` deletes the graph and the checkpoints.
+**Reset:** the console's **Reset** button (`POST /api/ui/reset`) puts the graph back to the
+demo baseline between runs: every capture, agent run and outcome is deleted, and the network
+and the seeded knowledge are loaded again. The demo chats in `backend/scripts/`
+(`demo_existing_context.py`, `demo_new_knowledge.py`) start from that state. The Slack
+channel cursors are kept, so old threads are not captured again. `docker compose down -v`
+deletes everything, checkpoints included.
 
 ### Time conventions
 

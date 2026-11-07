@@ -179,6 +179,14 @@ class Meta(BaseModel):
     phoenix_project: str
 
 
+class ResetOut(BaseModel):
+    """What POST /api/ui/reset did: the nodes it deleted and what it seeded again."""
+
+    deleted_nodes: int
+    assertions: int
+    violations: int
+
+
 class Change(BaseModel):
     """What the live stream says changed since its last message."""
 

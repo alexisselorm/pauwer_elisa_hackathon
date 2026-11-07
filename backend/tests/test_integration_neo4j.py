@@ -288,6 +288,39 @@ async def test_seed_full_is_clean_idempotent_and_wipeable(
     assert wiped.violations == 0
 
 
+async def test_reset_returns_to_the_seeded_baseline(
+    neo4j_url: str, make_settings: Callable[..., Settings]
+) -> None:
+    """The console's Reset: live captures go, seeded knowledge is restored, cursors stay."""
+    from kaiku.seed.profiles import Profile
+    from kaiku.seed.reset import reset
+    from kaiku.seed.service import SeedRequest, seed
+
+    settings = make_settings(neo4j_uri=neo4j_url, neo4j_password=PASSWORD, data_dir=MOCK_DATA)
+    await seed(settings, SeedRequest(network=True, gold=True, profile=Profile.FULL))
+    baseline = await _snapshot(neo4j_url)
+
+    # What a demo leaves behind: a captured thread and assertion, a changed gold status.
+    _query(
+        neo4j_url,
+        "CREATE (:Thread {thread_id: 'slack:C1:1.0'})"
+        "<-[:IN_THREAD]-(:Event:Message {event_id: 'slack:C1:1.0'}) "
+        "CREATE (:ContextAssertion {assertion_id: 'ASR-LIVE', origin: 'extracted'}) "
+        "CREATE (:ChannelCursor {channel: 'C1', ts: '1.0'}) "
+        "WITH 1 AS x MATCH (a:ContextAssertion {assertion_id: 'ASR-0024'}) "
+        "SET a.status = 'disputed'",
+    )
+
+    out = await reset(settings)
+
+    assert out.seed.violations == 0
+    assert out.deleted_nodes > 3
+    assert await _snapshot(neo4j_url) == baseline
+    assert _query(neo4j_url, "MATCH (n:Thread) RETURN count(n) AS n")[0]["n"] == 0
+    cursors = _query(neo4j_url, "MATCH (c:ChannelCursor) RETURN c.ts AS ts")
+    assert cursors == [{"ts": "1.0"}]  # the slackbot must not re-capture old threads
+
+
 async def test_seed_prunes_rows_that_left_the_source(
     neo4j_url: str, make_settings: Callable[..., Settings]
 ) -> None:

@@ -43,4 +43,6 @@ http://localhost:8080.
   V1–V6 gates per rule and the verbatim quotes. The quotes are highlighted in the messages.
 - **Agent runs:** MCP tool calls recorded by the server, grouped per agent. A new run
   starts after 90 s without a call.
+- **Reset** (header): `POST /api/ui/reset` deletes everything captured or recorded since
+  seeding and seeds the network and gold knowledge again. It's the console's only write.
 - **Traces:** "Trace ↗" opens the capture's trace in Arize Phoenix (`PHOENIX_PUBLIC_URL`).

@@ -62,6 +62,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ui/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset
+         * @description Reset the graph to the demo baseline: everything captured or recorded since seeding
+         *     is deleted, then the network and the gold knowledge are seeded again (kaiku.seed.reset).
+         *     The live stream then tells every open console to refetch.
+         */
+        post: operations["reset_api_ui_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ui/graph": {
         parameters: {
             query?: never;
@@ -971,6 +993,18 @@ export interface components {
                 [key: string]: components["schemas"]["Check"];
             };
         };
+        /**
+         * ResetOut
+         * @description What POST /api/ui/reset did: the nodes it deleted and what it seeded again.
+         */
+        ResetOut: {
+            /** Deleted Nodes */
+            deleted_nodes: number;
+            /** Assertions */
+            assertions: number;
+            /** Violations */
+            violations: number;
+        };
         /** RuleDraft */
         RuleDraft: {
             /**
@@ -1228,6 +1262,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Meta"];
+                };
+            };
+        };
+    };
+    reset_api_ui_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResetOut"];
                 };
             };
         };

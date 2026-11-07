@@ -2,6 +2,7 @@ import { Moon, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes } from 'react-router'
 import { AgentRunsPage } from './agents/AgentRunsPage'
+import { ResetButton } from './components/ResetButton'
 import { CapturesPage } from './captures/CapturesPage'
 import { GraphPage } from './graph/GraphPage'
 import { useLive } from './live-context'
@@ -51,6 +52,7 @@ export function App() {
         </nav>
         <div className="hdr-right">
           <span className="subtle small">Slack · Email · MCP</span>
+          <ResetButton />
           <span className={`live ${connected ? 'on' : ''}`} title={connected ? 'Live updates on' : 'Reconnecting'}>
             <i />
             {connected ? 'Live' : 'Offline'}
