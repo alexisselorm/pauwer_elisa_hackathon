@@ -8,7 +8,8 @@ Its answer is a structured `OpsAnswer`. Hard rules are enforced in code after th
 answered, not only asked for in the prompt (plan 001 WS5):
 - no step without a citation to an assertion the tools actually returned;
 - no step from an assertion whose conditions were checked and are not met;
-- "not documented" carries no steps.
+- "not documented" carries no steps;
+- three tool errors in a row fail the run (ToolErrorLimit) instead of answering from nothing.
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from enum import StrEnum
 from typing import Any
 
 from langchain.agents import create_agent
+from langchain.agents.middleware import AgentMiddleware
 from langchain.agents.structured_output import ToolStrategy
 from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.tools import BaseTool
@@ -264,6 +266,30 @@ def _from_plain_text(messages: list[Any]) -> OpsAnswer:
     return OpsAnswer(status=AnswerStatus.NEEDS_CLARIFICATION, summary=text)
 
 
+class ToolErrorsExceeded(RuntimeError):
+    """The tools kept failing: the run stops visibly rather than guess (BE-4.3)."""
+
+
+class ToolErrorLimit(AgentMiddleware):
+    """Counts tool errors in a row for one run; a success resets the count."""
+
+    def __init__(self, limit: int = 3) -> None:
+        super().__init__()
+        self.limit, self.streak = limit, 0
+
+    async def awrap_tool_call(self, request: Any, handler: Any) -> Any:
+        result = await handler(request)
+        if isinstance(result, ToolMessage) and result.status == "error":
+            self.streak += 1
+            if self.streak >= self.limit:
+                raise ToolErrorsExceeded(
+                    f"{self.streak} tool errors in a row (last: {request.tool_call['name']})"
+                )
+        else:
+            self.streak = 0
+        return result
+
+
 class OpsAgent:
     """One per process. Connects lazily: the API may still be starting when the bot does."""
 
@@ -315,6 +341,7 @@ class OpsAgent:
             tools=tools,
             system_prompt=system,
             response_format=ToolStrategy(OpsAnswer),
+            middleware=[ToolErrorLimit()],  # per run: the count starts at zero
         )
         content = question if not asker else f"{question}\n\n(asked by {asker})"
         result = await asyncio.wait_for(

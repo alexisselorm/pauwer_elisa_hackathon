@@ -231,3 +231,23 @@ def test_no_telemetry_is_unknown_never_met(telemetry: TelemetryStore) -> None:
         "TRN-017", "1/1/3", [*SYMPTOMS, "alarm_cleared"], utc("2026-11-07T09:00:00Z")
     )
     assert {r.status for r in results} == {ConditionStatus.UNKNOWN}
+
+
+async def test_three_tool_errors_in_a_row_fail_the_run() -> None:
+    from types import SimpleNamespace
+
+    from silentctx.agents.ops_agent import ToolErrorLimit, ToolErrorsExceeded
+
+    guard = ToolErrorLimit()
+    request = SimpleNamespace(tool_call={"name": "get_context"})
+
+    def reply(status: str) -> object:
+        async def handler(_: object) -> ToolMessage:
+            return ToolMessage("x", tool_call_id="1", status=status)  # type: ignore[arg-type]
+
+        return handler
+
+    for status in ["error", "error", "success", "error", "error"]:  # a success resets
+        await guard.awrap_tool_call(request, reply(status))
+    with pytest.raises(ToolErrorsExceeded, match="3 tool errors in a row"):
+        await guard.awrap_tool_call(request, reply("error"))
