@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
 
@@ -35,6 +35,7 @@ from silentctx.slack.format import (
 log = get_logger(__name__)
 
 TRIGGER = "OPTICAL_POWER_OK"
+ALARM_NAME = "noc-alarms"
 POLL_S = 3.0
 OUTCOME_BLOCK = "ops_outcome"
 GAP_BLOCK = "ops_gap"
@@ -147,16 +148,46 @@ class OpsActions:
         network: Network | None = None,
         alarm_channel: str | None = None,
         gap_channel: str | None = None,
+        capture_channels: Sequence[str] = (),
         settle: timedelta = timedelta(seconds=40),
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
         self.answerer, self.tools, self.network = answerer, tools, network
         self.alarm_channel, self.gap_channel = alarm_channel, gap_channel
+        self.capture_channels = list(capture_channels)
         self.settle, self.clock = settle, clock
+        self._target: str | None = None
+        self._watch_ok = True
         self._seen: set[str] | None = None
         self._people: dict[str, str] | None = None
 
     # --- Proactive ------------------------------------------------------------------------
+
+    async def alarm_target(self, client: AsyncWebClient) -> str | None:
+        """Where faults are posted. The bot watches the network either way; this only picks
+        the channel: SLACK_ALARM_CHANNEL, else a channel named #noc-alarms (joined if
+        needed), else the first capture channel."""
+        if self._target is None:
+            self._target = self.alarm_channel or await self._find_channel(client, ALARM_NAME)
+            if self._target is None and self.capture_channels:
+                self._target = self.capture_channels[0]
+        return self._target
+
+    async def _find_channel(self, client: AsyncWebClient, name: str) -> str | None:
+        cursor = None
+        while True:
+            page = await client.conversations_list(
+                types="public_channel", exclude_archived=True, limit=200, cursor=cursor
+            )
+            channels: list[dict[str, Any]] = page.get("channels", [])
+            for ch in channels:
+                if ch.get("name") == name:
+                    if not ch.get("is_member"):
+                        await client.conversations_join(channel=ch["id"])
+                    return str(ch["id"])
+            cursor = (page.get("response_metadata") or {}).get("next_cursor")
+            if not cursor:
+                return None
 
     async def poll_once(self, client: AsyncWebClient) -> int:
         """Post every new fault. The first poll only learns what already happened, so a
@@ -177,27 +208,41 @@ class OpsActions:
         return posted
 
     async def watch(self, client: AsyncWebClient) -> None:
-        log.info("fault_watch_started", channel=self.alarm_channel)
+        log.info("fault_watch_started")
         while True:
             try:
                 await self.poll_once(client)
+                if not self._watch_ok:
+                    log.info("fault_watch_recovered")
+                self._watch_ok = True
             except Exception as exc:  # noqa: BLE001  # sim restarting: try again next round
-                log.warning("fault_watch_failed", error=f"{type(exc).__name__}: {exc}")
+                if self._watch_ok:  # once per outage, not every 3 s
+                    log.warning("fault_watch_failed", error=f"{type(exc).__name__}: {exc}")
+                self._watch_ok = False
             await asyncio.sleep(POLL_S)
 
     async def post_fault(self, client: AsyncWebClient, ev: dict[str, Any]) -> None:
-        assert self.alarm_channel is not None
         node, port = ev["ne_id"], ev["port"]
+        channel = await self.alarm_target(client)
+        if channel is None:
+            log.warning(
+                "fault_seen_nowhere_to_post",
+                node=node,
+                port=port,
+                event_id=ev["event_id"],
+                hint="create #noc-alarms, or set SLACK_ALARM_CHANNEL",
+            )
+            return
         at = datetime.fromisoformat(ev["event_time"])
         head = await client.chat_postMessage(
-            channel=self.alarm_channel,
+            channel=channel,
             text=(
                 f":rotating_light: *{node} {port}*: optical module inserted · link up · "
                 f"optics OK ({at:%H:%M} UTC). Checking for a silent stall…"
             ),
         )
         reply = await client.chat_postMessage(
-            channel=self.alarm_channel,
+            channel=channel,
             thread_ts=head["ts"],
             text=":hourglass_flowing_sand: Checking conditions and documented knowledge…",
         )
@@ -213,9 +258,7 @@ class OpsActions:
             log.exception("proactive_answer_failed", event_id=ev["event_id"])
             text = f":warning: I couldn't check this fault ({type(exc).__name__})."
             blocks = text_blocks(text)
-        await client.chat_update(
-            channel=self.alarm_channel, ts=reply["ts"], text=text, blocks=blocks
-        )
+        await client.chat_update(channel=channel, ts=reply["ts"], text=text, blocks=blocks)
         log.info("fault_posted", node=node, port=port, event_id=ev["event_id"])
 
     # --- Outcome buttons ------------------------------------------------------------------

@@ -42,6 +42,8 @@ class Client:
     def __init__(self) -> None:
         self.posted: list[dict[str, Any]] = []
         self.updated: list[dict[str, Any]] = []
+        self.channels: list[dict[str, Any]] = []
+        self.joined: list[str] = []
 
     async def chat_postMessage(self, **kw: Any) -> dict[str, Any]:
         self.posted.append(kw)
@@ -53,6 +55,13 @@ class Client:
 
     async def chat_getPermalink(self, **kw: Any) -> dict[str, Any]:
         return {"permalink": f"https://x.slack.com/{kw['channel']}/{kw['message_ts']}"}
+
+    async def conversations_list(self, **kw: Any) -> dict[str, Any]:
+        return {"channels": self.channels}
+
+    async def conversations_join(self, **kw: Any) -> dict[str, Any]:
+        self.joined.append(kw["channel"])
+        return {"ok": True}
 
     async def users_list(self, **kw: Any) -> dict[str, Any]:
         return {
@@ -299,3 +308,25 @@ def test_slack_sources_link_to_the_message() -> None:
     text = format_answer(answer)
     assert "• <https://x.slack.com/archives/C1/p1|ASR-1>: erkki, #noc-transport" in text
     assert "• ASR-2: pekka" in text  # only https links are rendered
+
+
+async def test_the_network_is_watched_even_without_an_alarm_channel_setting() -> None:
+    # Settings only choose where to post. No SLACK_ALARM_CHANNEL: the #noc-alarms channel
+    # (joined if needed), else the first capture channel, else the fault is still seen and logged.
+    client = Client()
+    client.channels = [{"id": "CGEN", "name": "general"}, {"id": "CNOC", "name": "noc-alarms"}]
+    ops = _ops(alarm_channel=None)
+    await ops.post_fault(client, FAULT[2])  # type: ignore[arg-type]
+    assert client.posted[0]["channel"] == "CNOC"
+    assert client.joined == ["CNOC"]
+
+    client = Client()
+    ops = _ops(alarm_channel=None, capture_channels=["CCAP", "CCAP2"])
+    await ops.post_fault(client, FAULT[2])  # type: ignore[arg-type]
+    assert client.posted[0]["channel"] == "CCAP"
+
+    client, answerer = Client(), Answerer()
+    ops = _ops(alarm_channel=None, answerer=answerer)
+    await ops.post_fault(client, FAULT[2])  # type: ignore[arg-type]
+    assert client.posted == []  # nowhere to post: logged, and no LLM call wasted
+    assert answerer.asked == []

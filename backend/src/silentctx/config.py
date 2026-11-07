@@ -75,8 +75,9 @@ class Settings(BaseSettings):
     slack_bot_token: SecretStr | None = None
     slack_app_token: SecretStr | None = None
     slack_capture_channels: Annotated[list[str], NoDecode] = Field(default_factory=list)
-    # Where simulator faults are posted with the agent's advice (SL-2), e.g. #noc-alarms.
-    # Unset: the bot doesn't watch the simulator.
+    # Where network faults are posted with the agent's advice (SL-2). The bot watches the
+    # network regardless; unset means a channel named #noc-alarms, else the first capture
+    # channel.
     slack_alarm_channel: str | None = None
     # Where "Ask the expert" posts an undocumented question; unset: the asker's channel.
     slack_gap_channel: str | None = None

@@ -120,6 +120,7 @@ def build_actions(settings: Settings, agent: OpsAgent) -> ops_actions.OpsActions
         network=ops_actions.SimNetwork(settings.sim_url) if settings.sim_url else None,
         alarm_channel=settings.slack_alarm_channel,
         gap_channel=settings.slack_gap_channel,
+        capture_channels=settings.slack_capture_channels,
         settle=timedelta(seconds=settings.bounce_settle_s),
     )
 
@@ -162,10 +163,10 @@ async def run(settings: Settings) -> None:
     handler = AsyncSocketModeHandler(app, settings.slack_app_token.get_secret_value())
     await handler.connect_async()
     watcher = None
-    if actions.network is not None and actions.alarm_channel:
+    if actions.network is not None:
         watcher = asyncio.create_task(actions.watch(app.client), name="fault-watch")
     else:
-        log.info("fault_watch_off", reason="set SIM_URL and SLACK_ALARM_CHANNEL to enable")
+        log.warning("fault_watch_off", reason="SIM_URL is not set: no network feed to watch")
     await asyncio.to_thread(_mark_ready, True)
     log.info(
         "slack_connected",
