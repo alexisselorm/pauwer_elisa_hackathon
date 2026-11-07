@@ -11,18 +11,22 @@ Every write also records an AgentAction event (R1: every write is itself an even
 
 from __future__ import annotations
 
+import hashlib
 import json
 import uuid
-from collections.abc import Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from datetime import datetime
-from typing import Any, LiteralString
+from typing import Any, Literal, LiteralString
 
 from neo4j import AsyncDriver, AsyncManagedTransaction
 from neo4j.exceptions import ConstraintError
 from neo4j.time import DateTime as Neo4jDateTime
+from pydantic import ValidationError
 
 from silentctx.context.models import (
     AccessRecordView,
+    AssertionIn,
+    AssertionOut,
     AssertionView,
     EntityView,
     EventView,
@@ -30,8 +34,11 @@ from silentctx.context.models import (
     FlagView,
     Match,
     SegmentRef,
+    SourceIn,
 )
+from silentctx.domain import time as rules
 from silentctx.domain.models import AssertionStatus
+from silentctx.errors import WriteRejectedError
 from silentctx.graph.cypher import vector
 
 END_OF_TIME: LiteralString = "datetime('9999-12-31T00:00:00Z')"
@@ -563,6 +570,161 @@ class ContextRepository:
         )
         return {r["id"] for r in rows}
 
+    # --- The single write path for knowledge (BE-1.5; plan 001 WS1, R2-R7) -----------------
+    # Each public method is one transaction: the write, then the V5 checks on every assertion
+    # it touched. A violation raises WriteRejectedError (422) and the transaction rolls back.
+
+    async def _tx[T](self, work: Callable[[AsyncManagedTransaction], Awaitable[T]]) -> T:
+        async with self._driver.session(database=self._db) as session:
+            try:
+                return await session.execute_write(work)
+            except ConstraintError:
+                # The same idempotency key won a concurrent race: the retry replays it.
+                return await session.execute_write(work)
+
+    async def assert_(self, item: AssertionIn) -> AssertionOut:
+        """Create an assertion with its ABOUT bindings, DERIVED_FROM sources (and their
+        AUTHORED_BY authors), and CONTRADICTS / CORROBORATES links. Idempotent on the
+        completing source event + statement."""
+
+        async def work(tx: AsyncManagedTransaction) -> AssertionOut:
+            out = await _create(tx, item)
+            if not out.replayed:
+                await _check_v5(tx, [out.assertion_id, *item.contradicts, *item.corroborates])
+            return out
+
+        return await self._tx(work)
+
+    async def supersede(self, predecessor_id: str, successor: AssertionIn) -> AssertionOut:
+        """R4b / R6(i), a change in the world: the successor starts, and the predecessor's
+        valid_to becomes the successor's valid_from ("superseded timestamp")."""
+
+        async def work(tx: AsyncManagedTransaction) -> AssertionOut:
+            pred = await _state(tx, predecessor_id)
+            if pred.retracted_at is not None:
+                raise WriteRejectedError(f"{predecessor_id} is retracted; nothing to supersede")
+            if await _single(
+                tx,
+                "MATCH (:ContextAssertion)-[:SUPERSEDES]->(:ContextAssertion {assertion_id: $id}) "
+                "RETURN true AS x",
+                id=predecessor_id,
+            ):
+                raise WriteRejectedError(f"{predecessor_id} is already superseded")
+            out = await _create(tx, successor)
+            if out.replayed:
+                return out
+            ended = _rule(
+                rules.supersede,
+                pred,
+                rules.TemporalState(valid_from=out.valid_from, recorded_at=out.recorded_at),
+            )
+            await tx.run(
+                "MATCH (p:ContextAssertion {assertion_id: $pred}), "
+                "(s:ContextAssertion {assertion_id: $succ}) "
+                "SET p.valid_to = $valid_to, p.status = $status, p.superseded_by = $succ "
+                "CREATE (s)-[:SUPERSEDES]->(p)",
+                pred=predecessor_id,
+                succ=out.assertion_id,
+                valid_to=ended.valid_to,
+                status=ended.status.value,
+            )
+            await _check_v5(tx, [predecessor_id, out.assertion_id])
+            return out
+
+        return await self._tx(work)
+
+    async def correct(
+        self, wrong_id: str, fixed: AssertionIn, correction_event_id: str
+    ) -> AssertionOut:
+        """R6(ii), a person fixing an extraction mistake. The wrong version is retracted at the
+        correction's event_time; the fixed version keeps its validity window (not a change in
+        the world, so no SUPERSEDES) and is recorded at the correction."""
+
+        async def work(tx: AsyncManagedTransaction) -> AssertionOut:
+            wrong = await _state(tx, wrong_id)
+            at = await _single(
+                tx,
+                "MATCH (e:Event {event_id: $id}) RETURN e.event_time AS t",
+                id=correction_event_id,
+            )
+            if at is None:
+                raise WriteRejectedError(f"unknown correction event {correction_event_id!r}")
+            _, fixed_state = _rule(rules.correct, wrong, py(at))
+            sources = list(fixed.sources)
+            if correction_event_id not in {src.event_id for src in sources}:
+                sources.append(SourceIn(event_id=correction_event_id))
+            item = fixed.model_copy(
+                update={
+                    "valid_from": fixed_state.valid_from,
+                    "valid_to": fixed_state.valid_to,
+                    "sources": sources,
+                }
+            )
+            out = await _create(tx, item)
+            if out.replayed:
+                return out
+            if out.recorded_at != fixed_state.recorded_at:
+                raise WriteRejectedError("a source of the fix is later than the correction (R2)")
+            await tx.run(
+                "MATCH (w:ContextAssertion {assertion_id: $wrong}), "
+                "(f:ContextAssertion {assertion_id: $fixed}) "
+                "SET w.retracted_at = $at CREATE (f)-[:CORRECTS]->(w)",
+                wrong=wrong_id,
+                fixed=out.assertion_id,
+                at=fixed_state.recorded_at,
+            )
+            await _check_v5(tx, [wrong_id, out.assertion_id])
+            return out
+
+        return await self._tx(work)
+
+    async def retract(self, assertion_id: str, at: datetime) -> AssertionOut:
+        """Withdraw an assertion from what is known from `at` on (R6: nothing is deleted).
+        Retracting again at the same instant is a no-op."""
+
+        async def work(tx: AsyncManagedTransaction) -> AssertionOut:
+            state = await _state(tx, assertion_id)
+            at_utc = rules.ensure_utc(at)
+            if state.retracted_at is not None:
+                if state.retracted_at != at_utc:
+                    raise WriteRejectedError(f"{assertion_id} is already retracted")
+                replayed = True
+            else:
+                _rule(state.replace, retracted_at=at_utc)
+                await tx.run(
+                    "MATCH (a:ContextAssertion {assertion_id: $id}) SET a.retracted_at = $at",
+                    id=assertion_id,
+                    at=at_utc,
+                )
+                await _check_v5(tx, [assertion_id])
+                replayed = False
+            return await _out(tx, assertion_id, replayed=replayed)
+
+        return await self._tx(work)
+
+    async def add_evidence(
+        self,
+        outcome_event_id: str,
+        assertion_id: str,
+        relation: Literal["SUPPORTS", "REFUTES"],
+        conditions_met: bool | None = None,
+        review_due: bool = False,
+    ) -> dict[str, Any]:
+        """Link an Outcome to an assertion as evidence and update support_n / refute_n.
+        Linking the same outcome twice counts once."""
+
+        async def work(tx: AsyncManagedTransaction) -> dict[str, Any]:
+            try:
+                counters = await _evidence(
+                    tx, outcome_event_id, assertion_id, relation, conditions_met, review_due
+                )
+            except NotFoundError as exc:
+                raise WriteRejectedError(str(exc)) from exc
+            await _check_v5(tx, [assertion_id])
+            return counters
+
+        return await self._tx(work)
+
     # --- Writes ---------------------------------------------------------------------------
 
     async def write_once(
@@ -667,28 +829,7 @@ class ContextRepository:
             }
             if not assertion_id:
                 return out
-            counters = await (
-                await tx.run(
-                    "MATCH (o:Outcome {event_id: $id}), (a:ContextAssertion {assertion_id: $aid}) "
-                    "FOREACH (_ IN CASE WHEN $rel = 'SUPPORTS' THEN [1] ELSE [] END | "
-                    "  CREATE (o)-[:SUPPORTS {conditions_met: $met}]->(a) "
-                    "  SET a.support_n = coalesce(a.support_n, 0) + 1) "
-                    "FOREACH (_ IN CASE WHEN $rel = 'REFUTES' THEN [1] ELSE [] END | "
-                    "  CREATE (o)-[:REFUTES {conditions_met: $met}]->(a) "
-                    "  SET a.refute_n = coalesce(a.refute_n, 0) + 1) "
-                    "FOREACH (_ IN CASE WHEN $review THEN [1] ELSE [] END | "
-                    "  SET a.review_due = true) "
-                    "RETURN coalesce(a.support_n, 0) AS support_n, "
-                    "coalesce(a.refute_n, 0) AS refute_n, coalesce(a.review_due, false) AS review",
-                    id=event_id,
-                    aid=assertion_id,
-                    rel=relation,
-                    met=conditions_met,
-                    review=review,
-                )
-            ).single()
-            if counters is None:
-                raise NotFoundError(f"unknown assertion {assertion_id!r}")
+            counters = await _evidence(tx, event_id, assertion_id, relation, conditions_met, review)
             out |= {
                 "support_n": counters["support_n"],
                 "refute_n": counters["refute_n"],
@@ -893,3 +1034,234 @@ def _firmware_at(
             return str(payload["from"]), "before the next firmware_upgrade event"
     current = entity.get("firmware") or entity.get("firmware_as_built")
     return (str(current), "current inventory") if current else (None, None)
+
+
+# --- Write-path helpers (run inside a transaction) ------------------------------------------
+
+
+def _rule[T](fn: Callable[..., T], *args: Any, **kwargs: Any) -> T:
+    """Apply a domain time rule; a broken invariant rejects the write."""
+    try:
+        return fn(*args, **kwargs)
+    except (rules.TemporalError, ValidationError) as exc:
+        raise WriteRejectedError(str(exc)) from exc
+
+
+async def _single(tx: AsyncManagedTransaction, query: LiteralString, **params: Any) -> Any:
+    record = await (await tx.run(query, params)).single()
+    return None if record is None else record[0]
+
+
+async def _state(tx: AsyncManagedTransaction, assertion_id: str) -> rules.TemporalState:
+    a = await _single(
+        tx,
+        "MATCH (a:ContextAssertion {assertion_id: $id}) RETURN a { .valid_from, .valid_to, "
+        ".recorded_at, .retracted_at, .status, .review_due } AS a",
+        id=assertion_id,
+    )
+    if a is None:
+        raise WriteRejectedError(f"unknown assertion {assertion_id!r}")
+    a = py(a)
+    a["review_due"] = bool(a.get("review_due"))
+    a["status"] = a.get("status") or AssertionStatus.UNVERIFIED
+    return rules.TemporalState.model_validate(a)
+
+
+async def _out(tx: AsyncManagedTransaction, assertion_id: str, *, replayed: bool) -> AssertionOut:
+    a = await _single(
+        tx, "MATCH (a:ContextAssertion {assertion_id: $id}) RETURN a { .* } AS a", id=assertion_id
+    )
+    a = py(a)
+    return AssertionOut.model_validate(
+        {**{k: a.get(k) for k in AssertionOut.model_fields}, "replayed": replayed}
+    )
+
+
+def idempotency_key(completing_event_id: str, statement: str) -> str:
+    """Source event id + statement hash: re-extracting the same thread writes nothing new."""
+    norm = " ".join(statement.split()).casefold()
+    return f"{completing_event_id}:{hashlib.sha256(norm.encode()).hexdigest()[:16]}"
+
+
+async def _create(tx: AsyncManagedTransaction, item: AssertionIn) -> AssertionOut:
+    source_ids = sorted({s.event_id for s in item.sources})
+    found = py(
+        await _single(
+            tx,
+            "MATCH (e:Event) WHERE e.event_id IN $ids "
+            "RETURN collect({id: e.event_id, t: e.event_time}) AS rows",
+            ids=source_ids,
+        )
+    )
+    missing = set(source_ids) - {r["id"] for r in found}
+    if missing:
+        raise WriteRejectedError(f"unknown source events: {', '.join(sorted(missing))}")
+    # R2: recorded when the last source event happened (ties: the larger id, deterministic).
+    last = max(found, key=lambda r: (r["t"], r["id"]))
+    key = idempotency_key(last["id"], item.statement)
+    existing = await _single(
+        tx,
+        "MATCH (a:ContextAssertion {idempotency_key: $key}) RETURN a.assertion_id AS id",
+        key=key,
+    )
+    if existing is not None:
+        return await _out(tx, existing, replayed=True)
+
+    entity_ids = sorted({b.entity_id for b in item.bindings})
+    known = await _single(
+        tx,
+        "MATCH (e:Entity) WHERE e.entity_id IN $ids RETURN collect(e.entity_id) AS ids",
+        ids=entity_ids,
+    )
+    missing = set(entity_ids) - set(known)
+    if missing:  # ST-12: never create an orphan entity
+        raise WriteRejectedError(f"unknown entities: {', '.join(sorted(missing))}")
+    linked = sorted({*item.contradicts, *item.corroborates})
+    known = await _single(
+        tx,
+        "MATCH (a:ContextAssertion) WHERE a.assertion_id IN $ids "
+        "RETURN collect(a.assertion_id) AS ids",
+        ids=linked,
+    )
+    missing = set(linked) - set(known)
+    if missing:
+        raise WriteRejectedError(f"unknown assertions: {', '.join(sorted(missing))}")
+
+    recorded = last["t"]
+    state = _rule(
+        rules.TemporalState,
+        valid_from=item.valid_from or recorded,
+        valid_to=item.valid_to,
+        recorded_at=recorded,
+        status=AssertionStatus.DISPUTED if item.contradicts else item.status,
+    )
+    assertion_id = new_id("ASR")
+    await tx.run(
+        "MATCH (last:Event {event_id: $last}) "
+        "CREATE (a:ContextAssertion {assertion_id: $id, statement: $statement, topic: $topic, "
+        "  kind: $kind, qualifiers_json: $qualifiers, origin: $origin, status: $status, "
+        "  confidence: $confidence, valid_from: $vf, valid_to: $vt, recorded_at: $recorded, "
+        "  review_due: false, support_n: 0, refute_n: 0, idempotency_key: $key, "
+        "  asserted_by: last.author}) "
+        "WITH a UNWIND $bindings AS b MATCH (e:Entity {entity_id: b.entity_id}) "
+        "CREATE (a)-[:ABOUT {scope: b.scope, resolution_confidence: b.resolution_confidence, "
+        "  surface_form: b.surface_form}]->(e)",
+        last=last["id"],
+        id=assertion_id,
+        statement=item.statement,
+        topic=item.topic,
+        kind=item.kind,
+        qualifiers=json.dumps(item.qualifiers, sort_keys=True),
+        origin=item.origin,
+        status=state.status.value,
+        confidence=item.confidence,
+        vf=state.valid_from,
+        vt=state.valid_to,
+        recorded=state.recorded_at,
+        key=key,
+        bindings=[b.model_dump(mode="json") for b in item.bindings],
+    )
+    await tx.run(
+        "MATCH (a:ContextAssertion {assertion_id: $id}) "
+        "UNWIND $sources AS s MATCH (ev:Event {event_id: s.event_id}) "
+        "CREATE (a)-[:DERIVED_FROM {quote: s.quote}]->(ev) "
+        "WITH ev WHERE ev.author IS NOT NULL "
+        "MERGE (p:Person {person_id: ev.author}) MERGE (ev)-[:AUTHORED_BY]->(p)",
+        id=assertion_id,
+        sources=[s.model_dump() for s in item.sources],
+    )
+    # Symmetric relations: one edge per pair, read undirected (as the seed writes them).
+    # Disagreement makes both sides disputed (V6).
+    await tx.run(
+        "MATCH (a:ContextAssertion {assertion_id: $id}) "
+        "CALL (a) { UNWIND $contradicts AS x MATCH (b:ContextAssertion {assertion_id: x}) "
+        "  MERGE (a)-[:CONTRADICTS]->(b) "
+        "  SET b.status = CASE WHEN b.status IN ['superseded', 'expired'] THEN b.status "
+        "    ELSE 'disputed' END } "
+        "CALL (a) { UNWIND $corroborates AS x MATCH (b:ContextAssertion {assertion_id: x}) "
+        "  MERGE (a)-[:CORROBORATES]->(b) }",
+        id=assertion_id,
+        contradicts=item.contradicts,
+        corroborates=item.corroborates,
+    )
+    return AssertionOut(
+        assertion_id=assertion_id,
+        status=state.status,
+        valid_from=state.valid_from,
+        valid_to=state.valid_to,
+        recorded_at=state.recorded_at,
+        idempotency_key=key,
+    )
+
+
+# V5: the temporal invariants (R2-R7, verify_temporal), checked on the graph as the
+# transaction left it. Gold rows have no source events; proposals are recorded when proposed.
+_V5: LiteralString = """
+UNWIND $ids AS id
+MATCH (a:ContextAssertion {assertion_id: id})
+OPTIONAL MATCH (a)-[:DERIVED_FROM]->(ev:Event)
+WITH a, max(ev.event_time) AS last_source, count(ev) AS n_sources
+OPTIONAL MATCH (a)-[:ABOUT]->(e:Entity)
+WITH a, last_source, n_sources, count(e) AS n_bindings
+OPTIONAL MATCH (succ:ContextAssertion)-[:SUPERSEDES]->(a)
+WITH a, last_source, n_sources, n_bindings, collect(succ.valid_from) AS succ_from
+RETURN a.assertion_id AS id, [x IN [
+  CASE WHEN a.valid_to IS NOT NULL AND a.valid_to <= a.valid_from
+    THEN 'valid_to must be after valid_from' END,
+  CASE WHEN a.retracted_at IS NOT NULL AND a.retracted_at < a.recorded_at
+    THEN 'retracted before it was recorded' END,
+  CASE WHEN a.status IN ['superseded', 'expired'] AND a.valid_to IS NULL
+    THEN a.status + ' without valid_to' END,
+  CASE WHEN n_bindings = 0 THEN 'bound to no entity' END,
+  CASE WHEN coalesce(a.origin, '') <> 'gold' AND n_sources = 0 THEN 'derived from no event' END,
+  CASE WHEN a.origin = 'extracted' AND a.recorded_at <> last_source
+    THEN 'recorded_at is not the last source event_time (R2)' END,
+  CASE WHEN size(succ_from) > 1 THEN 'superseded more than once' END,
+  CASE WHEN size(succ_from) = 1 AND a.valid_to <> succ_from[0]
+    THEN 'valid_to is not the successor valid_from (R4b)' END
+] WHERE x IS NOT NULL] AS problems
+"""
+
+
+async def _check_v5(tx: AsyncManagedTransaction, ids: Sequence[str]) -> None:
+    rows = await (await tx.run(_V5, ids=sorted(set(ids)))).data()
+    problems = [f"{r['id']}: {p}" for r in rows for p in r["problems"]]
+    if problems:
+        raise WriteRejectedError("temporal check failed (V5): " + "; ".join(problems))
+
+
+async def _evidence(
+    tx: AsyncManagedTransaction,
+    outcome_id: str,
+    assertion_id: str,
+    relation: str | None,
+    conditions_met: bool | None,
+    review: bool,
+) -> dict[str, Any]:
+    """Outcome -[SUPPORTS|REFUTES]-> assertion and its counters (plan 001 §6.2). An edge that
+    already exists is not counted again."""
+    row = await (
+        await tx.run(
+            "MATCH (o:Outcome {event_id: $id}), (a:ContextAssertion {assertion_id: $aid}) "
+            "FOREACH (_ IN CASE WHEN $rel = 'SUPPORTS' AND NOT EXISTS { (o)-[:SUPPORTS]->(a) } "
+            "  THEN [1] ELSE [] END | "
+            "  CREATE (o)-[:SUPPORTS {conditions_met: $met}]->(a) "
+            "  SET a.support_n = coalesce(a.support_n, 0) + 1) "
+            "FOREACH (_ IN CASE WHEN $rel = 'REFUTES' AND NOT EXISTS { (o)-[:REFUTES]->(a) } "
+            "  THEN [1] ELSE [] END | "
+            "  CREATE (o)-[:REFUTES {conditions_met: $met}]->(a) "
+            "  SET a.refute_n = coalesce(a.refute_n, 0) + 1) "
+            "FOREACH (_ IN CASE WHEN $review THEN [1] ELSE [] END | "
+            "  SET a.review_due = true) "
+            "RETURN coalesce(a.support_n, 0) AS support_n, "
+            "coalesce(a.refute_n, 0) AS refute_n, coalesce(a.review_due, false) AS review",
+            id=outcome_id,
+            aid=assertion_id,
+            rel=relation,
+            met=conditions_met,
+            review=review,
+        )
+    ).single()
+    if row is None:
+        raise NotFoundError(f"unknown outcome {outcome_id!r} or assertion {assertion_id!r}")
+    return dict(row)

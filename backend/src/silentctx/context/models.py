@@ -7,9 +7,9 @@ them as the tools' output schemas.
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from silentctx.domain.models import AssertionStatus, UtcDatetime
 from silentctx.telemetry.store import ConditionResult
@@ -257,3 +257,55 @@ class FlagRecorded(BaseModel):
     review_due: bool
     routed_to: str | None
     replayed: bool = False
+
+
+# --- Writes (ContextRepository, plan 001 §8 WS1) ------------------------------------------
+
+
+class BindingIn(BaseModel):
+    entity_id: str = Field(min_length=1)
+    scope: Scope
+    surface_form: str | None = None
+    resolution_confidence: float = Field(default=1.0, ge=0, le=1)
+
+
+class SourceIn(BaseModel):
+    """An existing event the assertion derives from, with the quote that grounds it (V1)."""
+
+    event_id: str = Field(min_length=1)
+    quote: str | None = None
+
+
+class AssertionIn(BaseModel):
+    statement: str = Field(min_length=1)
+    topic: str | None = None
+    kind: str | None = None
+    qualifiers: dict[str, Any] = Field(default_factory=dict)
+    origin: Literal["extracted", "agent_proposal"] = "extracted"
+    status: AssertionStatus = AssertionStatus.UNVERIFIED
+    confidence: float | None = Field(default=None, ge=0, le=1)
+    # None: the start is when it was recorded (R3). recorded_at itself is never an input:
+    # it is the event_time of the last source event (R2).
+    valid_from: UtcDatetime | None = None
+    valid_to: UtcDatetime | None = None
+    bindings: list[BindingIn] = Field(min_length=1)
+    sources: list[SourceIn] = Field(min_length=1)
+    contradicts: list[str] = Field(default_factory=list)
+    corroborates: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _not_a_validity_status(self) -> AssertionIn:
+        if self.status in (AssertionStatus.SUPERSEDED, AssertionStatus.EXPIRED):
+            raise ValueError(f"{self.status} comes from supersede/expiry, not from a new write")
+        return self
+
+
+class AssertionOut(BaseModel):
+    assertion_id: str
+    status: AssertionStatus
+    valid_from: UtcDatetime
+    valid_to: UtcDatetime | None = None
+    recorded_at: UtcDatetime
+    retracted_at: UtcDatetime | None = None
+    idempotency_key: str | None = None
+    replayed: bool = False  # the same source event + statement was written before

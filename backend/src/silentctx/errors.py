@@ -51,6 +51,14 @@ class ProblemError(Exception):
         self.extensions = extensions
 
 
+class WriteRejectedError(ProblemError):
+    """A context-layer write that would break a rule (unknown entity or event, a temporal
+    invariant): nothing is written."""
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(422, "Write rejected", detail)
+
+
 def problem_response(
     request: Request,
     status: int,
