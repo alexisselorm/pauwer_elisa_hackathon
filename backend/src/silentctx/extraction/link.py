@@ -32,7 +32,8 @@ _OLD = re.compile(
     re.IGNORECASE,
 )
 _INSTALLED = re.compile(
-    r"\b(?:installed|commissioned|deployed|from)\s+(?:around\s+|in\s+|about\s+)?"
+    # Not "from": "cells are from 2016", "from the 2018 batch" date a part, not the unit.
+    r"\b(?:installed|commissioned|deployed)\s+(?:around\s+|in\s+|about\s+)?"
     r"((?:19|20)\d\d)\b|\(((?:19|20)\d\d)\)",
     re.IGNORECASE,
 )
@@ -161,7 +162,13 @@ def link(
     kind: TriageKind,
     inventory: Sequence[Mapping[str, Any]],
     valid_from: datetime,
+    *,
+    draft_text: str = "",
 ) -> Linked:
+    """`draft_text` (the rule's statement and quotes) is where exact ids and model names are
+    read first: a thread can name hardware for contrast ("the bounce trick is for the old
+    Gen1/Gen2 boxes", "same as on TRN-003") that the rule is not about (found live, G-01).
+    When the rule's own words name no id or model, the whole thread is read, as before."""
     by_id = {e["entity_id"].casefold(): e for e in inventory}
     found: dict[str, BindingIn] = {}
 
@@ -177,21 +184,56 @@ def link(
                 resolution_confidence=round(confidence, 3),
             )
 
-    # 1. Exact ids anywhere in the thread.
-    for m in _ID.finditer(thread_text):
-        if (e := by_id.get(m.group(0).casefold())) is not None:
-            bind(e, None, 1.0, m.group(0))
+    # 1. Exact ids and model names: in the rule's own words, else anywhere in the thread.
     models = [e for e in inventory if e.get("entity_type") == "hw_model"]
     model_ids = [m["entity_id"] for m in models]
-    for e in models:
-        if re.search(
-            rf"(?<![\w-]){re.escape(e['entity_id'])}(?![\w-])", thread_text, re.IGNORECASE
-        ):
-            bind(e, Scope.APPLIES_TO, 1.0, e["entity_id"])
-        elif (
-            found_id := _model_pattern(e["entity_id"], model_ids).search(thread_text)
-        ) is not None:
-            bind(e, Scope.APPLIES_TO, 0.9, found_id.group(0))
+    generations = [e for e in inventory if e.get("entity_type") == "generation"]
+
+    def ids_and_models(text: str) -> list[tuple[Mapping[str, Any], Scope | None, float, str]]:
+        hits: list[tuple[Mapping[str, Any], Scope | None, float, str]] = [
+            (e, None, 1.0, m.group(0))
+            for m in _ID.finditer(text)
+            if (e := by_id.get(m.group(0).casefold())) is not None
+        ]
+        for e in models:
+            if re.search(rf"(?<![\w-]){re.escape(e['entity_id'])}(?![\w-])", text, re.IGNORECASE):
+                hits.append((e, Scope.APPLIES_TO, 1.0, e["entity_id"]))
+            elif (found_id := _model_pattern(e["entity_id"], model_ids).search(text)) is not None:
+                hits.append((e, Scope.APPLIES_TO, 0.9, found_id.group(0)))
+        for e in generations:  # "the old Gen1/Gen2 boxes"
+            if re.search(rf"(?<![\w-]){re.escape(e['entity_id'])}(?![\w-])", text, re.IGNORECASE):
+                hits.append((e, Scope.APPLIES_TO, 1.0, e["entity_id"]))
+        return hits
+
+    own = ids_and_models(draft_text)
+    for e, scope, confidence, surface in own or ids_and_models(thread_text):
+        bind(e, scope, confidence, surface)
+    if own:
+        # The device it happened on, when the rule names its model but not the device
+        # ("008 is a TNC-3X"): devices named in the thread that run the rule's hardware.
+        hardware = {e["entity_id"] for e, *_ in own} | {
+            str(e.get("generation")) for e, *_ in own if e.get("entity_type") == "hw_model"
+        }
+        same_hw = []
+        for e, _, confidence, surface in ids_and_models(thread_text):
+            model = by_id.get(str(e.get("model") or "").casefold())
+            if (
+                e.get("entity_type") == "device"
+                and model is not None
+                and (model["entity_id"] in hardware or str(model.get("generation")) in hardware)
+            ):
+                same_hw.append((e, confidence, surface))
+        # Prefer the device the rule's mentions point at, even as a bare number ("008");
+        # "same as on TRN-003" is a comparison, not where this rule was seen.
+        said = {
+            d.lstrip("0")
+            for m in mentions
+            if m.role in (None, Scope.OBSERVED_ON)
+            for d in re.findall(r"\d{2,4}", m.surface_form)
+        }
+        pointed = [x for x in same_hw if x[0]["entity_id"].rsplit("-", 1)[-1].lstrip("0") in said]
+        for e, confidence, surface in pointed or same_hw:
+            bind(e, Scope.OBSERVED_ON, confidence, surface)
 
     # 2. "older units, installed 2019": the model and generation of the devices named.
     old = _OLD.search(thread_text)

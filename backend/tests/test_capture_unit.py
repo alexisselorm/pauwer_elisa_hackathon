@@ -239,6 +239,37 @@ def test_v3_an_entity_that_did_not_exist_yet_is_a_candidate() -> None:
     assert "did not exist" in linked.question
 
 
+def test_a_rule_is_scoped_by_its_own_words_not_the_hardware_named_for_contrast() -> None:
+    """Found live (G-01): a TNC-3X rule was bound to Gen1, Gen2 and TRN-003 too, because the
+    thread named them for contrast; then it 'contradicted' every Gen1 bounce rule."""
+    thread = (
+        "TRN-008 Jyvaskyla: new optics on 1/1/3, counters stuck at zero.\n"
+        "008 is a TNC-3X, the bounce trick is for the old Gen1/Gen2 boxes. Same as on TRN-003."
+    )
+    draft = "On TNC-3X units, replace the SFP again rather than bouncing the port."
+    for said in ("TRN-008", "008"):  # the model often writes the bare number
+        mentions = [Mention(surface_form=said, role=Scope.OBSERVED_ON)]
+        linked = link(mentions, thread, TriageKind.RULE, inventory(), MSG8, draft_text=draft)
+        ids = {b.entity_id for b in linked.bindings if not b.candidate}
+        assert {"TRN-008", "TNC-3X", "Gen3"} <= ids, said
+        assert not ids & {"TRN-003", "Gen1", "Gen2", "TNC-1X"}, said
+    # The background remark about other boxes is scoped to them, not to this thread's node.
+    other = link([], thread, TriageKind.RULE, inventory(), MSG8, draft_text="Gen1/Gen2: bounce")
+    assert {b.entity_id for b in other.bindings} >= {"Gen1", "Gen2"}
+    assert "TNC-3X" not in {b.entity_id for b in other.bindings}
+    # The rule's words name nothing: the thread is read, as before (Elisa's case, ST-10).
+    loose = link([], thread, TriageKind.RULE, inventory(), MSG8, draft_text="bounce it")
+    assert {"TRN-003", "TRN-008"} <= {b.entity_id for b in loose.bindings}
+
+
+def test_a_part_year_does_not_scope_a_rule_to_the_model() -> None:
+    """Found live (G-02): "Cells are from 2016" bound an Ivalo rule to every TNC-2X."""
+    text = "Ivalo (TRN-011): batteries hold 2 h. Cells are from 2016 and tired."
+    mentions = [Mention(surface_form="TRN-011", role=Scope.OBSERVED_ON)]
+    linked = link(mentions, text, TriageKind.RULE, inventory(), MSG8, draft_text=text)
+    assert {b.entity_id for b in linked.bindings if b.scope is Scope.APPLIES_TO} == set()
+
+
 def test_ports_named_in_the_thread() -> None:
     assert ports("bounce 1/1/3 then check 1/1/3 and 1/2/10") == ["1/1/3", "1/2/10"]
 
@@ -273,6 +304,39 @@ def test_reconcile_decisions() -> None:
     assert _decide("corrects", _cand("A")).contradicts == ["A"]
     assert _decide("contradicts", _cand("A")).contradicts == ["A"]
     assert _decide("unrelated", _cand("A")) == reconcile.Decision()
+
+
+def test_other_hardware_is_neither_contradicted_by_rote_nor_superseded() -> None:
+    """Found live (G-01): "replace the SFP" on TNC-3X was forced into CONTRADICTS with the
+    Gen1 rule that avoids replace_sfp, and SUPERSEDED a TRN-042 report."""
+    by_id = {e["entity_id"].casefold(): e for e in inventory()}
+    g01 = reconcile.equipment(["TRN-008", "TNC-3X"], by_id)
+    assert g01 == {"TRN-008", "Gen3"}
+    gen1_rule = reconcile.equipment(["TRN-042", "TNC-1X"], by_id)
+    assert reconcile.disjoint(g01, gen1_rule)
+    assert not reconcile.disjoint(g01, reconcile.equipment(["TRN-003"], by_id))  # a TNC-3X
+    assert not reconcile.disjoint(g01, reconcile.equipment(["SEG-042"], by_id))  # no hardware
+
+    avoids_swap = _cand("ASR-0001", qualifiers_json='{"action": "bounce_interface", '
+                        '"avoid": ["replace_sfp"]}')  # fmt: skip
+    later = T1 + timedelta(days=1)
+
+    def decide(rel: str, elsewhere: list[str]) -> reconcile.Decision:
+        return reconcile.decide(
+            thread_id="t1",
+            valid_from=later,
+            candidates=[avoids_swap],
+            relations=[Relation(assertion_id="ASR-0001", relation=rel)],
+            action="replace_sfp",
+            elsewhere=elsewhere,
+        )
+
+    assert decide("unrelated", []).contradicts == ["ASR-0001"]  # same hardware: the override
+    assert decide("unrelated", ["ASR-0001"]) == reconcile.Decision()  # other hardware: no
+    assert decide("supersedes", ["ASR-0001"]).supersede is None
+    assert decide("corroborates", ["ASR-0001"]).corroborates == ["ASR-0001"]
+    # The judge may still say it contests the other's scope (ST-14, H-09 "not only old units").
+    assert decide("contradicts", ["ASR-0001"]).contradicts == ["ASR-0001"]
 
 
 def test_authority_ranks_recency_then_role_then_channel() -> None:

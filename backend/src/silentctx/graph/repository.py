@@ -952,7 +952,9 @@ class ContextRepository:
                 "coalesce(a.authority, 1) AS authority, a.qualifiers_json AS qualifiers_json, "
                 "[(a)-[:DERIVED_FROM]->(ev:Event) | ev.thread_id] AS threads, "
                 "head([(a)-[:DERIVED_FROM]->(ev:Event) | ev.author_role]) AS role, "
-                "head([(a)-[:DERIVED_FROM]->(ev:Event) | ev.platform]) AS platform "
+                "head([(a)-[:DERIVED_FROM]->(ev:Event) | ev.platform]) AS platform, "
+                "[(a)-[b:ABOUT]->(e:Entity) WHERE NOT coalesce(b.candidate, false) "
+                "  AND b.scope <> 'activity' | {entity_id: e.entity_id, scope: b.scope}] AS about "
                 "ORDER BY a.recorded_at DESC LIMIT 20",
                 topic=topic,
                 ids=list(entity_ids),

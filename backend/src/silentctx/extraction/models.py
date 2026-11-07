@@ -6,6 +6,7 @@ resolves times (R3/R4), entities (BE-3.2) and the final relation to earlier know
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from enum import StrEnum
 from typing import Any, Protocol
 
@@ -108,5 +109,9 @@ class Judge(Protocol):
     ) -> Extraction: ...
 
     async def relate(
-        self, draft: RuleDraft, candidates: list[dict[str, Any]], starts: str = ""
+        self,
+        draft: RuleDraft,
+        candidates: list[dict[str, Any]],
+        starts: str = "",
+        scope: Sequence[Mapping[str, str]] = (),
     ) -> list[Relation]: ...

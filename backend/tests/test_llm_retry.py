@@ -6,6 +6,7 @@ Found live: Featherless answered the FAST model's "Resolved" check with HTTP 200
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from typing import Any
 
@@ -90,3 +91,35 @@ async def test_chat_has_no_fallback_and_the_error_names_the_cause(
         await judge._call(ModelRole.CHAT, Resolved, "s", "u")
     assert isinstance(exc.value.__cause__, ProviderEmptyResponseError)
     assert (fast.calls, chat.calls) == (0, llm.ATTEMPTS)
+
+
+async def test_the_judge_sees_what_each_side_is_about(
+    make_settings: Callable[..., Settings],
+) -> None:
+    """C3 (G-01): without scope the judge called a TNC-3X rule a contradiction of Gen1 ones."""
+    from silentctx.extraction.models import Quoted, RuleDraft
+
+    seen: list[Any] = []
+
+    class Recording(_Answers):
+        async def ainvoke(self, messages: Any) -> Any:
+            seen.append(messages)
+            return {"parsed": self.parsed, "raw": None, "parsing_error": None}
+
+    judge = _judge(make_settings, _NullChoices(), Recording({"relations": []}))
+    draft = RuleDraft(
+        statement="On TNC-3X, replace the SFP again",
+        topic="forwarding_state_after_sfp_swap",
+        action=Quoted(value="replace_sfp", quote="Swap the SFP again"),
+    )
+    cand = {
+        "assertion_id": "ASR-0001",
+        "statement": "bounce it",
+        "about": [{"entity_id": "TNC-1X", "scope": "applies_to"}],
+    }
+    mine = [{"entity_id": "TRN-008", "scope": "observed_on"}]
+    await judge.relate(draft, [cand], "", scope=mine)
+    user = seen[0][1][1]
+    assert 'About: {"observed_on": ["TRN-008"]}' in user
+    earlier = json.loads(user.split("Earlier:\n", 1)[1])
+    assert earlier[0]["about"] == {"applies_to": ["TNC-1X"]}

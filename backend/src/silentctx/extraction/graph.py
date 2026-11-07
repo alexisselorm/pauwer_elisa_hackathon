@@ -184,12 +184,16 @@ class Extractor:
             if isinstance(grounded, str):
                 items.append(item.model_copy(update={"dropped": grounded}))
                 continue
+            d = grounded.draft
+            # The rule's scope is read from its statement and action, not from its avoid
+            # quotes, which often name other hardware ("the bounce trick is for Gen1/Gen2").
             linked = link(
-                grounded.draft.entities,
+                d.entities,
                 thread.text(),
                 state["triage"].kind,
                 inventory,
                 grounded.valid_from,
+                draft_text=f"{d.statement}\n{d.action.quote if d.action else ''}",
             )
             update: dict[str, Any] = {"grounded": grounded, "linked": linked}
             if not linked.bindings:
@@ -271,7 +275,24 @@ class Extractor:
                 ),
                 reverse=True,
             )
-            relations = await self.judge.relate(g.draft, candidates, g.valid_from.isoformat())
+            mine = [
+                {"entity_id": b.entity_id, "scope": str(b.scope)}
+                for b in linked.bindings
+                if not b.candidate and b.scope is not Scope.ACTIVITY
+            ]
+            relations = await self.judge.relate(
+                g.draft, candidates, g.valid_from.isoformat(), scope=mine
+            )
+            by_id = {e["entity_id"].casefold(): e for e in await self.repo.all_entities()}
+            new_hw = reconcile.equipment([m["entity_id"] for m in mine], by_id)
+            elsewhere = [
+                c["assertion_id"]
+                for c in candidates
+                if reconcile.disjoint(
+                    new_hw,
+                    reconcile.equipment([x["entity_id"] for x in c.get("about") or []], by_id),
+                )
+            ]
             decision = reconcile.decide(
                 thread_id=thread.thread_id,
                 valid_from=g.valid_from,
@@ -279,6 +300,7 @@ class Extractor:
                 relations=relations,
                 action=g.draft.action.value if g.draft.action else None,
                 avoid=[a.value for a in g.draft.avoid],
+                elsewhere=elsewhere,
             )
             items.append(item.model_copy(update={"decision": decision}))
         return {"items": items}

@@ -8,7 +8,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
@@ -55,8 +55,9 @@ Answer with relevant, kind and a one-line reason."""
 
 EXTRACT_PROMPT = """Extract the reusable operational knowledge from this thread as rules.
 Usually there is one rule; return none if there is no answer that teaches something.
-When people disagree (one says "I just power-cycle it", another "do NOT power-cycle"),
-extract EACH side as its own rule, even the one that was argued against.
+When people disagree about the same equipment (one says "I just power-cycle it", another
+"do NOT power-cycle"), extract EACH side as its own rule, even the one that was argued
+against. A remark about a different model or generation is background, not a rule.
 
 Rules for every field:
 - Every quote is copied EXACTLY from one message (same words, no paraphrase). No quote, no field.
@@ -64,14 +65,21 @@ Rules for every field:
   For site access the action is how to get in: who has the key or code, or what to open
   (get_key, get_code), quoted from where it was said.
   A suggestion that was rejected ("So another SFP?" -> "No") goes into avoid.
-- value is a short snake_case token. Use these where they fit:
+- value is a short snake_case token. Use a listed token only if it means the same thing;
+  otherwise name it yourself (call_fire_station_generator, dispatch_technician):
   symptoms: oper_up, rx_power_normal, counters_zero, alarms_cleared
   actions and avoid: bounce_interface, replace_sfp, reboot_node, power_cycle_radio,
   export_config, get_key, get_code
+- A remark that ends a rule ("after 15 December ... no longer needed") is that rule's
+  valid_to, not a rule of its own.
 - observed: symptoms someone reported seeing, quoted from where they said it.
-- entities: every node, model, site, place or generation named ("TRN-042", "older units",
-  "the Kemi gate"), with role observed_on (where it happened), applies_to (which models or
-  generations it holds for) or activity (the work being done, e.g. "Changed the SFP").
+- entities: only what THIS rule is about ("TRN-042", "older units", "the Kemi gate"), with
+  role observed_on (where it happened), applies_to (which models or generations it holds
+  for) or activity (the work being done, e.g. "Changed the SFP"). Leave out things named
+  only for contrast or comparison ("the bounce trick is for the old Gen1/Gen2 boxes" in a
+  rule about TNC-3X; "same as on TRN-003").
+- topic: name the problem, not the work: prefer an existing symptom topic
+  (forwarding_state_after_sfp_swap) over an activity (sfp_replacement).
 - valid_from / valid_to: when the KNOWLEDGE starts or stops holding, only as an explicit
   calendar date or weekday ("from 1 December", "until 20 November", "the code lock was
   installed 3 August"), with tense past or future. Never the age or install year of the
@@ -90,7 +98,12 @@ assertion, say how the new one relates to it:
 - corrects: the earlier statement misread the same conversation, or a detail of it was wrong
   from the start (a wrong port, a typo)
 - contradicts: they disagree and neither replaces the other
-- unrelated"""
+- unrelated
+Each side lists what it is about (observed_on, applies_to). If they hold for different
+models or generations that don't overlap, they can't contradict or supersede each other:
+unrelated, or corroborates when they report the same experience on the same kind of
+equipment. A new statement that disputes the other's scope ("it is not only the old units")
+still contradicts it."""
 
 
 RESOLVED_PROMPT = """You see how a telecom operations chat thread started and one later reply.
@@ -246,10 +259,21 @@ class LlmJudge:
         return await self._call(ModelRole.CHAT, Extraction, system, user)
 
     async def relate(
-        self, draft: RuleDraft, candidates: list[dict[str, Any]], starts: str = ""
+        self,
+        draft: RuleDraft,
+        candidates: list[dict[str, Any]],
+        starts: str = "",
+        scope: Sequence[Mapping[str, str]] = (),
     ) -> list[Relation]:
         if not candidates:
             return []
+
+        def about(rows: Iterable[Mapping[str, str]]) -> dict[str, list[str]]:
+            out: dict[str, list[str]] = {}
+            for r in rows:
+                out.setdefault(str(r["scope"]), []).append(str(r["entity_id"]))
+            return {k: sorted(v) for k, v in sorted(out.items())}
+
         earlier = [
             {
                 "assertion_id": c["assertion_id"],
@@ -259,6 +283,7 @@ class LlmJudge:
                 "recorded_at": str(c.get("recorded_at")),
                 "valid_from": str(c.get("valid_from")),
                 "action": json.loads(c.get("qualifiers_json") or "{}").get("action"),
+                "about": about(c.get("about") or []),
             }
             for c in candidates
         ]
@@ -266,7 +291,8 @@ class LlmJudge:
             f"New: {draft.statement}\n"
             f"Starts: {starts or 'when it was said'}\n"
             f"Action: {draft.action.value if draft.action else None}; "
-            f"avoid: {[a.value for a in draft.avoid]}\n\n"
+            f"avoid: {[a.value for a in draft.avoid]}\n"
+            f"About: {json.dumps(about(scope))}\n\n"
             f"Earlier:\n{json.dumps(earlier, indent=1)}"
         )
         out = await self._call(ModelRole.CHAT, Relations, RELATE_PROMPT, user)

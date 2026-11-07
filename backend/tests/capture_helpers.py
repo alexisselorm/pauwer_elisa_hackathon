@@ -3,6 +3,7 @@ fake LLM judge that answers what a good model would (the LLM itself is not under
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -133,7 +134,11 @@ class FakeJudge:
         return Extraction(rules=self.rules)
 
     async def relate(
-        self, draft: RuleDraft, candidates: list[dict[str, Any]], starts: str = ""
+        self,
+        draft: RuleDraft,
+        candidates: list[dict[str, Any]],
+        starts: str = "",
+        scope: Sequence[Mapping[str, str]] = (),
     ) -> list[Relation]:
         self.calls.append("relate")
         out = []

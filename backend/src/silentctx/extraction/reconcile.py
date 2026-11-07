@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -56,6 +56,33 @@ def rank_key(recorded_at: datetime, role: str | None, platform: str | None) -> t
 SAME_CONVERSATION = timedelta(days=1)
 
 
+def equipment(entity_ids: Iterable[str], by_id: Mapping[str, Mapping[str, Any]]) -> set[str]:
+    """What hardware an assertion is about, at generation level plus the devices themselves:
+    a device brings its model's generation, a model its generation. Sites, segments and
+    topics bring nothing (access knowledge has no hardware scope)."""
+    out: set[str] = set()
+    for eid in entity_ids:
+        e = by_id.get(eid.casefold())
+        if e is None:
+            continue
+        kind = e.get("entity_type")
+        if kind == "device":
+            out.add(e["entity_id"])
+            e = by_id.get(str(e.get("model") or "").casefold()) or {}
+            kind = e.get("entity_type")
+        if kind == "hw_model" and e.get("generation"):
+            out.add(str(e["generation"]))
+        elif kind == "generation":
+            out.add(e["entity_id"])
+    return out
+
+
+def disjoint(new: set[str], other: set[str]) -> bool:
+    """Both name hardware and none of it is shared (TNC-3X vs Gen1/TNC-1X). Unknown on
+    either side is not disjoint, so access knowledge and unscoped rules keep the old path."""
+    return bool(new) and bool(other) and not (new & other)
+
+
 class Decision(BaseModel):
     skip_as: str | None = None  # already known from this thread: nothing to write
     correct: str | None = None
@@ -72,14 +99,28 @@ def decide(
     relations: Sequence[Relation],
     action: str | None = None,
     avoid: Sequence[str] = (),
+    elsewhere: Collection[str] = (),
 ) -> Decision:
+    """`elsewhere`: candidates about other hardware than the new one (`disjoint`). A rule for
+    TNC-3X that says "replace the SFP" doesn't contradict a Gen1 rule that says "don't", and
+    a change on one model doesn't supersede knowledge about another (found live, G-01).
+    The judge, which sees both scopes, may still call them contradictory (ST-14: "it is not
+    only the old units" contests the Gen1 scope)."""
     by_id = {c["assertion_id"]: c for c in candidates}
     d = Decision()
     superseded: list[Mapping[str, Any]] = []
-    # One says do X, the other says avoid X: a disagreement, whatever the judge said.
+    # One says do X, the other says avoid X, on the same hardware: a disagreement, whatever
+    # the judge said.
     judged = {r.assertion_id: r for r in relations}
     for cand in candidates:
         q = json.loads(cand.get("qualifiers_json") or "{}")
+        if cand["assertion_id"] in elsewhere:
+            rel = judged.get(cand["assertion_id"])
+            if rel is not None and rel.relation is RelationKind.SUPERSEDES:
+                judged[cand["assertion_id"]] = Relation(
+                    assertion_id=cand["assertion_id"], relation=RelationKind.UNRELATED
+                )
+            continue
         if (action and action in (q.get("avoid") or [])) or (q.get("action") in avoid):
             judged[cand["assertion_id"]] = Relation(
                 assertion_id=cand["assertion_id"], relation=RelationKind.CONTRADICTS
