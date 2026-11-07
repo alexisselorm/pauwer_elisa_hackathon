@@ -88,11 +88,19 @@ class SlackOps:
             blocks = text_blocks(text)
         await client.chat_update(channel=channel, ts=placeholder["ts"], text=text, blocks=blocks)
 
+    async def react_seen(self, client: AsyncWebClient, event: dict[str, Any]) -> None:
+        """👀 on the mention: seen, an answer is coming. Never blocks the answer."""
+        try:
+            await client.reactions_add(channel=event["channel"], timestamp=event["ts"], name="eyes")
+        except Exception as exc:  # noqa: BLE001  # e.g. missing reactions:write, already reacted
+            log.warning("slack_reaction_failed", error=f"{type(exc).__name__}: {exc}")
+
     async def handle_mention(self, event: dict[str, Any], client: AsyncWebClient) -> None:
         """@silentctx in a channel: answer in the thread of the mention."""
         if _is_from_a_bot(event) or event.get("subtype"):
             return
         log.info("slack_mention", channel=event.get("channel"), ts=event.get("ts"))
+        await self.react_seen(client, event)
         await self.answer(client, event, thread_ts=event.get("thread_ts") or event.get("ts"))
 
     async def handle_message(self, event: dict[str, Any], client: AsyncWebClient) -> None:

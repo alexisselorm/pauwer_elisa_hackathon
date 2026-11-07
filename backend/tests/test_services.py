@@ -41,6 +41,8 @@ class _Client:
     def __init__(self) -> None:
         self.posted: list[dict[str, Any]] = []
         self.updated: list[dict[str, Any]] = []
+        self.reactions: list[dict[str, Any]] = []
+        self.reaction_error: Exception | None = None
 
     async def chat_postMessage(self, **kwargs: Any) -> dict[str, Any]:
         self.posted.append(kwargs)
@@ -48,6 +50,12 @@ class _Client:
 
     async def chat_update(self, **kwargs: Any) -> dict[str, Any]:
         self.updated.append(kwargs)
+        return {"ok": True}
+
+    async def reactions_add(self, **kwargs: Any) -> dict[str, Any]:
+        if self.reaction_error:
+            raise self.reaction_error
+        self.reactions.append(kwargs)
         return {"ok": True}
 
 
@@ -153,3 +161,14 @@ def test_app_registers_events_and_buttons(make_settings: Callable[..., Settings]
     names = [listener.ack_function.__name__ for listener in app._async_listeners]
     assert sorted(set(names)) == ["handle_mention", "handle_message", "on_gap", "on_outcome"]
     assert len(names) == 7  # 2 events, 3 outcome buttons, 2 gap buttons
+
+
+async def test_mention_gets_eyes_and_a_failed_reaction_still_answers() -> None:
+    client, answerer = _Client(), _Answerer()
+    await bot.SlackOps(answerer).handle_mention(dict(MENTION), client)  # type: ignore[arg-type]
+    assert client.reactions == [{"channel": "C1", "timestamp": "1.000001", "name": "eyes"}]
+
+    client = _Client()
+    client.reaction_error = RuntimeError("missing_scope")
+    await bot.SlackOps(answerer).handle_mention(dict(MENTION), client)  # type: ignore[arg-type]
+    assert client.updated  # answered anyway
