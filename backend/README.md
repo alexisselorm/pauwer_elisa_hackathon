@@ -143,6 +143,7 @@ them. A re-run is a no-op.
 uv run ruff format --check . && uv run ruff check . && uv run mypy
 uv run pytest -m "not integration"   # fast, no Docker
 uv run pytest                        # + Neo4j via testcontainers (Docker, ~1 min)
+uv run pytest -m live -s             # real models from .env: ST-01 latency, ST-03 (~4 min)
 ```
 
 ## Layout

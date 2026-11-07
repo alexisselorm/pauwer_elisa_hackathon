@@ -14,7 +14,7 @@ from __future__ import annotations
 import asyncio
 import json
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any
 
@@ -27,7 +27,7 @@ from silentctx.extraction.graph import CaptureResult
 from silentctx.graph.repository import ContextRepository
 from silentctx.ingest.capture import CaptureLoop
 from silentctx.ingest.slack_events import SlackIngest
-from silentctx.ingest.store import CaptureStore, ThreadView
+from silentctx.ingest.store import CaptureStore, MessageIn, ThreadView
 from silentctx.logging import get_logger
 from silentctx.slack.actions import find_channel
 from silentctx.slack.format import actions, button, context
@@ -370,15 +370,52 @@ class CaptureCards:
 
 
 class CaptureHandlers:
-    """Message, reaction and shortcut events -> ingestion (BE-2.1) and the loop (BE-2.4)."""
+    """Message, reaction and shortcut events -> ingestion (BE-2.1) and the loop (BE-2.4).
 
-    def __init__(self, ingest: SlackIngest, loop: CaptureLoop) -> None:
-        self.ingest, self.loop = ingest, loop
+    A reply the word list doesn't recognise as a resolution ("counters moving again, kiitos")
+    is asked to the FAST_MODEL classifier in the background; a yes resolves the thread. A
+    failed check changes nothing: the idle trigger still reads the thread."""
+
+    def __init__(
+        self,
+        ingest: SlackIngest,
+        loop: CaptureLoop,
+        resolves: Callable[[str, str], Awaitable[bool]] | None = None,
+    ) -> None:
+        self.ingest, self.loop, self.resolves = ingest, loop, resolves
+        self._checks: set[asyncio.Task[None]] = set()
 
     async def on_message(self, event: dict[str, Any]) -> None:
         msg = await self.ingest.on_message(event)
-        if msg is not None and msg.resolution:
+        if msg is None:
+            return
+        if msg.resolution:
             self.loop.kick()
+        elif (
+            self.resolves is not None
+            and msg.text
+            and event.get("thread_ts")
+            not in (
+                None,
+                event.get("ts"),
+            )
+        ):
+            task = asyncio.create_task(self._classify(msg, msg.text))
+            self._checks.add(task)
+            task.add_done_callback(self._checks.discard)
+
+    async def _classify(self, msg: MessageIn, text: str) -> None:
+        assert self.resolves is not None
+        try:
+            thread = await self.ingest.store.thread(msg.thread_id)
+            start = thread.messages[0].text if thread.messages else ""
+            if await self.resolves(text, start) and await self.ingest.store.mark_resolved(
+                msg.event_id, msg.event_time
+            ):
+                log.info("resolution_by_model", event_id=msg.event_id)
+                self.loop.kick()
+        except Exception:
+            log.warning("resolution_check_failed", event_id=msg.event_id, exc_info=True)
 
     async def on_reaction(self, event: dict[str, Any]) -> None:
         if await self.ingest.on_reaction(event):

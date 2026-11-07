@@ -197,9 +197,8 @@ async def run(settings: Settings) -> None:
     async def embed(text: str) -> list[float] | None:
         return await embed_query_or_none(embedder, text)
 
-    extractor = Extractor(
-        repo, LlmJudge(settings), TelemetryStore(settings.data_dir, settings.sim_url), embed
-    )
+    judge = LlmJudge(settings)
+    extractor = Extractor(repo, judge, TelemetryStore(settings.data_dir, settings.sim_url), embed)
     cards = cap.CaptureCards(store, repo, log_channel=settings.slack_context_log_channel)
     loop = CaptureLoop(
         store,
@@ -209,7 +208,7 @@ async def run(settings: Settings) -> None:
         every_s=settings.capture_sweep_seconds,
     )
     ingest = SlackIngest(store, channels=settings.slack_capture_channels)
-    capture = cap.CaptureHandlers(ingest, loop)
+    capture = cap.CaptureHandlers(ingest, loop, judge.resolves)
     app = build_app(settings, agent, actions, capture, cards)
     identity = await app.client.auth_test()
     cards.client = app.client

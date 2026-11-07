@@ -17,6 +17,7 @@ from collections.abc import Callable, Collection, Mapping
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from slack_sdk.errors import SlackApiError
 from slack_sdk.web.async_client import AsyncWebClient
 
 from silentctx.domain.models import Platform
@@ -172,22 +173,28 @@ class SlackIngest:
     async def watched_channels(self, client: AsyncWebClient) -> list[str]:
         if self.channels:
             return sorted(self.channels - self.skip)
+        try:
+            found = await self._member_of(client, "public_channel,private_channel")
+        except SlackApiError as exc:  # installed before groups:read was in the manifest
+            if exc.response.get("error") != "missing_scope":
+                raise
+            log.warning("catch_up_public_only", reason="reinstall the app to add groups:read")
+            found = await self._member_of(client, "public_channel")
+        return [c for c in found if self.watched(c)]
+
+    @staticmethod
+    async def _member_of(client: AsyncWebClient, types: str) -> list[str]:
         found: list[str] = []
         cursor = None
         while True:
             page = await client.conversations_list(
-                # shortcut: public only; private channels need groups:read in the manifest.
-                types="public_channel",
-                exclude_archived=True,
-                limit=200,
-                cursor=cursor,
+                types=types, exclude_archived=True, limit=200, cursor=cursor
             )
             channels: list[dict[str, Any]] = page.get("channels", [])
             found += [c["id"] for c in channels if c.get("is_member")]
             cursor = (page.get("response_metadata") or {}).get("next_cursor")
             if not cursor:
-                break
-        return [c for c in found if self.watched(c)]
+                return found
 
     async def catch_up(self, client: AsyncWebClient) -> int:
         """Ingest what was posted while the bot was down. Returns the number of new events."""

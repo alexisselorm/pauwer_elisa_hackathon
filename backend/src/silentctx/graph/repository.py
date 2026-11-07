@@ -105,6 +105,9 @@ _ASSERTION_FIELDS: LiteralString = """
       .channel, .permalink, .text }] AS sources
 """
 
+# V3: a candidate binding (ambiguous, or not alive at valid_from) does not put an assertion
+# in an entity's scope until a person picks it on the Slack card.
+_CONFIRMED: LiteralString = "NOT coalesce(r.candidate, false)"
 _KNOWN: LiteralString = "a.recorded_at <= $k AND (a.retracted_at IS NULL OR a.retracted_at > $k)"
 # R10: validity as it was known at k. A supersession is recorded when its successor is
 # (R2), so if no successor was on record by k, the predecessor was still open-ended then:
@@ -329,8 +332,8 @@ class ContextRepository:
         `same_model_of` names a model) assertions observed on other devices of that model."""
         rows = await self._read(
             "UNWIND $scope AS s "
-            "MATCH (a:ContextAssertion)-[:ABOUT]->(:Entity {entity_id: s.id}) "
-            "WHERE " + _VALID + " AND " + _KNOWN + " "
+            "MATCH (a:ContextAssertion)-[r:ABOUT]->(:Entity {entity_id: s.id}) "
+            "WHERE " + _CONFIRMED + " AND " + _VALID + " AND " + _KNOWN + " "
             "WITH a, min(s.rank) AS rank "
             "RETURN rank, " + _ASSERTION_FIELDS,
             scope=[{"id": i, "rank": _RANK[m]} for i, m in scope.items()],
@@ -342,9 +345,15 @@ class ContextRepository:
         }
         if same_model_of:
             others = await self._read(
-                "MATCH (a:ContextAssertion)-[:ABOUT {scope: 'observed_on'}]->(o:Device)"
+                "MATCH (a:ContextAssertion)-[r:ABOUT {scope: 'observed_on'}]->(o:Device)"
                 "-[im:IS_MODEL]->(:HwModel {entity_id: $model}) "
-                "WHERE NOT o.entity_id IN $ids AND " + _VALID + " AND " + _KNOWN + " "
+                "WHERE NOT o.entity_id IN $ids AND "
+                + _CONFIRMED
+                + " AND "
+                + _VALID
+                + " AND "
+                + _KNOWN
+                + " "
                 "AND im.valid_from <= $t AND $t < coalesce(im.valid_to, " + END_OF_TIME + ") "
                 "WITH DISTINCT a RETURN " + _ASSERTION_FIELDS,
                 model=same_model_of,
@@ -444,8 +453,8 @@ class ContextRepository:
         )
         rows = await self._read(
             "UNWIND $ids AS id "
-            "MATCH (a:ContextAssertion)-[:ABOUT]->(:Entity {entity_id: id}) "
-            "WHERE (a.topic CONTAINS 'access' OR a.topic CONTAINS 'site') "
+            "MATCH (a:ContextAssertion)-[r:ABOUT]->(:Entity {entity_id: id}) "
+            "WHERE " + _CONFIRMED + " AND (a.topic CONTAINS 'access' OR a.topic CONTAINS 'site') "
             "AND " + _VALID + " AND " + _KNOWN + " "
             "WITH DISTINCT a RETURN " + _ASSERTION_FIELDS,
             ids=list(scope),

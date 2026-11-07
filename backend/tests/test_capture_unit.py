@@ -20,7 +20,7 @@ from silentctx.extraction.models import Mention, Relation, StatedTimeOut, Triage
 from silentctx.ingest import trigger
 from silentctx.ingest.backfill import elisa_example, teams_message
 from silentctx.ingest.slack_events import SlackIngest
-from silentctx.ingest.store import MessageIn, ThreadView
+from silentctx.ingest.store import MessageIn, MessageView, ThreadView
 from silentctx.seed.sources import MockData
 from silentctx.slack import capture as cap
 from tests.capture_helpers import (
@@ -163,7 +163,7 @@ def test_stated_dates_are_resolved_by_code_in_helsinki() -> None:
 
 
 def test_a_date_it_cannot_read_becomes_a_question_not_a_guess() -> None:
-    t = thread_of([(MSG8, "Erkki", None, "Starting soonish, reset the port first.")])
+    t = thread_of([(MSG8, "Erkki", None, "From Monday or Tuesday, reset the port first.")])
     draft = ELISA_RULE.model_copy(
         update={
             "action": q("bounce_interface", "reset the port first"),
@@ -171,14 +171,14 @@ def test_a_date_it_cannot_read_becomes_a_question_not_a_guess() -> None:
             "avoid": [],
             "observed": [],
             "entities": [],
-            "valid_from": StatedTimeOut(phrase="soonish", tense="future"),
+            "valid_from": StatedTimeOut(phrase="From Monday or Tuesday", tense="future"),
         }
     )
     g = gates.ground(draft, t.messages)
     assert isinstance(g, gates.Grounded)
     assert g.valid_from == MSG8
     assert g.time_note
-    assert "soonish" in g.time_note
+    assert "Monday or Tuesday" in g.time_note
 
 
 # --- BE-3.2: linking + V3 ------------------------------------------------------------------
@@ -501,3 +501,131 @@ def test_card_asks_its_one_question_inside_the_card() -> None:
     assert cap.CARD_CONFIRM not in json.dumps(confirmed)
     removed = cap.card_blocks([_view(retracted_at=MSG8)], THREAD, {})[1]
     assert "Not knowledge: removed" in json.dumps(removed)
+
+
+def test_st15_entity_linking_precision_and_recall_on_the_alias_table() -> None:
+    """ST-15: P and R >= 0.9 on kind=entity aliases, scored with a file the linker never
+    reads."""
+    from silentctx.eval.linking import score_aliases
+
+    aliases = MOCK_DATA / "knowledge_graph" / "entity_aliases.csv"
+    score = score_aliases(aliases, inventory(), datetime(2026, 11, 7, tzinfo=UTC))
+    assert score.rows == 32
+    assert score.precision >= 0.9, score.wrong
+    assert score.recall >= 0.9, score.misses
+
+
+def test_model_ids_and_old_units_resolve_from_the_inventory() -> None:
+    def ids(text: str) -> set[str]:
+        return {
+            b.entity_id
+            for b in link(
+                [Mention(surface_form=text)], text, TriageKind.RULE, inventory(), MSG8
+            ).bindings
+        }
+
+    assert ids("tnc2_roadm") == {"TNC-2X", "Gen2"}
+    assert ids("Gen3 units") == {"TNC-3X", "Gen3"}
+    assert ids("the older units") == {"TNC-1X", "Gen1"}  # first installed
+    assert "KMAX-4H" not in ids("KMAX-4K radio")  # a shared prefix needs the full id
+    assert ids("private road to the Kemi transport room") == {"SEG-042"}
+
+
+async def test_catch_up_lists_private_channels_and_falls_back_without_the_scope() -> None:
+    from slack_sdk.errors import SlackApiError
+
+    class Lister:
+        def __init__(self, scoped: bool) -> None:
+            self.scoped, self.types = scoped, []
+
+        async def conversations_list(self, **kw: Any) -> dict[str, Any]:
+            self.types.append(kw["types"])
+            if "private" in kw["types"] and not self.scoped:
+                resp = {"ok": False, "error": "missing_scope"}
+                raise SlackApiError("missing_scope", resp)
+            return {"channels": [{"id": "C1", "is_member": True}, {"id": "G1", "is_member": True}]}
+
+    ingest, _ = _ingest()
+    scoped = Lister(scoped=True)
+    assert await ingest.watched_channels(scoped) == ["C1", "G1"]  # type: ignore[arg-type]
+    assert scoped.types == ["public_channel,private_channel"]
+    old = Lister(scoped=False)
+    assert await ingest.watched_channels(old) == ["C1", "G1"]  # type: ignore[arg-type]
+    assert old.types == ["public_channel,private_channel", "public_channel"]
+
+
+async def test_the_model_resolves_a_reply_the_word_list_missed() -> None:
+    """BE-2.4: the FAST_MODEL classifier, only for thread replies, never blocking."""
+    import asyncio
+
+    from silentctx.slack.capture import CaptureHandlers
+
+    class Loop:
+        kicks = 0
+
+        def kick(self) -> None:
+            Loop.kicks += 1
+
+    asked: list[str] = []
+
+    async def resolves(text: str, start: str) -> bool:
+        asked.append(text)
+        return "kiitos" in text and "no traffic" in start
+
+    ingest, store = _ingest()
+
+    async def thread(thread_id: str) -> ThreadView:
+        root = store.events[f"slack:C1:{MSG['ts']}"]
+        return ThreadView(
+            thread_id=thread_id,
+            channel="C1",
+            last_message_ts=root.event_time,
+            messages=[MessageView.model_validate(root.model_dump())],
+        )
+
+    store.thread = thread  # type: ignore[attr-defined]
+    h = CaptureHandlers(ingest, Loop(), resolves)  # type: ignore[arg-type]
+    root = {**MSG, "text": "TRN-017 no traffic"}
+    await h.on_message(root)  # a new thread: not asked
+    reply = {**MSG, "ts": "1760422999.000000", "thread_ts": MSG["ts"], "text": "ok now, kiitos"}
+    await h.on_message(reply)
+    await asyncio.gather(*h._checks)
+    assert asked == ["ok now, kiitos"]
+    assert store.resolved == [("slack:C1:1760422999.000000", False)]
+    assert Loop.kicks == 1
+    await h.on_message({**reply, "ts": "1760423001.000000", "text": "Traffic is back"})
+    assert asked == ["ok now, kiitos"]  # the word list was enough
+    assert Loop.kicks == 2
+
+
+def test_a_year_dates_the_equipment_not_the_knowledge() -> None:
+    """Live finding: the model passed "installed around 2019" as the rule's start."""
+    draft = ELISA_RULE.model_copy(
+        update={"valid_from": StatedTimeOut(phrase="installed around 2019", tense="past")}
+    )
+    g = gates.ground(draft, elisa_thread().messages)
+    assert isinstance(g, gates.Grounded)
+    assert g.valid_from == MSG8
+    assert "valid_from:'installed around 2019' (names no day)" in g.dropped
+
+
+def test_v2_backstop_puts_a_rejected_suggestion_in_avoid() -> None:
+    """ST-04 even when the model forgets it (seen once in three live runs)."""
+    forgetful = ELISA_RULE.model_copy(update={"avoid": [ELISA_RULE.avoid[1]]})
+    g = gates.ground(forgetful, elisa_thread().messages)
+    assert isinstance(g, gates.Grounded)
+    assert {a.value for a in g.draft.avoid} == {"replace_sfp", "reboot_node"}
+    assert gates.rejected_suggestions(elisa_thread().messages)[0].quote == "So another SFP?"
+
+
+def test_llm_list_answers_are_unwrapped_instead_of_retried() -> None:
+    """Live finding: Kimi returned the rules as a bare list in 2 of 3 runs (+15-30 s)."""
+    from silentctx.extraction.llm import _unwrap
+    from silentctx.extraction.models import Extraction, Triage
+
+    rule = ELISA_RULE.model_dump()
+    assert Extraction.model_validate(_unwrap(Extraction, [rule])).rules[0].topic == rule["topic"]
+    wrapped = _unwrap(Extraction, [{"rules": [rule]}])
+    assert len(Extraction.model_validate(wrapped).rules) == 1
+    triage = {"relevant": True, "kind": "rule", "reason": "x"}
+    assert _unwrap(Triage, triage) == triage

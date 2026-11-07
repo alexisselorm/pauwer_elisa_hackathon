@@ -30,6 +30,7 @@ oauth_config:
       - chat:write.customize # demo replay personas only
       - commands
       - groups:history
+      - groups:read # list private channels the bot is in, for the catch-up sweep
       - im:history
       - im:write # route gaps/flags to the expert by DM
       - reactions:read

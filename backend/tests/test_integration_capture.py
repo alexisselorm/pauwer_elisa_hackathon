@@ -16,7 +16,7 @@ import pytest
 from neo4j import AsyncDriver
 
 from silentctx.config import Settings
-from silentctx.context.models import AssertionIn, Scope
+from silentctx.context.models import AssertionIn, Match, Scope
 from silentctx.domain.models import Platform
 from silentctx.domain.time import datetime_to_slack_ts
 from silentctx.extraction.graph import Extractor
@@ -596,7 +596,15 @@ async def test_confirm_and_the_one_clarifying_question(driver: AsyncDriver) -> N
             {"value": json.dumps({"a": aid, "t": thread_id, "e": "TRN-042"}), "action_ts": "3.3"}
         ],
     }
+    later = t + timedelta(days=1)
+
+    async def in_context() -> bool:
+        views = await rig.repo.context({"TRN-042": Match.DIRECT}, later, later)
+        return aid in {v.assertion_id for v in views}
+
+    assert not await in_context()  # a candidate is not knowledge about TRN-042 yet
     await rig.cards.on_bind(ack, body)
+    assert await in_context()
     (a,) = await rig.repo.assertions([aid])
     assert [(b.entity_id, b.candidate) for b in a.bindings if b.scope is Scope.OBSERVED_ON] == [
         ("TRN-042", False)

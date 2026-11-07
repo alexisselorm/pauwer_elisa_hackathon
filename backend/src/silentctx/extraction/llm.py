@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
@@ -23,6 +24,9 @@ from silentctx.extraction.models import (
 )
 from silentctx.ingest.store import ThreadView
 from silentctx.llm.chat import ModelRole, get_chat_model
+from silentctx.logging import get_logger
+
+log = get_logger(__name__)
 
 TIMEOUT_S = 90.0
 
@@ -60,8 +64,10 @@ Rules for every field:
 - entities: every node, model, site, place or generation named ("TRN-042", "older units",
   "the Kemi gate"), with role observed_on (where it happened), applies_to (which models or
   generations it holds for) or activity (the work being done, e.g. "Changed the SFP").
-- valid_from / valid_to: only an explicit calendar date or weekday ("from 1 December",
-  "until 20 November", "installed 3 August"), with tense past or future. Otherwise null.
+- valid_from / valid_to: when the KNOWLEDGE starts or stops holding, only as an explicit
+  calendar date or weekday ("from 1 December", "until 20 November", "the code lock was
+  installed 3 August"), with tense past or future. Never the age or install year of the
+  equipment ("installed around 2019" is about the unit, not the rule). Otherwise null.
 - topic: reuse one of the known topics when it fits: {topics}"""
 
 RELATE_PROMPT = """A new piece of operational knowledge was captured. For each earlier
@@ -77,6 +83,17 @@ assertion, say how the new one relates to it:
 - unrelated"""
 
 
+RESOLVED_PROMPT = """You see how a telecom operations chat thread started and one later reply.
+resolved=true only if the thread start reports a network fault or problem AND the reply says
+that problem is now fixed or working again (e.g. "counters moving again", "link passes
+traffic now"). If the start reports no fault, the answer is false whatever the reply says.
+Plans, questions, thanks for advice not yet tried, and small talk are false."""
+
+
+class Resolved(BaseModel):
+    resolved: bool
+
+
 class ExtractionError(RuntimeError):
     """The LLM failed twice (timeout or invalid output)."""
 
@@ -87,6 +104,17 @@ def _thread_text(thread: ThreadView) -> str:
         f"{f' ({m.author_role})' if m.author_role else ''}:\n{m.text}"
         for i, m in enumerate(thread.messages, 1)
     )
+
+
+def _unwrap(schema: type[BaseModel], out: Any) -> Any:
+    """Kimi sometimes answers `{"rules": [...]}` as a bare `[...]` or `[{"rules": [...]}]`.
+    For a schema that is one list field, take either shape instead of paying for a retry."""
+    if not isinstance(out, list):
+        return out
+    fields = list(schema.model_fields)
+    if len(out) == 1 and isinstance(out[0], dict) and set(out[0]) <= set(fields):
+        return out[0]
+    return {fields[0]: out} if len(fields) == 1 else out
 
 
 class LlmJudge:
@@ -107,15 +135,34 @@ class LlmJudge:
     ) -> T:
         runnable = self._model(role).with_structured_output(schema)
         last: Exception | None = None
-        for _ in range(2):
+        for attempt in (1, 2):
+            start = time.monotonic()
             try:
                 out = await asyncio.wait_for(
                     runnable.ainvoke([("system", system), ("user", user)]), TIMEOUT_S
                 )
-                return schema.model_validate(out)
+                result = schema.model_validate(_unwrap(schema, out))
             except Exception as exc:  # noqa: BLE001  # timeout, provider error, bad JSON: retry
                 last = exc
+                log.warning(
+                    "llm_call_failed", schema=schema.__name__, attempt=attempt, error=repr(exc)
+                )
+                continue
+            log.info(
+                "llm_call",
+                schema=schema.__name__,
+                role=role.value,
+                attempt=attempt,
+                seconds=round(time.monotonic() - start, 2),
+            )
+            return result
         raise ExtractionError(f"{schema.__name__}: {type(last).__name__}: {last}") from last
+
+    async def resolves(self, reply: str, thread_start: str) -> bool:
+        """The trigger's model check (BE-2.4) for replies the word list doesn't catch."""
+        user = f"Thread start:\n{thread_start}\n\nReply:\n{reply}"
+        out = await self._call(ModelRole.FAST, Resolved, RESOLVED_PROMPT, user)
+        return out.resolved
 
     async def triage(self, thread: ThreadView) -> Triage:
         return await self._call(ModelRole.FAST, Triage, TRIAGE_PROMPT, _thread_text(thread))

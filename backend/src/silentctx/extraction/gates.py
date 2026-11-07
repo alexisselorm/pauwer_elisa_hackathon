@@ -9,6 +9,7 @@ Times are resolved by code against the quoting message's event_time, never by th
 
 from __future__ import annotations
 
+import itertools
 import re
 from collections.abc import Sequence
 from datetime import datetime
@@ -21,6 +22,17 @@ from silentctx.extraction.models import Quoted, RuleDraft, StatedTimeOut
 from silentctx.ingest.store import MessageView
 
 _SPACE = re.compile(r"\s+")
+# A validity start or end names a day: a month or weekday name, a relative day, or a
+# numeric date. A bare year ("installed around 2019") dates equipment, not knowledge.
+_DAY = re.compile(
+    r"\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b"
+    r"|\b(mon|tues?|wed(nes)?|thu(rs)?|fri|sat(ur)?|sun)(day)?\b"
+    r"|\b(today|tonight|tomorrow|yesterday)\b"
+    r"|\b(tammi|helmi|maalis|huhti|touko|kesä|heinä|elo|syys|loka|marras|joulu)kuu"
+    r"|\b(maanantai|tiistai|keskiviikko|torstai|perjantai|lauantai|sunnuntai|huomenna|tänään)"
+    r"|\b\d{1,2}[./]\d{1,2}\b|\b\d{4}-\d{2}-\d{2}\b",
+    re.IGNORECASE,
+)
 _EDGE = "\"'\u201c\u201d\u2018\u2019`.,;:!\u2026- "
 
 
@@ -48,6 +60,29 @@ def is_question(quote: str, message: MessageView) -> bool:
     tail = text[idx + len(q) :]
     sentence_end = re.search(r"[.!?\n]", tail)
     return bool(sentence_end and sentence_end.group(0) == "?")
+
+
+# V2 backstop: a suggestion asked as a question and answered "No" by someone else is an
+# avoid, even if the model missed it ("So another SFP?" -> "No. Usually the SFP is fine.").
+_NO = re.compile(r"^\s*(no|nope|ei|don'?t)\b", re.IGNORECASE)
+_SUGGESTED = (
+    ("replace_sfp", re.compile(r"\b(sfp|optic|module|transceiver)", re.IGNORECASE)),
+    ("reboot_node", re.compile(r"\b(reboot|reload|restart)\b", re.IGNORECASE)),
+    ("power_cycle_radio", re.compile(r"\bpower[- ]?cycl", re.IGNORECASE)),
+)
+
+
+def rejected_suggestions(messages: Sequence[MessageView]) -> list[Quoted]:
+    out = []
+    for asked, answer in itertools.pairwise(messages):
+        if asked.author == answer.author or not _NO.match(answer.text):
+            continue
+        for line in asked.text.splitlines():
+            if line.rstrip().endswith("?"):
+                out += [
+                    Quoted(value=v, quote=line.strip()) for v, p in _SUGGESTED if p.search(line)
+                ]
+    return out
 
 
 class Grounded(BaseModel):
@@ -83,7 +118,9 @@ def ground(draft: RuleDraft, messages: Sequence[MessageView]) -> Grounded | str:
     if is_question(draft.action.quote, action_msg):
         return "V2: the action comes from a question, not an answer"
     conditions = keep(draft.conditions, "condition")
-    avoid = keep(draft.avoid, "avoid")
+    said = {a.value for a in draft.avoid}
+    missed = [r for r in rejected_suggestions(messages) if r.value not in said]
+    avoid = keep([*draft.avoid, *missed], "avoid")
     observed = keep(draft.observed, "observed")
     entities = [e for e in draft.entities if locate(e.surface_form, messages) is not None]
     dropped += [f"entity:{e.surface_form}" for e in draft.entities if e not in entities]
@@ -100,6 +137,11 @@ def ground(draft: RuleDraft, messages: Sequence[MessageView]) -> Grounded | str:
 
     time_note = None
     valid_from = recorded
+    for field in ("valid_from", "valid_to"):
+        stated = getattr(draft, field)
+        if stated is not None and not _DAY.search(stated.phrase):
+            dropped.append(f"{field}:{stated.phrase!r} (names no day)")
+            draft = draft.model_copy(update={field: None})
     if draft.valid_from is not None:
         resolved = _resolve(draft.valid_from, messages, recorded)
         if isinstance(resolved, str):

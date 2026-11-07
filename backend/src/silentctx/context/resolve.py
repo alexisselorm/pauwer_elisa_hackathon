@@ -93,7 +93,7 @@ def resolve(
         if kind == "device":
             transport = e["entity_id"].startswith("TRN-")
             confidence = 0.8 if transport and not access else 0.75 if transport else 0.4
-            if node and transport:
+            if node and transport and not access:  # "the road to the transport room"
                 confidence = 0.85
             add(e, confidence, city)
         elif kind in ("fibre", "microwave") and e.get("private_road"):
