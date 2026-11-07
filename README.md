@@ -1,15 +1,66 @@
-# pauwer_elisa_hackathon — kaiku
+# kaiku
+
+**An expert answers a question in Slack, and a minute later an AI agent cites that answer on site.**
 
 Captures the operational knowledge experts share in Slack, Teams and email, binds it to the
 network entities it is about with a validity period, and serves it to any AI agent over MCP.
-Built for Elisa's challenge in `Elisa_SinceAI2026/` (the only source of truth).
+Built for Elisa's Since AI 2026 challenge, *Capturing and Linking Human-Generated Contextual
+Metadata for Autonomous Network Operations*; the brief and Elisa's example in
+`Elisa_SinceAI2026/` are the only source of truth.
 
-The graph holds Elisa's five time-aware layers: **as-designed** (intent: planned nodes and
-links), **as-built** (devices, sites, segments, hardware models and generations),
-**as-running** (snapshots: firmware, links, status, plus telemetry), **context** (the captured
-assertions, each bound to entities with `valid_from` / `valid_to` / `recorded_at`) and the
-**event stream** (alarms, device events, messages, outcomes, agent actions, each with one
-event time). One query cross-references all five at any instant.
+## The problem
+
+Elisa's two examples (`Elisa_SinceAI2026/ELISA_HIDDEN_KNOWLEDGE_EXAMPLE_2026/use_case.md`):
+
+- After an SFP replacement on TRN-042 the port is UP, optical levels are normal, alarms have
+  cleared, and traffic is still zero. The field engineer suspects the new SFP. Erkki Expert
+  knows that on this hardware it is a forwarding-state issue: disable and enable the
+  interface, don't swap the SFP again, don't reboot. That rule lives only in a Teams chat
+  and an email.
+- An AI dispatches a field engineer to a site in Northern Finland and he finds a locked
+  barrier on the private road. Where to get the key was written down only in an email.
+
+An autonomous agent cannot use either piece of knowledge unless it is captured, tied to the
+right devices and sites, dated, checked against the network, and retrievable at the moment
+it is needed.
+
+## How it works
+
+```
+ Slack threads ──┐
+ email_drop/ ────┤                                       ┌─ Neo4j, five layers at time t ──┐
+ Teams backfill ─┼─▶ triage ─▶ extract ─▶ gates V1–V6 ─▶ │ as-designed · as-built          │
+ PDF, Confluence,│   (fast)    (chat)        │           │ as-running · context · events   │
+ ITSM KB ────────┘                           │           └───────────────┬─────────────────┘
+                                             │ V4                        │ MCP, bearer token per agent
+                  network simulator ─▶ telemetry (DuckDB)                ▼
+                                                    ops agent in Slack · any MCP client · console
+```
+
+1. **Capture without asking anyone.** The slackbot watches every channel it is in. When a
+   thread is resolved ("Traffic is back 👍") or goes idle, a small model triages it; a
+   kept thread is extracted by the chat model into assertions: conditions, action, what to
+   avoid, scope, validity. One card appears in the thread, edited in place; its buttons
+   are optional.
+2. **Gates instead of trust** (plan 001 §6.1). V1 every field must quote the source
+   verbatim; V2 a rule must come from an answer, not a question ("So another SFP?" becomes
+   an *avoid*); V3 each bound entity must exist at `valid_from`; V4 the claimed symptoms
+   are checked against telemetry in the last complete 15-minute interval; V5 the temporal
+   invariants run in the same transaction as the write; V6 the same knowledge from a
+   second channel corroborates instead of duplicating, a newer change supersedes, a
+   disagreement becomes `disputed`.
+3. **Five time-aware layers.** **As-designed** (planned nodes and links), **as-built**
+   (devices, sites, segments, hardware models and generations), **as-running** (firmware,
+   links, status, plus telemetry), **context** (the captured assertions, each bound to
+   entities with `valid_from` / `valid_to` / `recorded_at`) and the **event stream**
+   (alarms, device events, messages, outcomes, agent actions). One query cross-references
+   all five at any instant, and *as known at* a second instant.
+4. **The network confirms the knowledge.** When an agent's advice is carried out, the
+   outcome comes back through MCP and the telemetry decides: recovery adds support,
+   failure with the conditions met refutes it, failure with the conditions not met does
+   not count. Confidence is Beta(1 + support, 1 + refute) and is always shown.
+5. **Any agent reads it over MCP.** The Slack ops agent is only a reference client; it
+   uses the same tools as everyone else.
 
 **Slack stands in for Teams** in the live demo (Socket Mode needs no public URL). Elisa's
 `teams_chat.json` and the synthetic Teams channels in `mock_data/teams/` flow through the same
@@ -17,16 +68,56 @@ ingest path via `kaiku backfill` (`backend/src/kaiku/ingest/backfill.py`); a Mic
 change-notification connector would plug into the same `MessageIn` interface
 (`backend/src/kaiku/ingest/store.py`).
 
+### MCP tools
+
+Served at `http://localhost:8000/mcp`; the bearer token from `MCP_TOKENS` identifies the
+agent, and every write is itself an event carrying that agent id. Times are ISO 8601 UTC;
+`as_of` (what was valid then) and `known_at` (what had been recorded by then) default to now.
+
+| Tool | What |
+|---|---|
+| `get_context` | Expert knowledge in scope for an entity at a time: the node, its model and generation, its segments, observations on devices of the same model |
+| `search_context` | Semantic search over knowledge valid at a time (keyword ranking without embeddings) |
+| `get_site_access` | How to physically reach a device or segment on the visit date: locks, keys, gates, roads, and the access register |
+| `get_entity` | As-built and as-running facts: model, generation, firmware, status, segments, links |
+| `get_events` | Alarms, device events and outcomes for an entity |
+| `get_history` | How a piece of knowledge changed: versions, contradictions, corroborations, outcome evidence, flags |
+| `check_conditions` | An assertion's symptoms checked against telemetry: each met, not met or unknown |
+| `resolve_entities` | The graph entities a piece of text refers to, with a confidence each |
+| `report_outcome` | What happened after an action; becomes evidence for or against the assertion |
+| `propose_assertion` | New knowledge from an agent, stored `unverified` until a person confirms it |
+| `open_knowledge_gap` | Records that something isn't documented and routes it to the most likely expert |
+| `flag_assertion` | Asks a person to review a piece of knowledge |
+| `ping` | The server version and your agent id |
+
+### Results
+
+The latest committed eval ([`eval/results/20261107T161529Z.md`](eval/results/20261107T161529Z.md))
+captures every thread from scratch on an empty graph (gold never loaded) and asks the
+questions through MCP, scored exactly. One run, so no variance is reported.
+
+| Set | Passed |
+|---|---|
+| T0: Elisa's own example | 4/6 (both failures: `reboot_node` missing from the avoid list) |
+| T2: held-out capture (hand-written, 9 threads) | 4/9 |
+| T2: held-out QA (12 questions) | 8/12 |
+
+The console's *Scorecard* page shows every run with the failed checks expanded.
+
+## Repository
+
 | Where | What |
 |---|---|
 | [`docs/plans/`](docs/plans/) | 001 backend and time model, 002 Slack and MCP, 003 acceptance tests and eval, 004 retrieval at time t, 005 console |
-| [`docs/pitch/outline.md`](docs/pitch/outline.md) | The pitch, slide by slide |
+| [`docs/video/`](docs/video/) | The recap video and the HTML it is rendered from |
+| [`slack/manifest.yaml`](slack/manifest.yaml) | The Slack app manifest |
 | [`backend/`](backend/) | FastAPI + MCP server, Slack bot, network simulator, CLI ([README](backend/README.md)) |
 | [`frontend/`](frontend/) | Web console: live knowledge graph, capture traces, agent runs, scorecard ([README](frontend/README.md)) |
 | [`mock_data/`](mock_data/) | Synthetic network, chat, email and gold answers, all generated by us ([README](mock_data/README.md)) |
 | [`demo/`](demo/) | Elisa's recap email as a `.eml` to drop during the demo |
 | [`eval/heldout/`](eval/heldout/) | Hand-written held-out threads for the eval |
 | [`eval/retrieval/`](eval/retrieval/) | Retrieval-only eval: search results scored against the gold assertions (`kaiku eval retrieval`) |
+| [`eval/results/`](eval/results/) | Committed eval runs, shown on the console's Scorecard |
 
 ## Run the demo
 
@@ -102,6 +193,15 @@ Featherless API key. Plan 30 minutes for the first run (image build, backfill tr
    - `uv run python scripts/demo_new_knowledge.py`: facilities announce an eleven-day
      renovation at Lappeenranta from next Monday; the card shows a new assertion with a
      validity window in the future. Drag the console's *As of* slider into and out of it.
+   - `uv run python scripts/demo_pori_access.py` (the video's scene 2): street works close
+     the Pori front gate until a Friday about two weeks out, and the back gate's key box
+     code comes from the NOC duty phone. kaiku captures a new assertion on TRN-017 with
+     that end date; the script prints next Monday's date so you can ask the bot about a
+     visit inside the window.
+
+   Before a recorded take, `uv run python scripts/fill_channel.py` posts everyday chatter
+   (no node, site or fix, so nothing is captured) to push earlier test threads out of
+   view; press **Reset** within `CAPTURE_IDLE_MINUTES` of it.
 9. **Any agent.** `npx @modelcontextprotocol/inspector`, transport *Streamable HTTP*, URL
    `http://localhost:8000/mcp`, header `Authorization: Bearer <your inspector token>`.
    Call `ping` to see which agent you are, then `get_context` with `entity_id: TRN-017` to
@@ -216,3 +316,15 @@ times and no date, so its backfill uses 2025-10-14 in Europe/Helsinki (EEST, UTC
 synthetic seconds to keep messages in the same minute ordered (plan 001 R8). A live replay
 gets the real Slack `ts`, so its validity starts "a minute ago", and the fault injected
 afterwards is recalled against the same "now".
+
+## Development
+
+```sh
+cd backend && uv sync && uv run pre-commit install   # ruff, mypy --strict, unit tests on commit
+uv run pytest -m "not live"                          # unit + Neo4j integration (testcontainers)
+cd ../frontend && npm ci && API_URL=http://localhost:8000 npm run dev   # :5173, /api proxied
+```
+
+CI (`.github/workflows/ci.yml`) runs the same checks plus the frontend's typecheck, lint and
+tests on every push. Tests marked `live` call real LLMs and Slack and run only by hand.
+Details: [`backend/README.md`](backend/README.md), [`frontend/README.md`](frontend/README.md).
