@@ -4,7 +4,7 @@ Slack stays the place where people capture and ask, and MCP stays the only agent
 (plan 002). This adds a **read-only web console** for the jury and stakeholders. It shows
 three things that chat cannot: the graph over time, why each capture was kept and how it
 was linked, and what agents read. It reverses plan 002's "no React frontend" decision for
-the demo only. Nothing in the console writes.
+the demo only. The console's only write is the Reset button (§2).
 
 ## 1. Views
 
@@ -17,8 +17,10 @@ the demo only. Nothing in the console writes.
 
 ## 2. Backend
 
-- `kaiku/ui/`: read-only router at `/api/ui/*` with pydantic response models. Its Cypher
-  lives in `ui/queries.py`. Agents never use these endpoints.
+- `kaiku/ui/`: router at `/api/ui/*` with pydantic response models, read-only except
+  `POST /api/ui/reset`, which wipes the graph back to the demo baseline (network plus the
+  gold assertions minus the forwarding-stall knowledge) and only accepts requests from
+  localhost origins. Its Cypher lives in `ui/queries.py`. Agents never use these endpoints.
 - `GET /api/ui/stream`: server-sent events (sse-starlette). The API diffs a small
   snapshot of the graph every `UI_POLL_SECONDS`. It uses ids, not `recorded_at`, which is
   message time (R2) and so cannot mark what is new.
@@ -42,6 +44,12 @@ links to `PHOENIX_PUBLIC_URL/redirects/traces/<id>`.
 
 ## 4. Not done
 
-- No auth on the console: like every service here, it binds to 127.0.0.1.
+- No auth on the console: like every service here, it binds to 127.0.0.1, and Reset is
+  additionally limited to localhost origins.
 - Agent runs are grouped by time gap, not by MCP session, because the adapter opens a
   session per call.
+- The graph does not yet mark assertions the lifecycle watcher (plan 001 §6.3, in
+  progress) sets `review_due` on after a firmware change; they show as their status, and
+  the reason is in `get_history`.
+- The Scorecard shows the committed eval runs; it has no button to start one (`kaiku eval
+  run` on the host).

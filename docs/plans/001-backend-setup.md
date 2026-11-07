@@ -105,7 +105,7 @@ The corpus is historical (2025-10 to 2026-11-07), and Slack cannot post messages
 
 ## 4. Current state (verified)
 
-There's no application code yet. Inputs:
+Written on 2026-11-06, when there was no application code yet. As of 2026-11-07 every workstream in §8 has code: WS0–WS3 and WS5–WS6 are built (see the backend README), WS4 has the outcome verifier (§6.2) built and the lifecycle watcher (§6.3, `validation/lifecycle.py`) in progress, and the as-designed layer is loaded by the seed alongside as-built and as-running. The inputs below are unchanged:
 
 | Fact | Where |
 |---|---|
@@ -167,6 +167,8 @@ v1 relied on a human tap alone. v2 validates at three points, and most of it inv
 4. **Scope learning:** a success on an entity outside `applies_to` (for example a TNC-2X) creates an `agent_proposal` that widens the scope. It is `unverified`, linked `CONTRADICTS` to the narrower scope, and confirmed by a person.
 
 ### 6.3 Lifecycle validation (cross-layer at t)
+
+Status 2026-11-07: being implemented as the lifecycle watcher (`validation/lifecycle.py`), acting on `DeviceEvent`s (ST-29b in plan 003).
 
 - A firmware change, line-card swap or model change in the as-running layer on a device inside an assertion's scope sets `review_due = true` **for that device only**. The agent says "unverified since firmware v6.2 on TRN-005". Validity is unchanged (R5).
 - Decommissioning a device closes assertions that are bound **only** to that device (R4c). Model-level assertions stay.

@@ -2,6 +2,19 @@
 
 Status: **Revised 2026-11-06 (v2). This replaces the React + shadcn frontend plan.** The experts are already in Slack, so the brief's primary criterion ("minimal additional work… from the channels they already use") is met where they already work. Agents, Elisa's or ours, use the MCP server.
 
+**What shipped (2026-11-07), against this plan:**
+
+| Planned here | Built |
+|---|---|
+| §2 "No web UI", §3.5 App Home explorer, WS-S3, §6 step 4 (App Home with `known_at`) | **Replaced by the web console**, [plan 005](005-console.md): the live graph with the *As of* slider and *Only what was known then*, capture traces, agent runs, scorecard. App Home shows a short help view with a link to the console (`app_home_opened`); the date picker was never built. |
+| §3.3 IMAP polling of a shared mailbox | **Dropped.** Email comes in through a drop folder (`EMAIL_DROP_DIR`, `.eml` or `.msg`, polled every `EMAIL_POLL_SECONDS`) and the `.msg` backfill. Elisa's email ships as `demo/elisa_email.eml`. |
+| §4.2 `propose_assertion` "plus a Slack confirmation card" | **Dropped.** The proposal is written `unverified` with `origin=agent_proposal` and shows in the console; no Slack card. |
+| §7 `/kaiku quiet` slash command | **Dropped.** Capture is per channel (`SLACK_CAPTURE_CHANNELS`); there is no slash command. |
+| §3.6 `slack/replay.py --thread elisa --speed 10x` | Built as `kaiku replay --channel '#noc-transport' [--speed 30]`. |
+| §6 demo script | Superseded by the run-book in the root README. |
+
+Everything else in §3 (capture flow, card, buttons, clarifying question, in-place update, ops agent, gaps, fault thread with outcome buttons) and §4 (all read and write tools, prompt, resource) is built.
+
 Depends on [`001-backend-setup.md`](001-backend-setup.md) (time rules R1–R10, validation §6, write governance §7). Tests are in [`003-acceptance-and-eval.md`](003-acceptance-and-eval.md).
 
 ## 1. Goal
@@ -20,7 +33,7 @@ Depends on [`001-backend-setup.md`](001-backend-setup.md) (time rules R1–R10, 
 | **Official MCP Python SDK `mcp` 1.30.0 (MIT)** with Streamable HTTP (stateless), served by the FastAPI app at `/mcp`, plus stdio for local clients. Not 2.x: `langchain-mcp-adapters` 0.3.2, the latest, requires `mcp<2`, and our ops agent shares the venv (checked on pypi.org, 2026-11-06). | It's the reference SDK, and the wire protocol doesn't depend on the SDK version, so any MCP client works. One process serves REST, MCP and the graph driver. |
 | **`langchain-mcp-adapters` 0.3.2 (MIT)** for our ops agent (pypi.org/pypi/langchain-mcp-adapters, 2026-11-06) | Our agent sees only MCP tools, the same as Elisa's agent would. |
 | **Bearer token per agent** (`MCP_TOKENS` maps agent_id to token) | Every write is attributable (001 §7). OAuth is post-hackathon. |
-| **No web UI.** Graph visuals use Neo4j Browser with saved Cypher. Time travel uses the Slack App Home date picker. | Less to build. The judges see the product where the users are. |
+| ~~**No web UI.** Graph visuals use Neo4j Browser with saved Cypher. Time travel uses the Slack App Home date picker.~~ **Reversed by plan 005:** a read-only web console shows the graph over time, the captures and the agent runs; people still capture and ask in Slack only. | The jury needs to see linking, validity and what agents read, which chat cannot show. |
 | Usability budget (enforced in code) | At most 1 bot message per captured thread. At most 1 clarifying question per thread. 0 required actions. Experts are never DMed except to route a gap or flag aimed at them. |
 
 ## 3. Slack app
@@ -54,7 +67,7 @@ Valid from 14:22 today · source: Erkki (this thread) · telemetry agrees ✓
 
 ### 3.3 Email
 
-- A `.eml` drop folder and optional IMAP polling of a shared mailbox (e.g. `noc-knowledge@`, which experts CC as they do today). The `.msg` backfill is also supported.
+- A `.eml` drop folder (built: `EMAIL_DROP_DIR`, also `.msg`) ~~and optional IMAP polling of a shared mailbox (e.g. `noc-knowledge@`, which experts CC as they do today)~~ (IMAP dropped; a shared mailbox would be an exporter into the same folder). The `.msg` backfill is also supported.
 - Email captures are **not** announced in work channels. They appear in `#context-log`, a quiet audit channel. If the email corroborates a Slack assertion, the original Slack card gains "+1 source (email)".
 
 ### 3.4 Ops agent in Slack (a reference agent that uses MCP only)
@@ -70,15 +83,16 @@ Valid from 14:22 today · source: Erkki (this thread) · telemetry agrees ✓
 - **Disputed:** both views with authors and dates, and the lower-risk step flagged as disputed.
 - Citations: Slack sources use `chat.getPermalink`; backfilled sources show the file path and quote.
 
-### 3.5 App Home (read-only explorer)
+### 3.5 App Home (read-only explorer) — replaced by the console (plan 005)
 
-- Pick an entity and an `as_of` date (Block Kit datepicker + timepicker), plus an optional `known_at`.
-- It lists the assertions valid at that time, with status, validity window, sources, support/refute counts and the supersession chain.
-- This replaces the React timeline.
+- ~~Pick an entity and an `as_of` date (Block Kit datepicker + timepicker), plus an optional `known_at`.~~
+- ~~It lists the assertions valid at that time, with status, validity window, sources, support/refute counts and the supersession chain.~~
+- ~~This replaces the React timeline.~~
+- Built instead: App Home shows a short help view with a link to the console; the console's graph page does the `as_of` / `known_at` exploration.
 
 ### 3.6 Demo replay script
 
-`slack/replay.py --thread elisa --speed 10x` posts Elisa's 12 messages verbatim into `#noc-transport` using personas (`chat:write.customize`). Event times are the real Slack `ts`. For a more natural demo, two teammates can type the messages instead. Author resolution supports both real users (profile name and title) and personas (`username` override).
+`kaiku replay --channel '#noc-transport' --speed 30` (built as a CLI command, `slack/replay.py` is the module) posts Elisa's 12 messages verbatim into `#noc-transport` using personas (`chat:write.customize`). Event times are the real Slack `ts`. For a more natural demo, two teammates can type the messages instead. Author resolution supports both real users (profile name and title) and personas (`username` override).
 
 ## 4. MCP server
 
@@ -103,7 +117,7 @@ Streamable HTTP at `http://localhost:8000/mcp`, plus stdio (`kaiku mcp --stdio`)
 |---|---|
 | `report_outcome(assertion_id?, entity_id, port?, action, result: resolved\|not_resolved\|unknown, observed_at, evidence_ref?, idempotency_key)` | An `Outcome` event, then outcome validation (001 §6.2) |
 | `open_knowledge_gap(question, entity_ids, context?, idempotency_key)` | A gap routed to an expert in Slack |
-| `propose_assertion(statement, entity_ids, qualifiers?, valid_from?, valid_to?, evidence_event_ids[≥1], rationale, idempotency_key)` | An `unverified` agent proposal, plus a Slack confirmation card in the relevant channel |
+| `propose_assertion(statement, entity_ids, qualifiers?, valid_from?, valid_to?, evidence_event_ids[≥1], rationale, idempotency_key)` | An `unverified` agent proposal ~~, plus a Slack confirmation card in the relevant channel~~ (no Slack card was built; the proposal shows in the console) |
 | `flag_assertion(assertion_id, reason, evidence_event_ids, idempotency_key)` | `review_due`, routed to the author |
 
 **Deliberately not exposed:** confirm, retract, delete, or set validity. A write with an unknown entity, or a proposal without evidence, gets a tool error. The same idempotency key yields the same result. Each call records `agent_id` from the token.
@@ -129,24 +143,24 @@ Message, reaction and shortcut handlers. Card rendering, button actions (confirm
 ### WS-S2 — Ops agent bot
 Mention and DM handling, proactive fault threads, outcome buttons, the dispatch access block, gap routing and the disputed layout.
 
-### WS-S3 — App Home explorer
-Entity picker, `as_of`/`known_at` pickers and the assertion list.
+### WS-S3 — App Home explorer — not built; the console (plan 005) replaced it
+~~Entity picker, `as_of`/`known_at` pickers and the assertion list.~~
 
 ### WS-M1 — MCP read tools
 Plus contract tests: tool schemas are snapshotted, and MCP Inspector can call every tool.
 
 ### WS-M2 — MCP write tools
-Auth, idempotency, governance errors and the Slack side effects (proposal and flag cards).
+Auth, idempotency, governance errors ~~and the Slack side effects (proposal and flag cards)~~ (no proposal card was built; a flag sets `review_due`).
 
 ### WS-S4 — Demo script
 Replay script, sim fault and action buttons, saved Neo4j Browser queries, a run-book and the backup video.
 
-## 6. Demo script (about 4 minutes)
+## 6. Demo script (about 4 minutes) — superseded by the run-book in the root README
 
 1. **Capture.** Elisa's chat is replayed live in `#noc-transport`. After "Traffic is back 👍" the card appears in the thread: valid from now, bound to TRN-042 / TNC-1X Gen1 / SFP replacement, with "telemetry agrees ✓". No one clicks anything. Then forward Erkki's email to the mailbox, and the card shows "+1 source (email)".
 2. **Linking.** Show the graph in Neo4j Browser (assertion → TRN-042, TNC-1X, Gen1, `Activity:sfp_replacement`; source message; author).
 3. **Recall.** Inject a fault on TRN-017 (Pori, TNC-1X). The agent posts in `#noc-alarms` with conditions ✓✓✓, the next step bounce, avoid SFP swap and reboot, and a permalink to Erkki's message. Click [Run bounce (simulated)]. Counters recover, and the card shows "network-confirmed on TRN-017 · support 1".
-4. **Access.** "@ops dispatch to Kemi on 2026-08-10": the reply gives the code lock. In App Home, with `known_at = 2026-08-10`, it shows the padlock, which explains why a dispatch on that date failed.
+4. **Access.** "@ops dispatch to Kemi on 2026-08-10": the reply gives the code lock. In ~~App Home~~ the console (or `get_site_access` in MCP Inspector), with `known_at = 2026-08-10`, it shows the padlock, which explains why a dispatch on that date failed.
 5. **Outdated or conflicting advice.** The stale ITSM KB says "reboot the node". The agent shows it as contradicted by newer expert knowledge. The KMAX-4K experts disagree, so the answer is marked disputed.
 6. **Honesty.** "@ops which firmware fixes the forwarding bug?" gets "Not documented, asking @Erkki". Erkki replies, the gap closes, and that reply is the capture.
 7. **Any agent.** In Claude Desktop (or MCP Inspector) on the same server, ask "What do we know about TRN-019 before I reboot it?". It returns the same context through `get_context`.
@@ -157,11 +171,11 @@ Replay script, sim fault and action buttons, saved Neo4j Browser queries, a run-
 |---|---|
 | Workspace admin approval or rate limits | Use our own free workspace. Rate limits don't matter at demo volume. Retries are idempotent. |
 | `chat:write.customize` personas look staged | Prefer two teammates typing live, and keep the script as backup |
-| The card feels intrusive | Usability budget (§2). Per-channel opt-in. `/kaiku quiet` mutes the cards but keeps capturing. |
+| The card feels intrusive | Usability budget (§2). Per-channel opt-in. ~~`/kaiku quiet` mutes the cards but keeps capturing.~~ (no slash command was built) |
 | MCP client compatibility | Test with MCP Inspector, Claude Desktop and `langchain-mcp-adapters` before the freeze |
 
 ## 8. Out of scope
 - OAuth for MCP.
 - Slack Enterprise Grid.
 - A Microsoft Teams bot. The pitch says the capture interface is channel-agnostic, and Teams exports are already backfilled.
-- A web UI.
+- ~~A web UI.~~ (reversed: plan 005)

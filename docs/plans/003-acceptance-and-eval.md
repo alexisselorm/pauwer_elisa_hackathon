@@ -4,7 +4,9 @@ Status: **New 2026-11-06.** This replaces the v1 "success test" lines and v1 WS6
 
 ## 1. Success tests
 
-Every test is automated (pytest, against Neo4j in testcontainers, a fake Slack built from recorded event payloads, and the MCP server over HTTP) unless it is marked **live**. "Criterion" refers to brief §06: **U** = usability (primary), **R** = relevance, **L** = linking (entity and time), **F** = feasibility, **A** = agentic suitability.
+Every test is automated (pytest, against Neo4j in testcontainers, a fake Slack built from recorded event payloads, and the MCP server over HTTP) unless it is marked **live** or, as of 2026-11-07, **no automated test** / **in progress** below. "Criterion" refers to brief §06: **U** = usability (primary), **R** = relevance, **L** = linking (entity and time), **F** = feasibility, **A** = agentic suitability.
+
+A CI gate now exists: `.github/workflows/ci.yml` runs ruff, mypy and `pytest -m "not live"` (the integration tests against a Neo4j testcontainer) for the backend, and typecheck, lint and vitest for the frontend, on every push and pull request. The pre-commit hook runs the unit tests only.
 
 ### 1.1 Capture with zero work (U, R)
 
@@ -28,7 +30,7 @@ Every test is automated (pytest, against Neo4j in testcontainers, a fake Slack b
 | ST-10 | ST-01 | `observed_on` = TRN-042. `applies_to` ⊇ {TNC-1X, Gen1}. `activity` = `sfp_replacement`. Symptoms = {oper_up, rx_power_normal, counters_zero}. Action = `bounce_interface`. Avoid ⊇ {replace_sfp, reboot_node}. |
 | ST-11 | Kemi barrier threads (corpus) | Bound to SEG-042 / site Kemi, not to a device |
 | ST-12 | A message mentions TRN-999 (doesn't exist) | No orphan entity. The binding is flagged. HTTP 422 on a direct write. |
-| ST-13 | Held-out H-06 (TRN-019 dispute) | Scope = TRN-019 only. The model-level rule is unchanged. |
+| ST-13 | Held-out H-06 (TRN-019 dispute) | Scope = TRN-019 only. The model-level rule is unchanged. **No automated test** (covered only by the T2 eval run, H-06). |
 | ST-14 | Held-out H-09 (TNC-2X, by email), on the demo-profile graph (001 §3.5: no corpus Gen2 widening) | A new assertion `applies_to` TNC-2X, `unverified`. `CONTRADICTS` the Gen1-only scope. The Gen1 rule isn't rewritten. On the full backfill it `CORROBORATES` ASR-0006 instead. |
 | ST-15 | The entity-link scorer over the regression and held-out sets | P and R ≥ 0.9 on `kind=entity` aliases |
 
@@ -46,7 +48,7 @@ Every test is automated (pytest, against Neo4j in testcontainers, a fake Slack b
 | ST-27 | H-07 (same author corrects themselves) | `SUPERSEDES`. Predecessor `valid_to` = successor `valid_from`. |
 | ST-28 | Stale ITSM KB "reboot the node" vs the expert rule | `CONTRADICTS`. The agent ranks the newer expert knowledge first and mentions the KB as outdated. |
 | ST-29 | After every ingest and every eval run | 0 violations from `checks.cypher` (port of `verify_temporal.py` plus R2/R7) |
-| ST-29b | Device decommissioned / firmware upgraded in the as-running layer | Device-only assertions expire (R4c). Model-level ones get `review_due` for that device only. Validity is unchanged (R5). |
+| ST-29b | Device decommissioned / firmware upgraded in the as-running layer | Device-only assertions expire (R4c). Model-level ones get `review_due` for that device only. Validity is unchanged (R5). **In progress** (lifecycle watcher, `validation/lifecycle.py`). |
 
 ### 1.4 Agent recall and continuing the workflow (A, R)
 
@@ -55,12 +57,12 @@ Every test is automated (pytest, against Neo4j in testcontainers, a fake Slack b
 | ST-30 | Sim fault on TRN-017 1/1/2 (TNC-1X), knowledge from ST-01 only | A proactive post in `#noc-alarms`: conditions met ×3, step = check counters → bounce, avoid = SFP swap and reboot, citation = permalink to message 8. It arrives **before** any hardware action. |
 | ST-31 | The same symptom, but the counters are normal | The rule is not applied (`not_met`). No bounce is recommended. |
 | ST-32 | No telemetry for the node | Conditions `unknown`, stated explicitly. Not treated as met. |
-| ST-33 | Dispatch to Kemi planned for a given date | Access block valid **at the visit time** |
-| ST-34 | CASE-009 (Kemi at 02:00) | `partial`: the code is known, but the out-of-hours procedure is not documented. A gap is opened. |
+| ST-33 | Dispatch to Kemi planned for a given date | Access block valid **at the visit time**. **No automated test** (`get_site_access` at `as_of` is tested; the agent's dispatch answer is not). |
+| ST-34 | CASE-009 (Kemi at 02:00) | `partial`: the code is known, but the out-of-hours procedure is not documented. A gap is opened. **No automated test.** |
 | ST-35 | All `not_documented` questions (regression + HQ-10…12) | `not_documented`, no steps, gap routed. **0** confident answers. |
 | ST-36 | Control questions QA-001/002 | Answered from network data, not refused |
 | ST-37 | A gap is routed in Slack and the expert replies in the thread | An assertion is captured from the reply. Gap `ANSWERED_BY` that assertion. No extra form. |
-| ST-38 | H-06 disputed (HQ-06) | Both views, authors and dates. Status `disputed`. Gap opened. |
+| ST-38 | H-06 disputed (HQ-06) | Both views, authors and dates. Status `disputed`. Gap opened. **No automated test** (the T2 eval scores HQ-06 `dispute_shown`). |
 
 ### 1.5 Validation (R, A): 001 §6
 
@@ -68,9 +70,9 @@ Every test is automated (pytest, against Neo4j in testcontainers, a fake Slack b
 |---|---|---|
 | ST-40 | ST-01: "counters basically zero" at 06:21:30Z; the last complete bin (06:00–06:15) of TRN-042 1/1/3 is zero (backfill) / sim (live) | V4 adds `SUPPORTS` from the network. The card shows "telemetry agrees ✓". Using the open 06:15 bin (partial, 1.01 Mbps) would wrongly report a disagreement, so this is tested. |
 | ST-41 | Bounce on TRN-017 succeeds (sim) | An `Outcome` `resolved`, then `SUPPORTS`. `observed_on` += TRN-017. `unverified` → `believed_true` without any human click. |
-| ST-42 | Bounce on TRN-019 fails (sim `outcome=fail`), conditions met | `REFUTES`, `review_due`, one DM to Erkki. A second failure → `disputed` + gap. |
+| ST-42 | Bounce on TRN-019 fails (sim `outcome=fail`), conditions met | `REFUTES`, `review_due`, one DM to Erkki (tested). A second failure → `disputed` + gap: **no automated test**. |
 | ST-43 | Bounce fails but conditions were `not_met` | Not counted against the rule |
-| ST-44 | Bounce succeeds on TRN-010 (TNC-2X, outside scope), demo-profile graph | An `agent_proposal` widening the scope (`unverified`). Slack card for a person. |
+| ST-44 | Bounce succeeds on TRN-010 (TNC-2X, outside scope), demo-profile graph | An `agent_proposal` widening the scope (`unverified`). ~~Slack card for a person.~~ (shows in the console; no card.) **In progress** (scope widening in the outcome verifier). |
 | ST-45 | Extraction output without a quote for its action | Dropped (V1) |
 
 ### 1.6 MCP and agents writing (A, F)
@@ -82,13 +84,13 @@ Every test is automated (pytest, against Neo4j in testcontainers, a fake Slack b
 | ST-52 | `propose_assertion` without evidence, or with an unknown entity | Tool error. Nothing is written. |
 | ST-53 | The same `idempotency_key` twice | One event |
 | ST-54 | Missing or invalid token | Rejected. Every successful write has `agent_id`. |
-| ST-55 | A foreign agent runs ST-30 using only MCP + the `ops_triage` prompt | Same step, avoid list and citations as our agent (scored like §2.3) |
+| ST-55 | A foreign agent runs ST-30 using only MCP + the `ops_triage` prompt | Same step, avoid list and citations as our agent (scored like §2.3). **No automated test** (done by hand with MCP Inspector, run-book step 9). |
 
 ### 1.7 Robustness (F)
 
 | ID | Given | Expect |
 |---|---|---|
-| ST-60 | LLM unavailable | Capture is queued and retried. The agent answers in "degraded" mode from graph-only context, says so, and never fabricates. |
+| ST-60 | LLM unavailable | Capture is queued and retried (tested: `test_llm_retry.py`). The agent answers in "degraded" mode from graph-only context, says so, and never fabricates: **in progress** (degraded-mode wording; today the mention answers "Sorry, I couldn't answer that right now" and the fault thread posts a warning). |
 | ST-61 | Slack redelivers an event (retry header) | No duplicate event or assertion |
 | ST-62 | Re-running the backfill | No-op (idempotent) |
 | ST-63 | `docker compose up` on a clean machine and the run-book | Demo §6 of plan 002 runs end to end **(live)** |
@@ -127,22 +129,23 @@ ST-70…ST-78 are specified in [plan 004 §6](004-temporal-aware-retrieval.md#6-
 | A | Action accuracy (enum match) · avoid-list honoured · condition-check honesty (no `unknown` treated as met) · citation validity (the cited event exists **and** contains the quoted span) · **false-confident rate** on `not_documented` (target 0) · gap routing | `eval qa` |
 | A — validation | Correct status transitions for ST-40…44 | `eval validation` |
 
-### 2.4 Protocol
+### 2.4 Protocol (as shipped, 2026-11-07)
 
-- **Two graph conditions for QA:**
-  - (a) **extracted-only**: the graph is built by our pipeline from raw sources, with gold wiped (`origin=gold` never loaded);
-  - (b) **gold-seeded**: the upper bound.
-  Report both. The difference is the loss caused by extraction.
-- **Three runs** per LLM-dependent item. Report mean and min–max. Pin model ids in the results file.
-- **Through the real interfaces.** The QA eval calls the MCP server, not internal functions. Capture tests go through the Slack and email connectors.
-- **No key, no score.** If no LLM key is present, LLM-dependent rows say `skipped`, never 0%. T0 time tests and the temporal checks run without an LLM.
-- **CI gate:** T0 + ST-20…29 + ST-50…54 must pass to merge. T1 and T2 are tracked, not gated.
-- **Output:** `eval/results/<timestamp>.json` plus a Markdown table. The slide shows T0 (pass) and T2 (numbers with n), with the caveat: "T1 is self-authored; T2 is hand-written and held out, n = 9 threads / 12 questions."
+- **One graph condition for QA: extracted-only.** The graph is built by our pipeline from raw sources on a throwaway Neo4j, with gold never loaded. The planned gold-seeded upper bound was not built; the retrieval eval (§2.5) is the only run on the gold graph.
+- **One run** per item. The report says so in its caveat and pins the model ids; no mean or min–max is reported. Three runs were planned and not done, for time.
+- **Through the real interfaces.** The QA eval calls the MCP server, not internal functions. Capture goes through the same ingest path as live Slack and email.
+- **No key, no run.** `kaiku eval run` needs the Featherless key; without it the retrieval eval ranks by keyword and says so, and `kaiku eval time` runs the temporal checks without an LLM.
+- **CI gate:** the automated ST tests (unit and integration) must pass in CI (`.github/workflows/ci.yml`). The eval runs are not gated; they are recorded.
+- **Output:** `eval/results/<start>.json` plus a Markdown table, both committed, shown by the console's Scorecard. The run also saves the captures and the agents' answers, so `kaiku eval rescore` can score a saved run again with a newer scorer in seconds. The slide shows T0 and T2 with n and the caveat: "T2 is hand-written and held out, n = 9 threads / 12 questions; one run, so no variance is reported."
+- **T1 regression** (the answer key on the full backfill) was not wired into `kaiku eval`; it is covered by the retrieval set and the integration tests.
 
-### 2.5 CLI
+### 2.5 CLI (as shipped)
 
 ```
-kaiku eval --set elisa|regression|heldout|all --graph extracted|gold|both --runs 3
-kaiku eval time      # no LLM needed for the R-rule checks on stored data
-kaiku eval retrieval # search_context alone on the gold graph: recall@k, MRR, nothing invalid at as_of
+kaiku eval run --set elisa|all        # T0, or T0 + T2 held-out; extracted graph only, one run
+kaiku eval rescore eval/results/<start>.json   # score a saved run again, no Neo4j, no LLM
+kaiku eval time                       # no LLM needed for the R-rule checks on stored data
+kaiku eval retrieval                  # search_context alone on the gold graph: recall@k, MRR, nothing invalid at as_of
 ```
+
+Planned and not built: `--set regression|heldout` on their own, `--graph extracted|gold|both`, `--runs 3`.
