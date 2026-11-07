@@ -17,6 +17,9 @@ Every test is automated (pytest, against Neo4j in testcontainers, a fake Slack b
 | ST-05 | An expert clicks ✏️ and narrows the scope to TRN-042 only | The old version gets `retracted_at` = click time. The new version **keeps** the original `valid_from` (R6ii). There is no `SUPERSEDES` edge. |
 | ST-06 | A thread names "the Kemi box" while two devices exist at Kemi | One clarifying question with buttons. The answer binds the entity. No second question. |
 | ST-07 | No response to the card for 24 h | Status stays `unverified`. The agent still uses it and labels it. |
+| ST-08 | The bot is stopped, Elisa's thread is posted, then the bot starts | The catch-up sweep from the channel watermark ingests all 12 messages and captures the same single assertion as ST-01. No duplicates on a second restart. |
+| ST-09 | A chatter thread is triaged `ignored`; later an expert replies in it with a fix | The thread is re-triaged once (new message after `last_triaged_ts`) and becomes `captured`. Threads with no new message are never re-triaged (0 extra LLM calls per sweep). |
+| ST-09a | Corpus Kemi barrier thread (one site, no rule) | Triage keeps it as `kind=access`, not ignored as a one-off. Every triaged thread has a non-empty `triage_reason`. |
 
 ### 1.2 Linking (L)
 

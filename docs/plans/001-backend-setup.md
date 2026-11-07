@@ -123,6 +123,7 @@ There's no application code yet. Inputs:
 ## 5. Graph model
 
 - **Events (as-observed):** `(:Event:Message|Email|Alarm|DeviceEvent|Outcome|AgentAction {event_id, event_time, ingested_at, channel, …})`. These are immutable and have no validity fields (R1). Example: `(:Message)-[:IN_THREAD]->(:Thread)`, `(:Event)-[:ON]->(:Entity)`.
+- **Capture state (operational, never used in temporal queries):** `(:Thread {thread_id, channel, last_message_ts, last_triaged_ts, status: pending|captured|ignored|extraction_failed, triage_kind: rule|access|correction|none, triage_reason})` records what the capture loop has read and what it decided. `(:ChannelCursor {channel, last_seen_ts})` is the per-channel watermark (WS2).
 - **Entities (design, as-built and as-running layers):** `(:Entity:Device|Port|Segment|Site|HwModel|Generation|Activity {entity_id, valid_from, valid_to})`. Devices connect to their model, generation, site and segment through edges that carry their own validity. Firmware is an as-running snapshot with its own validity.
 - **Context assertion:** `(:ContextAssertion {assertion_id, topic, statement, qualifiers_json, kind, status, confidence, valid_from, valid_to, recorded_at, retracted_at, review_due, support_n, refute_n, origin: extracted|agent_proposal|gold, embedding})`
 - **Binding edges (Elisa's "BINDING"):**
@@ -221,9 +222,19 @@ uv, Python 3.12, ruff, mypy, pytest, testcontainers. Lifespan: Neo4j driver, mig
 - `threads`: by Slack `thread_ts`, Teams `conversation_id`, or email `In-Reply-To`.
 - `trigger`: extract on a resolution signal (🎉/✅/👍 reaction, "fixed"/"traffic is back", or the FAST_MODEL classifier) or after N minutes idle.
 - Idempotent on `(channel, event_id)`, and robust to Slack retry headers.
+- **Proactive capture loop (the agent reads the channels on its own; plain code, the LLM only judges relevance):**
+  - *Watermark:* each opted-in channel has a `ChannelCursor.last_seen_ts`, advanced after every stored message. Socket Mode does not replay events missed while the bot was down, so on startup a **catch-up sweep** reads `conversations.history` / `conversations.replies` from the watermark and ingests anything missed (idempotency makes overlap harmless).
+  - *Sweeper:* every 60 s (`CAPTURE_SWEEP_SECONDS`), threads with `last_message_ts > last_triaged_ts` that are resolved or idle ≥ N minutes go to triage. This is also where the idle trigger runs.
+  - *Memory of decisions:* every triage result is written to the `Thread` (status, kind, one-line reason). A thread already triaged is not re-read unless a new message arrives after `last_triaged_ts`; then it is re-triaged (an `ignored` thread can become `captured`, and a `captured` one updates its card in place, 002 §3.2).
+  - Email (`.eml` drop folder, IMAP in BE-2.5) uses the same watermark pattern: the last processed `Message-ID` / `Date`.
+  - Not an LLM agent with Slack tools: a deterministic loop keeps ST-01 latency, ST-03 precision and ST-61/62 idempotency testable.
 
 ### WS3 — Extraction graph
 - Nodes: `triage → extract → link → validate (V1–V4) → reconcile (V6) → persist (V5)`.
+- `triage` (FAST_MODEL) uses a telecom-operations rubric and returns `{relevant, kind: rule|access|correction|none, reason}`, written to the `Thread` (WS2):
+  - **Keep:** symptom → action rules (the TRN-042 case); "avoid X" warnings; model, generation or firmware quirks; site access (keys, codes, gates, barriers, contacts), kept even when it is about one site only; workarounds; advice that corrects, contradicts or retires earlier advice ("actually…", "not any more", "since the upgrade").
+  - **Ignore:** greetings and small talk; scheduling and logistics; status pings that teach nothing ("on my way", "ticket opened"); live incident updates with no reusable rule.
+  - **Unanswered questions** are not knowledge, but are kept as gap candidates (`kind=none`, reason says so) for the ops agent's `open_knowledge_gap`.
 - Time resolution (R3/R4) is a deterministic function: the LLM returns the quoted phrase ("from 1 December"), and code resolves it with `zoneinfo("Europe/Helsinki")` against `event_time`.
 - Linking uses inventory attributes. `entity_aliases.csv` is for scoring only.
 - No HITL `interrupt()` here. Confirmation is asynchronous in Slack (plan 002), so extraction never waits for a person.

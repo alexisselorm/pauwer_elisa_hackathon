@@ -35,9 +35,10 @@ Depends on [`001-backend-setup.md`](001-backend-setup.md) (time rules R1–R10, 
 ### 3.2 Capture flow (people do nothing)
 
 1. Messages in opted-in channels (`SLACK_CAPTURE_CHANNELS`, e.g. `#noc-transport`, `#field-ops`, `#access-north`) are stored as `Message` events. `event_time` = Slack `ts` (R1).
-2. The trigger fires on a resolution signal ("Traffic is back 👍", ✅/🎉 reaction, "fixed") or after idle time.
-3. Extraction runs in the background (001 WS3).
-4. If an assertion was captured, the bot posts **one** threaded reply, a Block Kit "context card":
+2. The trigger fires on a resolution signal ("Traffic is back 👍", ✅/🎉 reaction, "fixed") or after idle time. A 60 s sweeper does the idle check, so the bot reads the channels on its own (001 WS2 "Proactive capture loop").
+3. The bot remembers what it has read: a per-channel watermark (with a catch-up sweep after any restart, since Socket Mode does not replay missed events) and a per-thread decision (`captured` / `ignored` / `extraction_failed`, with a one-line reason). An ignored thread is re-read only when a new reply arrives. Ignore decisions are never posted to work channels; they are visible in `#context-log` and the App Home, so "why didn't it capture this?" always has an answer.
+4. Triage keeps or ignores with a telecom-operations rubric (001 WS3); extraction runs in the background only on kept threads.
+5. If an assertion was captured, the bot posts **one** threaded reply, a Block Kit "context card":
 
 ```
 📌 Captured for TNC-1X (Gen1) · seen on TRN-042 · after SFP replacement
@@ -47,9 +48,9 @@ Valid from 14:22 today · source: Erkki (this thread) · telemetry agrees ✓
 [✅ Correct]  [✏️ Fix]  [🚫 Not knowledge]
 ```
 
-5. Buttons are optional. With no response, the assertion stays `unverified` and is still usable, with that label. ✏️ opens a modal prefilled with scope and validity. Saving it is a **correction** (R6ii), not a supersession. 🚫 retracts it.
-6. **Clarifying question**, only when a binding is a `candidate` (V3) or a date is ambiguous: one question in the thread, with buttons. Example: "Does this apply to all TNC-1X units, or only TRN-042?" [All TNC-1X] [Only TRN-042]. The answer is captured as an event.
-7. Thread replies after the card that change the knowledge ("actually it was 1/1/4") are re-extracted, and the card is **updated in place** (`chat.update`), never re-posted.
+6. Buttons are optional. With no response, the assertion stays `unverified` and is still usable, with that label. ✏️ opens a modal prefilled with scope and validity. Saving it is a **correction** (R6ii), not a supersession. 🚫 retracts it.
+7. **Clarifying question**, only when a binding is a `candidate` (V3) or a date is ambiguous: one question in the thread, with buttons. Example: "Does this apply to all TNC-1X units, or only TRN-042?" [All TNC-1X] [Only TRN-042]. The answer is captured as an event.
+8. Thread replies after the card that change the knowledge ("actually it was 1/1/4") are re-extracted, and the card is **updated in place** (`chat.update`), never re-posted.
 
 ### 3.3 Email
 
