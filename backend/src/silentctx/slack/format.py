@@ -18,6 +18,11 @@ _STATUS_HEADER = {
 SLACK_TEXT_LIMIT = 3900  # chat.postMessage truncates around 4k characters
 
 
+def _escape(text: str) -> str:
+    """Slack reads <, > and & as markup (an email Message-ID is <...@...>)."""
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
 def _pretty(token: str) -> str:
     return token.replace("_", " ")
 
@@ -45,12 +50,15 @@ def format_answer(answer: OpsAnswer) -> str:
             bits = [
                 b for b in (s.who, _pretty(s.where) if s.where else None, (s.when or "")[:10]) if b
             ]
-            ref = (
+            label = (
                 f"<{s.link}|{s.assertion_id}>"
                 if (s.link or "").startswith("https://")
                 else s.assertion_id
             )
-            lines.append(f"• {ref}: {', '.join(bits)}")
+            ref = f" · `{_escape(s.ref)}`" if s.ref else ""
+            lines.append(f"• {label}: {', '.join(bits)}{ref}")
+            if s.detail:
+                lines.append(f"    ↳ _{_escape(' '.join(s.detail.split())[:200])}_")
     if answer.gap_id:
         lines.append("")
         lines.append(

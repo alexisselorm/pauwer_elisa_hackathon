@@ -347,3 +347,74 @@ async def test_with_no_known_expert_the_channel_is_asked() -> None:
     assert ask["text"].startswith(":question: Does anyone know? <@U5> asked something")
     assert "Anyone" not in ask["text"]
     assert client.updated[0]["text"].startswith("Asked in <#CASK> (")
+
+
+def test_sources_are_grounded_in_the_tool_citations() -> None:
+    from silentctx.agents.ops_agent import Source, ground_sources
+    from silentctx.slack.format import format_answer
+
+    context = {
+        "assertions": [
+            {
+                "assertion_id": "ASR-0001",
+                "citations": [
+                    {
+                        "source_type": "teams_message",
+                        "source_ref": "7826958213559",
+                        "detail": "NOC-Transport thread, message 8/12",
+                        "author": "erkki",
+                        "recorded_at": "2025-10-14T06:22:08Z",
+                    },
+                    {
+                        "source_type": "slack",
+                        "source_ref": "https://x.slack.com/archives/C1/p17",
+                        "detail": "Disable and re-enable the interface before swapping hardware",
+                        "author": "erkki",
+                        "recorded_at": "2026-11-07T10:01:00Z",
+                    },
+                ],
+            },
+            {
+                "assertion_id": "ASR-0024",
+                "citations": [
+                    {
+                        "source_type": "email",
+                        "source_ref": "<BDB4@volga.example>",
+                        "detail": "Kemi site: new code lock installed",
+                        "author": "timo",
+                        "recorded_at": "2026-08-18T09:00:00Z",
+                    }
+                ],
+            },
+        ]
+    }
+    msgs = [ToolMessage(content=json.dumps(context), tool_call_id="1", name="get_context")]
+    model_said = ADVICE.model_copy(
+        update={
+            "sources": [
+                Source(assertion_id="ASR-0001", who="Erkki?", where="NOC-Transport thread"),
+                Source(assertion_id="ASR-0024", who="timo", where="email"),
+                Source(assertion_id="ASR-9999", who="nobody"),  # not in the tool output
+            ]
+        }
+    )
+    grounded = ground_sources(model_said, msgs)
+    s1, s2, s3 = grounded.sources
+    # The captured Slack message wins over the backfilled reference: a real permalink.
+    assert (s1.who, s1.link, s1.ref, s1.when) == (
+        "erkki",
+        "https://x.slack.com/archives/C1/p17",
+        None,
+        "2026-11-07",
+    )
+    assert (s2.ref, s2.link, s2.detail) == (
+        "<BDB4@volga.example>",
+        None,
+        "Kemi site: new code lock installed",
+    )
+    assert s3 == model_said.sources[2]  # nothing to ground it in: unchanged
+
+    text = format_answer(grounded)
+    assert "• <https://x.slack.com/archives/C1/p17|ASR-0001>: erkki, slack, 2026-11-07" in text
+    assert "    ↳ _Disable and re-enable the interface before swapping hardware_" in text
+    assert "• ASR-0024: timo, email, 2026-08-18 · `&lt;BDB4@volga.example&gt;`" in text

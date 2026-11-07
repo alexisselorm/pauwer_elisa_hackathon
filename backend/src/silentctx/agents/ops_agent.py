@@ -82,6 +82,9 @@ class Source(BaseModel):
         default=None,
         description="the citation's source_ref when it is a URL (a Slack permalink), else null",
     )
+    # Filled from the tool's own citation after the model answers (ground_sources):
+    ref: str | None = Field(default=None, description="leave empty")
+    detail: str | None = Field(default=None, description="leave empty")
 
 
 class OpsAnswer(BaseModel):
@@ -138,21 +141,75 @@ def seen_assertion_ids(messages: Iterable[Any]) -> set[str]:
     return ids
 
 
+def _payloads(m: ToolMessage) -> list[Any]:
+    """A tool result's structured parts: its artifact and any JSON text content."""
+    out = [m.artifact] if m.artifact else []
+    parts = m.content if isinstance(m.content, list) else [m.content]
+    for part in parts:
+        text = part.get("text") if isinstance(part, dict) else part
+        if isinstance(text, str):
+            with contextlib.suppress(json.JSONDecodeError):
+                out.append(json.loads(text))
+    return out
+
+
 def opened_gap(messages: Iterable[Any]) -> dict[str, Any] | None:
     """What open_knowledge_gap actually returned (the model's copy of it isn't trusted)."""
     for m in messages:
         if isinstance(m, ToolMessage) and m.name == "open_knowledge_gap" and m.status != "error":
             found: dict[str, Any] = {}
-            _gap_fields(m.artifact, found)
-            parts = m.content if isinstance(m.content, list) else [m.content]
-            for part in parts:
-                text = part.get("text") if isinstance(part, dict) else part
-                if isinstance(text, str):
-                    with contextlib.suppress(json.JSONDecodeError):
-                        _gap_fields(json.loads(text), found)
+            for payload in _payloads(m):
+                _gap_fields(payload, found)
             if found.get("gap_id"):
                 return found
     return None
+
+
+def _citations(value: Any, out: dict[str, list[dict[str, Any]]]) -> None:
+    if isinstance(value, dict):
+        aid, cits = value.get("assertion_id"), value.get("citations")
+        if isinstance(aid, str) and isinstance(cits, list):
+            out.setdefault(aid, []).extend(c for c in cits if isinstance(c, dict))
+        for v in value.values():
+            _citations(v, out)
+    elif isinstance(value, list):
+        for v in value:
+            _citations(v, out)
+
+
+def ground_sources(answer: OpsAnswer, messages: Iterable[Any]) -> OpsAnswer:
+    """Each cited source as the tools returned it: who, where, when, the reference (a Slack
+    permalink becomes the link) and the detail (the quoted message, or a document label).
+    The model's own summary of a source is only kept where the tools said nothing."""
+    found: dict[str, list[dict[str, Any]]] = {}
+    for m in messages:
+        if isinstance(m, ToolMessage):
+            for payload in _payloads(m):
+                _citations(payload, found)
+    sources = []
+    for s in answer.sources:
+        cits = found.get(s.assertion_id) or []
+        # Prefer the captured message (a permalink) over a backfilled reference.
+        c = next((c for c in cits if str(c.get("source_ref", "")).startswith("https://")), None)
+        c = c or (cits[0] if cits else None)
+        if c is None:
+            sources.append(s)
+            continue
+        ref = c.get("source_ref")
+        is_link = isinstance(ref, str) and ref.startswith("https://")
+        sources.append(
+            s.model_copy(
+                update={
+                    "who": c.get("author") or s.who,
+                    "where": c.get("source_type") or s.where,
+                    "when": str(c.get("recorded_at") or s.when or "")[:10] or None,
+                    "link": ref if is_link else None,
+                    "ref": None if is_link else ref,
+                    "detail": c.get("detail"),
+                }
+            )
+        )
+    return answer.model_copy(update={"sources": sources})
 
 
 def _gap_fields(value: Any, out: dict[str, Any]) -> None:
@@ -263,7 +320,7 @@ class OpsAgent:
         if not isinstance(answer, OpsAnswer):
             answer = _from_plain_text(result.get("messages", []))
         messages = result.get("messages", [])
-        checked = enforce_rules(answer, seen_assertion_ids(messages))
+        checked = ground_sources(enforce_rules(answer, seen_assertion_ids(messages)), messages)
         gap = opened_gap(messages)
         if gap is not None:
             checked = checked.model_copy(
