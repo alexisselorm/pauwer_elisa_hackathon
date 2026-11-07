@@ -7,6 +7,13 @@ x-backend: &backend
   image: kaiku-backend:local
   init: true
   restart: unless-stopped
+  # Fixed upstream DNS: otherwise a container keeps the host's resolver from when it was
+  # created, and a network change (wifi, VPN, sleep) breaks every lookup until it is
+  # recreated, which silently cut the bot off from Slack. Service names still resolve.
+  # On a network that blocks public DNS, set DNS_PRIMARY/DNS_SECONDARY in .env (next to this file).
+  dns:
+    - ${DNS_PRIMARY:-1.1.1.1}
+    - ${DNS_SECONDARY:-8.8.8.8}
   env_file:
     - path: backend/.env
       required: true

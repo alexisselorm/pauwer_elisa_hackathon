@@ -187,6 +187,33 @@ def _mark_ready(ready: bool) -> None:
         READY_FILE.unlink(missing_ok=True)
 
 
+class _Connection(Protocol):
+    async def is_connected(self) -> bool: ...
+
+
+async def watch_connection(conn: _Connection, *, every_s: float = 5.0) -> None:
+    """Keep the healthcheck's ready file in step with the Socket Mode link.
+
+    Bolt reconnects by itself, but while it cannot (say DNS broke after a network change)
+    Slack has nowhere to deliver events or button clicks. Being "up" is not enough: the
+    container only counts as healthy while the socket is actually connected.
+    """
+    ready: bool | None = None
+    while True:
+        try:
+            now = await conn.is_connected()
+        except Exception:  # noqa: BLE001  # a failing probe means not connected
+            now = False
+        if now != ready:
+            await asyncio.to_thread(_mark_ready, now)
+            if ready is not None:
+                (log.info if now else log.error)(
+                    "slack_socket_reconnected" if now else "slack_socket_lost"
+                )
+            ready = now
+        await asyncio.sleep(every_s)
+
+
 async def run(settings: Settings) -> None:
     await asyncio.to_thread(_mark_ready, False)
     if settings.slack_bot_token is None or settings.slack_app_token is None:
@@ -242,7 +269,7 @@ async def run(settings: Settings) -> None:
         watcher = asyncio.create_task(actions.watch(app.client), name="fault-watch")
     else:
         log.warning("fault_watch_off", reason="SIM_URL is not set: no network feed to watch")
-    await asyncio.to_thread(_mark_ready, True)
+    link = asyncio.create_task(watch_connection(handler.client), name="slack-link")
     log.info(
         "slack_connected",
         bot_user=identity.get("user"),
@@ -253,6 +280,7 @@ async def run(settings: Settings) -> None:
         await asyncio.Event().wait()
     finally:
         sweeper.cancel()
+        link.cancel()
         if mail is not None:
             mail.cancel()
         if watcher is not None:

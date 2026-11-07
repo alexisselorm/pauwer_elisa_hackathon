@@ -179,3 +179,27 @@ async def test_mention_gets_eyes_and_a_failed_reaction_still_answers() -> None:
     client.reaction_error = RuntimeError("missing_scope")
     await bot.SlackOps(answerer).handle_mention(dict(MENTION), client)  # type: ignore[arg-type]
     assert client.updated  # answered anyway
+
+
+async def test_slackbot_ready_file_follows_the_socket(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Healthy only while connected: a dropped socket turns it red, a reconnect green."""
+    states = iter([True, False, True])
+    seen: list[bool] = []
+    done = asyncio.Event()
+
+    class _Conn:
+        async def is_connected(self) -> bool:
+            return next(states)
+
+    def mark(ready: bool) -> None:
+        seen.append(ready)
+        if len(seen) == 3:
+            done.set()
+
+    monkeypatch.setattr(bot, "_mark_ready", mark)
+    task = asyncio.create_task(bot.watch_connection(_Conn(), every_s=0.01))
+    await asyncio.wait_for(done.wait(), timeout=2)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert seen == [True, False, True]
