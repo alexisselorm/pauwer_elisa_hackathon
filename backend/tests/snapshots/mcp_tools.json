@@ -1138,7 +1138,7 @@
               "type": "string"
             },
             "kind": {
-              "description": "Alarm, DeviceEvent, Outcome, AgentAction, Message, Email",
+              "description": "Alarm, DeviceEvent, Outcome, AgentAction, Message (Slack, Teams, email, documents)",
               "title": "Kind",
               "type": "string"
             },

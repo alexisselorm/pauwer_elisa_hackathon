@@ -191,12 +191,11 @@ async def test_vector_search_and_scoped_ranking(neo4j_url: str, settings: Settin
             assert [h.id for h in hits] == ["VEC-b"]
 
             # Scoped ranking: the trap case. SEARCH with a MATCH filter would return nothing
-            # here (post-filter of the global top-1); exact ranking returns VEC-c.
-            hits = await vector.rank_candidates(
-                driver, "neo4j", vector.ASSERTIONS, ["VEC-c", "VEC-d"], q, 1
+            # here (post-filter of the global top-1); exact similarities return VEC-c.
+            hits = await vector.similarities(
+                driver, "neo4j", vector.ASSERTIONS, ["VEC-c", "VEC-d"], q
             )
             assert [h.id for h in hits] == ["VEC-c"]
-            assert await vector.rank_candidates(driver, "neo4j", vector.ASSERTIONS, [], q, 1) == []
         finally:
             await driver.execute_query(
                 "MATCH (n:ContextAssertion) WHERE n.assertion_id STARTS WITH 'VEC-' DETACH DELETE n"

@@ -22,7 +22,7 @@ from typing import Any
 from pydantic import BaseModel
 from rapidfuzz import fuzz
 
-from kaiku.context.models import BindingIn, EntityCandidate, Scope
+from kaiku.context.models import SCOPE_BY_ENTITY_TYPE, BindingIn, EntityCandidate, Scope
 from kaiku.context.resolve import resolve
 from kaiku.extraction.models import Mention, TriageKind
 
@@ -63,15 +63,7 @@ _SYNONYMS = {
 }
 TOPIC_MATCH = 85  # token_set_ratio: the words said are (nearly) all in the label
 TIE = 0.05
-SCOPE_BY_TYPE = {
-    "device": Scope.OBSERVED_ON,
-    "fibre": Scope.OBSERVED_ON,
-    "microwave": Scope.OBSERVED_ON,
-    "site": Scope.OBSERVED_ON,
-    "hw_model": Scope.APPLIES_TO,
-    "generation": Scope.APPLIES_TO,
-    "topic": Scope.ACTIVITY,
-}
+SCOPE_BY_TYPE = SCOPE_BY_ENTITY_TYPE
 
 
 class Linked(BaseModel):

@@ -23,6 +23,20 @@ class Scope(StrEnum):
     ACTIVITY = "activity"
 
 
+# Entity type -> the scope an assertion about it takes by default (plan 001 §5): a device,
+# segment or site is where something was observed, a model or generation is what it applies
+# to, a topic is the activity. The one table for the seed, the linker and MCP proposals.
+SCOPE_BY_ENTITY_TYPE: dict[str, Scope] = {
+    "device": Scope.OBSERVED_ON,
+    "fibre": Scope.OBSERVED_ON,
+    "microwave": Scope.OBSERVED_ON,
+    "site": Scope.OBSERVED_ON,
+    "hw_model": Scope.APPLIES_TO,
+    "generation": Scope.APPLIES_TO,
+    "topic": Scope.ACTIVITY,
+}
+
+
 class Match(StrEnum):
     """Why an assertion is in scope for the entity asked about (ranking order)."""
 
@@ -190,7 +204,10 @@ class SiteAccessResult(BaseModel):
 
 class EventView(BaseModel):
     event_id: str
-    kind: str = Field(description="Alarm, DeviceEvent, Outcome, AgentAction, Message, Email")
+    kind: str = Field(
+        description="Alarm, DeviceEvent, Outcome, AgentAction, Message (Slack, Teams, email, "
+        "documents)"
+    )
     event_time: UtcDatetime
     type: str | None = None
     severity: str | None = None

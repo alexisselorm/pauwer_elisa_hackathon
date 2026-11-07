@@ -14,7 +14,7 @@ from kaiku.graph.driver import create_driver
 from kaiku.graph.repository import ContextRepository
 from kaiku.llm.embeddings import FeatherlessEmbedder
 from kaiku.mcp.server import ServiceHolder, create_mcp_server
-from kaiku.seed.sources import MockData
+from kaiku.seed.sources import load_aliases
 from kaiku.telemetry.store import TelemetryStore
 
 
@@ -24,15 +24,11 @@ async def run_stdio(settings: Settings, agent_id: str) -> None:
     driver = create_driver(settings)
     try:
         await driver.verify_connectivity()
-        try:
-            aliases = MockData(settings.data_dir).model_aliases()
-        except FileNotFoundError:
-            aliases = {}
         holder.service = ContextService(
             ContextRepository(driver, settings.neo4j_database),
             await asyncio.to_thread(TelemetryStore, settings.data_dir),
             embedder=FeatherlessEmbedder.from_settings(settings),
-            aliases=aliases,
+            aliases=load_aliases(settings.data_dir),
         )
         await server.run_stdio_async()
     finally:

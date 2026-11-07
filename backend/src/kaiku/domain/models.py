@@ -27,16 +27,17 @@ class AssertionStatus(StrEnum):
 
 
 class Platform(StrEnum):
-    """Where an event's `event_time` comes from (plan 001 R1)."""
+    """Where an event's `event_time` comes from (plan 001 R1). Every stored `platform`
+    string is one of these."""
 
     SLACK = "slack"
     TEAMS = "teams"
     EMAIL = "email"
-    ALARM = "alarm"
-    PM = "pm"
-    DEVICE_EVENT = "device_event"
-    OUTCOME = "outcome"
-    DOCUMENT = "document"
+    ALARM = "alarm"  # the alarm's raise time
+    DEVICE_EVENT = "device_event"  # the as-running change (firmware upgrade, decommission)
     PDF = "pdf"  # an expert's notes: the PDF CreationDate
     CONFLUENCE = "confluence"  # a wiki page: when it was last edited
     ITSM = "itsm"  # a ticketing KB article: when it was published
+    MCP = "mcp"  # an agent's write: the outcome's observed time, the action's wall clock
+    NETWORK = "network"  # the telemetry check (V4) at the reported observation time
+    SIM = "sim"  # the simulator's fault and action events

@@ -37,8 +37,9 @@ from kaiku.context.models import (
     SegmentRef,
     SourceIn,
 )
+from kaiku.context.ranking import MATCH_BY_RANK, MATCH_RANK, score
 from kaiku.domain import time as rules
-from kaiku.domain.models import AssertionStatus
+from kaiku.domain.models import AssertionStatus, Platform
 from kaiku.errors import WriteRejectedError
 from kaiku.graph import checks
 from kaiku.graph.cypher import vector
@@ -46,38 +47,14 @@ from kaiku.logging import get_logger
 
 END_OF_TIME: LiteralString = "datetime('9999-12-31T00:00:00Z')"
 
-# Ranking (plan 002 §4.1 "ranked"): how the assertion reached the entity, its status and its
-# confidence. Shown to agents as `score`; never used to hide anything.
-MATCH_WEIGHT = {
-    Match.DIRECT: 1.0,
-    Match.MODEL: 0.9,
-    Match.SITE: 0.85,
-    Match.SEGMENT: 0.8,
-    Match.SAME_MODEL_DEVICE: 0.5,
-    # Below another device of the same model: when the query names an entity, knowledge
-    # about unrelated ones is the least likely to apply (plan 004 R12).
-    Match.OUTSIDE_SCOPE: 0.4,
-}
-STATUS_WEIGHT = {
-    AssertionStatus.BELIEVED_TRUE: 1.0,
-    AssertionStatus.UNVERIFIED: 0.8,
-    AssertionStatus.DISPUTED: 0.7,
-    # Everything ranked has already passed the validity filter at t (R9, R12 plan 004), so
-    # "superseded" / "expired" only say what happened *after* t. At a past as_of that
-    # assertion is the one in force; a penalty would push the right answer down.
-    AssertionStatus.SUPERSEDED: 1.0,
-    AssertionStatus.EXPIRED: 1.0,
-}
-CONFIDENCE_WEIGHT = {"high": 1.0, "medium": 0.85, "low": 0.6}
-SCOPE_BY_ENTITY_TYPE = {
-    "device": "observed_on",
-    "fibre": "observed_on",
-    "microwave": "observed_on",
-    "site": "observed_on",
-    "hw_model": "applies_to",
-    "generation": "applies_to",
-    "topic": "activity",
-}
+
+def _within(alias: LiteralString, t: LiteralString = "$t") -> LiteralString:
+    """The half-open validity window of `alias` contains `t` (R9):
+    valid_from <= t < coalesce(valid_to, infinity)."""
+    return (
+        alias + ".valid_from <= " + t + " AND " + t + " < coalesce(" + alias + ".valid_to, "
+        + END_OF_TIME + ")"
+    )  # fmt: skip
 
 
 log = get_logger(__name__)
@@ -117,7 +94,7 @@ _ASSERTION_FIELDS: LiteralString = """
     + [(a)-[:SUPERSEDES]->(x:ContextAssertion) | x.assertion_id]) AS supersedes,
   [(a)-[:DERIVED_FROM]->(ev:Event) | ev { .event_id, .event_time, .platform, .author,
       .channel, .permalink, .text }] AS sources,
-  [(x:Entity)<-[:ON]-(:Outcome)-[s:SUPPORTS]->(a) WHERE s.verified = true
+  [(x:Entity)<-[:ON]-(:Event:Outcome)-[s:SUPPORTS]->(a) WHERE s.verified = true
       AND NOT coalesce(s.overridden, false) | x.entity_id] AS confirmed_on
 """
 
@@ -235,19 +212,6 @@ def assertion_view(
     return view
 
 
-def score(view: AssertionView) -> float:
-    conf = view.confidence
-    if isinstance(conf, int | float):
-        conf_w = 0.5 + 0.5 * float(conf)
-    else:
-        conf_w = CONFIDENCE_WEIGHT.get(str(conf), 0.8)
-    s = MATCH_WEIGHT.get(view.match, 0.7) if view.match else 0.7
-    s *= STATUS_WEIGHT.get(view.status, 0.7) * conf_w
-    if view.review_due:
-        s *= 0.9
-    return s
-
-
 class ContextRepository:
     def __init__(self, driver: AsyncDriver, database: str) -> None:
         self._driver = driver
@@ -282,20 +246,18 @@ class ContextRepository:
     async def get_entity(self, entity_id: str, t: datetime) -> EntityView:
         rows = await self._read(
             "MATCH (e:Entity {entity_id: $id}) "
-            "OPTIONAL MATCH (e)-[im:IS_MODEL]->(m:HwModel) "
-            "  WHERE im.valid_from <= $t AND $t < coalesce(im.valid_to, " + END_OF_TIME + ") "
-            "OPTIONAL MATCH (m)-[:OF_GENERATION]->(g:Generation) "
-            "OPTIONAL MATCH (snap:RunningSnapshot)-[:SNAPSHOT_OF]->(e) "
-            "  WHERE snap.valid_from <= $t AND $t < coalesce(snap.valid_to, " + END_OF_TIME + ") "
+            "OPTIONAL MATCH (e)-[im:IS_MODEL]->(m:Entity:HwModel) WHERE " + _within("im") + " "
+            "OPTIONAL MATCH (m)-[:OF_GENERATION]->(g:Entity:Generation) "
+            "OPTIONAL MATCH (snap:RunningSnapshot)-[:SNAPSHOT_OF]->(e) WHERE "
+            + _within("snap")
+            + " "
             "WITH e, m, g, snap "
-            "OPTIONAL MATCH (s:Segment)-[c:CONNECTS]->(e) "
-            "  WHERE c.valid_from <= $t AND $t < coalesce(c.valid_to, " + END_OF_TIME + ") "
+            "OPTIONAL MATCH (s:Entity:Segment)-[c:CONNECTS]->(e) WHERE " + _within("c") + " "
             "WITH e, m, g, snap, collect(DISTINCT s { .entity_id, .name, .private_road, "
             "  .barrier }) AS segments "
-            "OPTIONAL MATCH (e)-[l:LINKED]-(o:Device) "
-            "  WHERE l.valid_from <= $t AND $t < coalesce(l.valid_to, " + END_OF_TIME + ") "
+            "OPTIONAL MATCH (e)-[l:LINKED]-(o:Entity:Device) WHERE " + _within("l") + " "
             "WITH e, m, g, snap, segments, collect(DISTINCT o.entity_id) AS linked "
-            "OPTIONAL MATCH (fw:DeviceEvent {type: 'firmware_upgrade'})-[:ON]->(e) "
+            "OPTIONAL MATCH (fw:Event:DeviceEvent {type: 'firmware_upgrade'})-[:ON]->(e) "
             "WITH e, m, g, snap, segments, linked, fw ORDER BY fw.event_time "
             "RETURN e { .*, embedding: null } AS e, m.entity_id AS model, "
             "g.entity_id AS generation, snap.hw_model AS running_hw_model, segments, linked, "
@@ -344,10 +306,10 @@ class ContextRepository:
         """Devices in service at t whose model (as built at t) is this model or of this
         generation."""
         rows = await self._read(
-            "MATCH (d:Device)-[im:IS_MODEL]->(m:HwModel) "
-            "WHERE (m.entity_id = $id OR (m)-[:OF_GENERATION]->(:Generation {entity_id: $id})) "
-            "  AND im.valid_from <= $t AND $t < coalesce(im.valid_to, " + END_OF_TIME + ") "
-            "  AND d.valid_from <= $t AND $t < coalesce(d.valid_to, " + END_OF_TIME + ") "
+            "MATCH (d:Entity:Device)-[im:IS_MODEL]->(m:Entity:HwModel) "
+            "WHERE (m.entity_id = $id "
+            "  OR (m)-[:OF_GENERATION]->(:Entity:Generation {entity_id: $id})) "
+            "  AND " + _within("im") + " AND " + _within("d") + " "
             "RETURN DISTINCT d.entity_id AS id ORDER BY id",
             id=model_or_generation,
             t=t,
@@ -359,14 +321,11 @@ class ContextRepository:
         at t (R9: node -> HwModel -> Generation -> Site -> Segment)."""
         rows = await self._read(
             "MATCH (e:Entity {entity_id: $id}) "
-            "OPTIONAL MATCH (e)-[im:IS_MODEL]->(m:HwModel) "
-            "  WHERE im.valid_from <= $t AND $t < coalesce(im.valid_to, " + END_OF_TIME + ") "
-            "OPTIONAL MATCH (m)-[:OF_GENERATION]->(g:Generation) "
-            "OPTIONAL MATCH (e)-[:OF_GENERATION]->(own:Generation) "
-            "OPTIONAL MATCH (e)-[at:AT_SITE]->(site:Site) "
-            "  WHERE at.valid_from <= $t AND $t < coalesce(at.valid_to, " + END_OF_TIME + ") "
-            "OPTIONAL MATCH (s:Segment)-[c:CONNECTS]->(e) "
-            "  WHERE c.valid_from <= $t AND $t < coalesce(c.valid_to, " + END_OF_TIME + ") "
+            "OPTIONAL MATCH (e)-[im:IS_MODEL]->(m:Entity:HwModel) WHERE " + _within("im") + " "
+            "OPTIONAL MATCH (m)-[:OF_GENERATION]->(g:Entity:Generation) "
+            "OPTIONAL MATCH (e)-[:OF_GENERATION]->(own:Entity:Generation) "
+            "OPTIONAL MATCH (e)-[at:AT_SITE]->(site:Entity:Site) WHERE " + _within("at") + " "
+            "OPTIONAL MATCH (s:Entity:Segment)-[c:CONNECTS]->(e) WHERE " + _within("c") + " "
             "RETURN e.entity_id AS e, m.entity_id AS m, "
             "coalesce(g.entity_id, own.entity_id) AS g, "
             "collect(DISTINCT site.entity_id) AS sites, "
@@ -405,26 +364,27 @@ class ContextRepository:
             "WHERE " + _CONFIRMED + " AND " + _VALID + " AND " + _KNOWN + " "
             "WITH a, min(s.rank) AS rank "
             "RETURN rank, " + _ASSERTION_FIELDS,
-            scope=[{"id": i, "rank": _RANK[m]} for i, m in scope.items()],
+            scope=[{"id": i, "rank": MATCH_RANK[m]} for i, m in scope.items()],
             t=t,
             k=k,
         )
         views: dict[str, AssertionView] = {
-            r["a"]["assertion_id"]: assertion_view(r, _MATCH_BY_RANK[r["rank"]], k) for r in rows
+            r["a"]["assertion_id"]: assertion_view(r, MATCH_BY_RANK[r["rank"]], k) for r in rows
         }
         if same_model_of:
             others = await self._read(
-                "MATCH (a:ContextAssertion)-[r:ABOUT {scope: 'observed_on'}]->(o:Device)"
-                "-[im:IS_MODEL]->(:HwModel {entity_id: $model}) "
+                "MATCH (a:ContextAssertion)-[r:ABOUT {scope: 'observed_on'}]->(o:Entity:Device)"
+                "-[im:IS_MODEL]->(:Entity:HwModel {entity_id: $model}) "
                 "WHERE NOT o.entity_id IN $ids AND "
                 + _CONFIRMED
                 + " AND "
                 + _VALID
                 + " AND "
                 + _KNOWN
-                + " "
-                "AND im.valid_from <= $t AND $t < coalesce(im.valid_to, " + END_OF_TIME + ") "
-                "WITH DISTINCT a RETURN " + _ASSERTION_FIELDS,
+                + " AND "
+                + _within("im")
+                + " WITH DISTINCT a RETURN "
+                + _ASSERTION_FIELDS,
                 model=same_model_of,
                 ids=list(scope),
                 t=t,
@@ -514,7 +474,7 @@ class ContextRepository:
     ) -> tuple[list[SegmentRef], list[AssertionView], list[AccessRecordView]]:
         seg_ids = [i for i, m in scope.items() if m in (Match.SEGMENT, Match.DIRECT)]
         segs = await self._read(
-            "MATCH (s:Segment) WHERE s.entity_id IN $ids "
+            "MATCH (s:Entity:Segment) WHERE s.entity_id IN $ids "
             "RETURN s { .entity_id, .name, .private_road, .barrier } AS s",
             ids=seg_ids,
         )
@@ -529,7 +489,7 @@ class ContextRepository:
             k=k,
         )
         register = await self._read(
-            "MATCH (r:AccessRecord)-[:FOR]->(s:Segment) WHERE s.entity_id IN $ids "
+            "MATCH (r:AccessRecord)-[:FOR]->(s:Entity:Segment) WHERE s.entity_id IN $ids "
             "AND r.recorded_at <= $k "
             # As known at k: the next register row closes this one only once recorded.
             "WITH r, s, CASE WHEN EXISTS { MATCH (n:AccessRecord)-[:FOR]->(s) "
@@ -971,16 +931,19 @@ class ContextRepository:
         event_id = f"NET-{assertion_id}-{entity_id}"
 
         async def work(tx: AsyncManagedTransaction) -> None:
-            if await _single(tx, "MATCH (o:Outcome {event_id: $id}) RETURN true", id=event_id):
+            if await _single(
+                tx, "MATCH (o:Event:Outcome {event_id: $id}) RETURN true", id=event_id
+            ):
                 return
             await tx.run(
                 "MATCH (d:Entity {entity_id: $entity}) "
-                "CREATE (o:Event:Outcome {event_id: $id, event_time: $t, platform: 'network', "
+                "CREATE (o:Event:Outcome {event_id: $id, event_time: $t, platform: $platform, "
                 "  action: 'telemetry_check', result: $result, port: $port, detail: $detail, "
-                "  agent_id: 'network'}) CREATE (o)-[:ON]->(d)",
+                "  agent_id: $platform}) CREATE (o)-[:ON]->(d)",
                 entity=entity_id,
                 id=event_id,
                 t=rules.ensure_utc(observed_at),
+                platform=Platform.NETWORK.value,
                 result="agrees" if agrees else "disagrees",
                 port=port,
                 detail=detail,
@@ -1064,7 +1027,7 @@ class ContextRepository:
             await tx.run(
                 "CREATE (r:WriteReceipt {key: $key, result: $result, created_at: $now}) "
                 "CREATE (e:Event:AgentAction {event_id: $action, event_time: $now, "
-                "  platform: 'mcp', tool: $tool, agent_id: $agent, on_behalf_of: $behalf, "
+                "  platform: $platform, tool: $tool, agent_id: $agent, on_behalf_of: $behalf, "
                 "  idempotency_key: $ikey, trigger_event_id: $trigger, ingested_at: $now}) "
                 "CREATE (e)-[:RECEIPT]->(r) "
                 # Link the event that prompted the write when it is on record (a sim alarm
@@ -1076,6 +1039,7 @@ class ContextRepository:
                 result=json.dumps(result, default=_json_default),
                 now=now,
                 action=action_id,
+                platform=Platform.MCP.value,
                 tool=tool,
                 agent=agent_id,
                 behalf=on_behalf_of,
@@ -1126,7 +1090,7 @@ class ContextRepository:
             await tx.run(
                 "MATCH (d:Entity {entity_id: $entity}) "
                 "CREATE (o:Event:Outcome {event_id: $id, event_time: $observed, "
-                "  ingested_at: $now, platform: 'mcp', action: $action, result: $result, "
+                "  ingested_at: $now, platform: $platform, action: $action, result: $result, "
                 "  port: $port, evidence_ref: $ref, agent_id: $agent, "
                 "  on_behalf_of: $behalf, conditions_met: $met, assertion_id: $aid, "
                 "  verification: CASE WHEN $aid IS NULL THEN null ELSE 'pending' END}) "
@@ -1136,6 +1100,7 @@ class ContextRepository:
                 id=event_id,
                 observed=observed_at,
                 now=now,
+                platform=Platform.MCP.value,
                 action=action,
                 result=result,
                 port=port,
@@ -1176,7 +1141,7 @@ class ContextRepository:
         """What the verifier needs: when and where the action ran, the assertion whose
         advice was followed (with its qualifiers), and how far verification got."""
         rows = await self._read(
-            "MATCH (o:Outcome {event_id: $id}) "
+            "MATCH (o:Event:Outcome {event_id: $id}) "
             "OPTIONAL MATCH (a:ContextAssertion {assertion_id: o.assertion_id}) "
             "RETURN o.event_id AS event_id, o.event_time AS t_action, "
             "head([(o)-[:ON]->(e:Entity) | e.entity_id]) AS entity_id, o.port AS port, "
@@ -1189,7 +1154,7 @@ class ContextRepository:
     async def outcomes_to_verify(self, limit: int = 100) -> list[str]:
         """Outcomes still waiting for the network's verdict, oldest first."""
         rows = await self._read(
-            "MATCH (o:Outcome {verification: 'pending'}) RETURN o.event_id AS id "
+            "MATCH (o:Event:Outcome {verification: 'pending'}) RETURN o.event_id AS id "
             "ORDER BY o.event_time LIMIT $limit",
             limit=limit,
         )
@@ -1230,8 +1195,9 @@ class ContextRepository:
         async def work(tx: AsyncManagedTransaction) -> dict[str, Any]:
             o = await _single(
                 tx,
-                "MATCH (o:Outcome {event_id: $id}) RETURN o { .verification, .assertion_id, "
-                "  .conditions_met, entity_id: head([(o)-[:ON]->(e:Entity) | e.entity_id]) } AS o",
+                "MATCH (o:Event:Outcome {event_id: $id}) RETURN o { .verification, "
+                "  .assertion_id, .conditions_met, "
+                "  entity_id: head([(o)-[:ON]->(e:Entity) | e.entity_id]) } AS o",
                 id=outcome_id,
             )
             if o is None:
@@ -1240,7 +1206,7 @@ class ContextRepository:
                 return _outcome_row(await (await tx.run(_OUTCOME_STATE, id=outcome_id)).single())
             met = o["conditions_met"] if o.get("conditions_met") is not None else conditions_met
             await tx.run(
-                "MATCH (o:Outcome {event_id: $id}) SET o.verification = $verdict, "
+                "MATCH (o:Event:Outcome {event_id: $id}) SET o.verification = $verdict, "
                 "  o.verification_detail = $detail, o.verified_at = $at, o.conditions_met = $met",
                 id=outcome_id,
                 verdict=verdict,
@@ -1549,16 +1515,6 @@ def _json_default(value: Any) -> Any:
     raise TypeError(f"not JSON serialisable: {type(value).__name__}")
 
 
-_RANK = {
-    Match.DIRECT: 0,
-    Match.MODEL: 1,
-    Match.SITE: 2,
-    Match.SEGMENT: 3,
-    Match.SAME_MODEL_DEVICE: 4,
-}
-_MATCH_BY_RANK = {v: k for k, v in _RANK.items()}
-
-
 def _firmware_at(
     entity: Mapping[str, Any], upgrades: Sequence[Mapping[str, Any]], t: datetime
 ) -> tuple[str | None, str | None]:
@@ -1844,7 +1800,7 @@ async def _evidence(
     already exists is not counted again."""
     row = await (
         await tx.run(
-            "MATCH (o:Outcome {event_id: $id}), (a:ContextAssertion {assertion_id: $aid}) "
+            "MATCH (o:Event:Outcome {event_id: $id}), (a:ContextAssertion {assertion_id: $aid}) "
             "FOREACH (_ IN CASE WHEN $rel = 'SUPPORTS' AND NOT EXISTS { (o)-[:SUPPORTS]->(a) } "
             "  THEN [1] ELSE [] END | "
             "  CREATE (o)-[:SUPPORTS {conditions_met: $met}]->(a) "
@@ -1874,7 +1830,7 @@ async def _evidence(
 # --- Outcome verification helpers (plan 001 §6.2) --------------------------------------------
 
 _OUTCOME_STATE: LiteralString = """
-MATCH (o:Outcome {event_id: $id})
+MATCH (o:Event:Outcome {event_id: $id})
 OPTIONAL MATCH (a:ContextAssertion {assertion_id: o.assertion_id})
 RETURN o.event_id AS event_id, o.verification AS verification,
   o.verification_detail AS verification_detail, o.conditions_met AS conditions_met,
@@ -1888,17 +1844,17 @@ RETURN o.event_id AS event_id, o.verification AS verification,
 # bound), and unverified knowledge is now believed true. A retraction stays a retraction.
 # An entity that didn't exist yet when the knowledge started to hold is not bound to it
 # (V3, R9: a bound entity exists at valid_from); the SUPPORTS edge still names it.
-_CONFIRMED_BY_NETWORK: LiteralString = """
-MATCH (a:ContextAssertion {assertion_id: $aid}), (e:Entity {entity_id: $entity})
-WHERE a.retracted_at IS NULL
-SET a.status = CASE WHEN a.status = 'unverified' THEN 'believed_true' ELSE a.status END
-FOREACH (_ IN CASE WHEN EXISTS { (a)-[:ABOUT]->(e) }
-    OR a.valid_from < coalesce(e.valid_from, a.valid_from)
-    OR a.valid_from >= coalesce(e.valid_to, datetime('9999-12-31T00:00:00Z'))
-  THEN [] ELSE [1] END |
-  CREATE (a)-[:ABOUT {scope: 'observed_on', resolution_confidence: 1.0, candidate: false,
-    outcome_id: $id}]->(e))
-"""
+_CONFIRMED_BY_NETWORK: LiteralString = (
+    "MATCH (a:ContextAssertion {assertion_id: $aid}), (e:Entity {entity_id: $entity}) "
+    "WHERE a.retracted_at IS NULL "
+    "SET a.status = CASE WHEN a.status = 'unverified' THEN 'believed_true' ELSE a.status END "
+    "FOREACH (_ IN CASE WHEN EXISTS { (a)-[:ABOUT]->(e) } "
+    "    OR a.valid_from < coalesce(e.valid_from, a.valid_from) "
+    "    OR a.valid_from >= coalesce(e.valid_to, " + END_OF_TIME + ") "
+    "  THEN [] ELSE [1] END | "
+    "  CREATE (a)-[:ABOUT {scope: 'observed_on', resolution_confidence: 1.0, candidate: false, "
+    "    outcome_id: $id}]->(e))"
+)
 
 # Evidence relation -> the counter it adds to.
 _COUNTED: tuple[tuple[LiteralString, LiteralString], ...] = (
@@ -1906,19 +1862,19 @@ _COUNTED: tuple[tuple[LiteralString, LiteralString], ...] = (
     ("REFUTES", "refute_n"),
 )
 _OVERRIDE: dict[str, LiteralString] = {
-    rel: "MATCH (o:Outcome {event_id: $id})-[r:" + rel + "]->(a:ContextAssertion "
+    rel: "MATCH (o:Event:Outcome {event_id: $id})-[r:" + rel + "]->(a:ContextAssertion "
     "{assertion_id: $aid}) WHERE NOT coalesce(r.overridden, false) "
     "SET r.overridden = true, r.overridden_at = $at, "
     "a." + n + " = coalesce(a." + n + ", 1) - 1"
     for rel, n in _COUNTED
 }
 _VERIFIED: dict[str, LiteralString] = {
-    rel: "MATCH (o:Outcome {event_id: $id})-[r:" + rel + "]->(a:ContextAssertion "
+    rel: "MATCH (o:Event:Outcome {event_id: $id})-[r:" + rel + "]->(a:ContextAssertion "
     "{assertion_id: $aid}) WHERE NOT coalesce(r.overridden, false) SET r.verified = true"
     for rel, _ in _COUNTED
 }
 _ADD_VERIFIED: dict[str, LiteralString] = {
-    rel: "MATCH (o:Outcome {event_id: $id}), (a:ContextAssertion {assertion_id: $aid}) "
+    rel: "MATCH (o:Event:Outcome {event_id: $id}), (a:ContextAssertion {assertion_id: $aid}) "
     "CREATE (o)-[:" + rel + " {conditions_met: $met, verified: true}]->(a) "
     "SET a." + n + " = coalesce(a." + n + ", 0) + 1"
     for rel, n in _COUNTED
@@ -1938,7 +1894,7 @@ async def _network_evidence(
     counted: the same relation is marked verified, a different one is overridden."""
     rows = await (
         await tx.run(
-            "MATCH (o:Outcome {event_id: $id})-[r:SUPPORTS|REFUTES]->"
+            "MATCH (o:Event:Outcome {event_id: $id})-[r:SUPPORTS|REFUTES]->"
             "(:ContextAssertion {assertion_id: $aid}) WHERE NOT coalesce(r.overridden, false) "
             "RETURN DISTINCT type(r) AS rel",
             id=outcome_id,

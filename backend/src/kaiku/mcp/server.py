@@ -47,7 +47,7 @@ from kaiku.context.models import (
     SearchResult,
     SiteAccessResult,
 )
-from kaiku.context.service import ContextError, ContextService
+from kaiku.context.service import MAX_EVENTS, ContextError, ContextService
 from kaiku.domain.models import AssertionStatus
 from kaiku.logging import get_logger
 from kaiku.validation.outcomes import evidence_line
@@ -410,7 +410,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
             list[str] | None,
             Field(description="kinds (Alarm, DeviceEvent, Outcome) or types (LOS, field_visit)"),
         ] = None,
-        limit: Annotated[int, Field(ge=1, le=200)] = 100,
+        limit: Annotated[int, Field(ge=1, le=MAX_EVENTS)] = 100,
     ) -> Annotated[CallToolResult, EventsResult]:
         """The event stream for an entity: alarms, device events and outcomes."""
         return await _call(lambda: holder.get().get_events(entity_id, start, end, types, limit))

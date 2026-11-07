@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from kaiku.context.models import (
+    SCOPE_BY_ENTITY_TYPE,
     AssertionView,
     Binding,
     ConditionsResult,
@@ -30,18 +31,15 @@ from kaiku.context.models import (
     OutcomeResult,
     ProposalCreated,
     ResolveResult,
+    Scope,
     SearchResult,
     SiteAccessResult,
 )
+from kaiku.context.ranking import score
 from kaiku.context.resolve import resolve
 from kaiku.domain.models import AssertionStatus
 from kaiku.domain.time import ensure_utc, qualifiers_match
-from kaiku.graph.repository import (
-    SCOPE_BY_ENTITY_TYPE,
-    ContextRepository,
-    NotFoundError,
-    score,
-)
+from kaiku.graph.repository import ContextRepository, NotFoundError
 from kaiku.llm.embeddings import (
     Embedder,
     EmbeddingDimensionError,
@@ -581,7 +579,7 @@ class ContextService:
         if vt is not None and vt <= vf:
             raise ContextError("valid_to must be after valid_from")
         bindings = [
-            {"entity_id": i, "scope": SCOPE_BY_ENTITY_TYPE.get(types[i], "observed_on")}
+            {"entity_id": i, "scope": SCOPE_BY_ENTITY_TYPE.get(types[i], Scope.OBSERVED_ON).value}
             for i in entity_ids
         ]
         out, replayed = await self.repo.propose(
@@ -645,18 +643,3 @@ class ContextService:
         )
         log.info("assertions_embedded", count=len(rows))
         return len(rows)
-
-
-def match_label(match: Match | None) -> str:
-    return (
-        {
-            Match.DIRECT: "about this entity",
-            Match.MODEL: "about its hardware model",
-            Match.SITE: "about its site",
-            Match.SEGMENT: "about its site/road",
-            Match.SAME_MODEL_DEVICE: "seen on another device of the same model",
-            Match.OUTSIDE_SCOPE: "not about the entities named",
-        }.get(match, "related")
-        if match
-        else "related"
-    )

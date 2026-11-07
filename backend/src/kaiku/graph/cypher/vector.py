@@ -8,7 +8,8 @@ Findings:
 - A `WHERE` before or after SEARCH filters the top-k AFTER the search. Scoping to a set of
   entities that way silently drops matches. So scoped retrieval does NOT use the index:
   the graph narrows the candidates first (by entity and time, plan 001), then
-  `rank_candidates` scores them exactly with `vector.similarity.cosine`.
+  `similarities` scores every one of them exactly with `vector.similarity.cosine` and the
+  caller ranks (plan 004 R12: nothing is cut before the structural score is applied).
 
 Labels and index names can't be query parameters, so they come only from the fixed
 `VectorIndexSpec` constants below, never from callers.
@@ -126,32 +127,6 @@ async def _search_procedure(
         k=k,
         status_in=list(status_in or []),
         database_=database,
-    )
-    return [VectorHit.model_validate(dict(r)) for r in records]
-
-
-async def rank_candidates(
-    driver: AsyncDriver,
-    database: str,
-    spec: VectorIndexSpec,
-    ids: Sequence[str],
-    vector: Sequence[float],
-    k: int,
-) -> list[VectorHit]:
-    """Exact cosine ranking of an already-scoped candidate set. Candidates without an
-    embedding are skipped (they can still be returned by the graph-only path)."""
-    _check_k(k)
-    if not ids:
-        return []
-    query: LiteralString = (
-        "MATCH (n:" + spec.label + ") WHERE n." + spec.id_property + " IN $ids "
-        "AND n.embedding IS NOT NULL "
-        "RETURN n." + spec.id_property + " AS id, "
-        "vector.similarity.cosine(n.embedding, $vector) AS score "
-        "ORDER BY score DESC LIMIT $k"
-    )
-    records, _, _ = await driver.execute_query(
-        query, ids=list(ids), vector=list(vector), k=k, database_=database
     )
     return [VectorHit.model_validate(dict(r)) for r in records]
 

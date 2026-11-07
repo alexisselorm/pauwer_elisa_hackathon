@@ -25,6 +25,7 @@ from kaiku.graph.repository import ContextRepository
 from kaiku.llm.embeddings import FeatherlessEmbedder
 from kaiku.logging import REQUEST_ID_HEADER, configure_logging, get_logger
 from kaiku.mcp.server import ServiceHolder, create_mcp_server
+from kaiku.seed.sources import load_aliases
 from kaiku.state import AppState, EmbeddingState
 from kaiku.telemetry.store import TelemetryStore
 from kaiku.tracing import setup_tracing
@@ -35,17 +36,6 @@ from kaiku.ui.router import router as console_router
 
 log = get_logger(__name__)
 EMBED_INTERVAL_S = 60.0
-
-
-def _load_aliases(settings: Settings) -> dict[str, str]:
-    """Surface forms for entity resolution (mock_data/knowledge_graph/entity_aliases.csv)."""
-    from kaiku.seed.sources import MockData
-
-    try:
-        return MockData(settings.data_dir).model_aliases()
-    except (FileNotFoundError, KeyError) as exc:
-        log.warning("entity_aliases_unavailable", error=str(exc))
-        return {}
 
 
 async def _embed_forever(
@@ -83,7 +73,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             ContextRepository(driver, settings.neo4j_database),
             telemetry,
             embedder=embeddings.embedder,
-            aliases=_load_aliases(settings),
+            aliases=load_aliases(settings.data_dir),
         )
         token = settings.slack_bot_token
         app.state.console = Console(

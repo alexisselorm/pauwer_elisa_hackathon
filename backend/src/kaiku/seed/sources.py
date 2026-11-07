@@ -11,6 +11,7 @@ from typing import Any
 
 from pydantic import BaseModel, TypeAdapter
 
+from kaiku.logging import get_logger
 from kaiku.seed.models import (
     AccessRecordRow,
     AlarmRow,
@@ -23,6 +24,19 @@ from kaiku.seed.models import (
     SegmentRow,
     SnapshotRow,
 )
+
+log = get_logger(__name__)
+
+
+def load_aliases(data_dir: Path) -> dict[str, str]:
+    """Surface forms for entity resolution (knowledge_graph/entity_aliases.csv), or none
+    when the data directory is not a mock_data checkout: the api and the stdio server
+    still start, with id-only resolution."""
+    try:
+        return MockData(data_dir).model_aliases()
+    except (FileNotFoundError, KeyError) as exc:
+        log.warning("entity_aliases_unavailable", error=str(exc))
+        return {}
 
 
 def _jsonl(path: Path) -> Iterator[Any]:

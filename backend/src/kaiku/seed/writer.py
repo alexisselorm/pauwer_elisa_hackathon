@@ -24,22 +24,14 @@ from typing import Any, LiteralString
 from neo4j import AsyncDriver
 from pydantic import BaseModel
 
+from kaiku.context.models import SCOPE_BY_ENTITY_TYPE
+from kaiku.domain.models import Platform
 from kaiku.seed.models import EntityRow
 from kaiku.seed.sources import MockData
 
 GOLD = "gold"
 SEED = "seed"
 GENERATIONS = ("Gen1", "Gen2", "Gen3")
-
-# Gold subject kind -> binding scope (plan 001 §5: observed_on | applies_to | activity).
-_SCOPE_BY_ENTITY_TYPE = {
-    "device": "observed_on",
-    "fibre": "observed_on",
-    "microwave": "observed_on",
-    "site": "observed_on",
-    "hw_model": "applies_to",
-    "topic": "activity",
-}
 
 
 class SeedReport(BaseModel):
@@ -152,8 +144,8 @@ async def write_network(driver: AsyncDriver, database: str, data: MockData) -> S
     await _run(
         driver,
         database,
-        "UNWIND $rows AS r MATCH (d:Device {entity_id: r.device}), "
-        "(m:HwModel {entity_id: r.model}) "
+        "UNWIND $rows AS r MATCH (d:Entity:Device {entity_id: r.device}), "
+        "(m:Entity:HwModel {entity_id: r.model}) "
         "MERGE (d)-[x:IS_MODEL]->(m) SET x.valid_from = r.valid_from, x.valid_to = r.valid_to",
         model_rows,
     )
@@ -166,8 +158,8 @@ async def write_network(driver: AsyncDriver, database: str, data: MockData) -> S
     await _run(
         driver,
         database,
-        "UNWIND $rows AS r MATCH (m:HwModel {entity_id: r.model}), "
-        "(g:Generation {entity_id: r.generation}) "
+        "UNWIND $rows AS r MATCH (m:Entity:HwModel {entity_id: r.model}), "
+        "(g:Entity:Generation {entity_id: r.generation}) "
         "MERGE (m)-[:OF_GENERATION]->(g)",
         gen_rows,
     )
@@ -185,8 +177,8 @@ async def write_network(driver: AsyncDriver, database: str, data: MockData) -> S
     await _run(
         driver,
         database,
-        "UNWIND $rows AS r MATCH (s:Segment {entity_id: r.segment}), "
-        "(d:Device {entity_id: r.device}) "
+        "UNWIND $rows AS r MATCH (s:Entity:Segment {entity_id: r.segment}), "
+        "(d:Entity:Device {entity_id: r.device}) "
         "MERGE (s)-[x:CONNECTS {end: r.end}]->(d) "
         "SET x.valid_from = r.valid_from, x.valid_to = r.valid_to",
         connects,
@@ -235,7 +227,7 @@ async def write_network(driver: AsyncDriver, database: str, data: MockData) -> S
     await _run(
         driver,
         database,
-        "UNWIND $rows AS r MATCH (d:Device {entity_id: r.device}) "
+        "UNWIND $rows AS r MATCH (d:Entity:Device {entity_id: r.device}) "
         "MERGE (s:RunningSnapshot {snapshot_id: r.props.snapshot_id}) SET s += r.props, "
         "s.valid_to = r.props.valid_to "
         "MERGE (s)-[:SNAPSHOT_OF]->(d)",
@@ -250,7 +242,7 @@ async def write_network(driver: AsyncDriver, database: str, data: MockData) -> S
                 "event_id": ev.event_id,
                 "event_time": ev.event_time,
                 "end_time": ev.end_time,
-                "platform": "device_event",
+                "platform": Platform.DEVICE_EVENT.value,
                 "type": ev.type,
                 "workorder_id": ev.workorder_id,
                 "outcome": ev.outcome,
@@ -267,7 +259,7 @@ async def write_network(driver: AsyncDriver, database: str, data: MockData) -> S
         database,
         "UNWIND $rows AS r MERGE (e:Event {event_id: r.props.event_id}) "
         "SET e:DeviceEvent, e += r.props "
-        "WITH e, r MATCH (d:Device {entity_id: r.device}) MERGE (e)-[:ON]->(d)",
+        "WITH e, r MATCH (d:Entity:Device {entity_id: r.device}) MERGE (e)-[:ON]->(d)",
         events,
     )
     report.device_events = len(events)
@@ -279,7 +271,7 @@ async def write_network(driver: AsyncDriver, database: str, data: MockData) -> S
                 "event_id": a.alarm_id,
                 "event_time": a.raised,
                 "cleared_at": a.cleared,
-                "platform": "alarm",
+                "platform": Platform.ALARM.value,
                 "type": a.type,
                 "severity": a.severity,
                 "probable_cause": a.probable_cause,
@@ -294,7 +286,7 @@ async def write_network(driver: AsyncDriver, database: str, data: MockData) -> S
         driver,
         database,
         "UNWIND $rows AS r MERGE (e:Event {event_id: r.props.event_id}) SET e:Alarm, e += r.props "
-        "WITH e, r MATCH (d:Device {entity_id: r.device}) MERGE (e)-[:ON]->(d)",
+        "WITH e, r MATCH (d:Entity:Device {entity_id: r.device}) MERGE (e)-[:ON]->(d)",
         alarms,
     )
     report.alarms = len(alarms)
@@ -357,7 +349,7 @@ async def write_gold(driver: AsyncDriver, database: str, data: MockData) -> Seed
         subject_type = entity_type.get(a.subject_entity_id)
         if subject_type is None:
             raise ValueError(f"{a.assertion_id}: unknown subject {a.subject_entity_id}")
-        targets = {(a.subject_entity_id, _SCOPE_BY_ENTITY_TYPE[subject_type])}
+        targets = {(a.subject_entity_id, SCOPE_BY_ENTITY_TYPE[subject_type].value)}
         models = a.qualifiers.get("applies_to_models") or []
         targets |= {(m, "applies_to") for m in models if m in entity_type}
         topic_id = f"TOPIC:{a.topic}"
@@ -417,7 +409,7 @@ async def write_gold(driver: AsyncDriver, database: str, data: MockData) -> Seed
     await _run(
         driver,
         database,
-        "UNWIND $rows AS r MATCH (s:Segment {entity_id: r.segment}) "
+        "UNWIND $rows AS r MATCH (s:Entity:Segment {entity_id: r.segment}) "
         "MERGE (x:AccessRecord {record_id: r.props.record_id}) SET x += r.props "
         "MERGE (x)-[:FOR]->(s)",
         access,
@@ -455,11 +447,11 @@ _PRUNE_SNAPSHOTS: LiteralString = (
     "DETACH DELETE n RETURN count(*) AS n"
 )
 _PRUNE_IS_MODEL: LiteralString = (
-    "MATCH (d:Device)-[r:IS_MODEL]->(m:HwModel) "
+    "MATCH (d:Entity:Device)-[r:IS_MODEL]->(m:Entity:HwModel) "
     "WHERE NOT d.entity_id + '|' + m.entity_id IN $keep DELETE r RETURN count(*) AS n"
 )
 _PRUNE_CONNECTS: LiteralString = (
-    "MATCH (s:Segment)-[r:CONNECTS]->(d:Device) "
+    "MATCH (s:Entity:Segment)-[r:CONNECTS]->(d:Entity:Device) "
     "WHERE NOT s.entity_id + '|' + d.entity_id + '|' + r.end IN $keep "
     "DELETE r RETURN count(*) AS n"
 )
@@ -467,7 +459,7 @@ _PRUNE_LINKS: LiteralString = (
     "MATCH ()-[r:LINKED]->() WHERE NOT r.link_id IN $keep DELETE r RETURN count(*) AS n"
 )
 _PRUNE_EVENT_ON: LiteralString = (
-    "MATCH (e:Event {origin: 'seed'})-[r:ON]->(d:Device) "
+    "MATCH (e:Event {origin: 'seed'})-[r:ON]->(d:Entity:Device) "
     "WHERE NOT e.event_id + '|' + d.entity_id IN $keep DELETE r RETURN count(*) AS n"
 )
 _PRUNE_GOLD_ASSERTIONS: LiteralString = (

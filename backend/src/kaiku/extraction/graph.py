@@ -90,7 +90,6 @@ class State(TypedDict, total=False):
     triage: Triage
     items: list[Item]
     cursor: int  # the rule reconcile and persist are on
-    failed: str
 
 
 Embed = Callable[[str], Awaitable[list[float] | None]]
