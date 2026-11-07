@@ -34,7 +34,7 @@ export function ScorecardPage() {
     return (
       <div className="page">
         <Empty title="No eval run yet">
-          <span className="mono">docker compose exec api kaiku eval run --set elisa</span> writes <span className="mono">eval/results/*.json</span>, shown here.
+          <span className="mono">cd backend && uv run kaiku eval run --set elisa</span> writes <span className="mono">eval/results/*.json</span>, shown here.
         </Empty>
       </div>
     )
