@@ -896,6 +896,7 @@ class ContextRepository:
         now: datetime,
         work: Any,
         on_behalf_of: str | None = None,
+        trigger_event_id: str | None = None,
     ) -> tuple[dict[str, Any], bool]:
         """Run `work(tx) -> dict` once per (agent, tool, key). Returns (result, replayed)."""
         key = f"{agent_id}:{tool}:{idempotency_key}"
@@ -914,8 +915,13 @@ class ContextRepository:
                 "CREATE (r:WriteReceipt {key: $key, result: $result, created_at: $now}) "
                 "CREATE (e:Event:AgentAction {event_id: $action, event_time: $now, "
                 "  platform: 'mcp', tool: $tool, agent_id: $agent, on_behalf_of: $behalf, "
-                "  idempotency_key: $ikey, ingested_at: $now}) "
-                "CREATE (e)-[:RECEIPT]->(r)",
+                "  idempotency_key: $ikey, trigger_event_id: $trigger, ingested_at: $now}) "
+                "CREATE (e)-[:RECEIPT]->(r) "
+                # Link the event that prompted the write when it is on record (a sim alarm
+                # may reach the agent before the graph).
+                "WITH e OPTIONAL MATCH (t:Event {event_id: $trigger}) "
+                "FOREACH (_ IN CASE WHEN t IS NULL THEN [] ELSE [1] END | "
+                "  CREATE (e)-[:TRIGGERED_BY]->(t))",
                 key=key,
                 result=json.dumps(result, default=_json_default),
                 now=now,
@@ -924,6 +930,7 @@ class ContextRepository:
                 agent=agent_id,
                 behalf=on_behalf_of,
                 ikey=idempotency_key,
+                trigger=trigger_event_id,
             )
             return result, False
 
@@ -949,6 +956,7 @@ class ContextRepository:
         evidence_ref: str | None,
         conditions_met: bool | None,
         on_behalf_of: str | None = None,
+        trigger_event_id: str | None = None,
     ) -> tuple[dict[str, Any], bool]:
         """An Outcome event (plan 001 §6.2). Evidence for the assertion:
         resolved -> SUPPORTS (support_n + 1);
@@ -1006,6 +1014,7 @@ class ContextRepository:
             now=now,
             work=work,
             on_behalf_of=on_behalf_of,
+            trigger_event_id=trigger_event_id,
         )
 
     async def open_gap(
@@ -1019,6 +1028,7 @@ class ContextRepository:
         context: str | None,
         routed_to: str | None,
         on_behalf_of: str | None = None,
+        trigger_event_id: str | None = None,
     ) -> tuple[dict[str, Any], bool]:
         gap_id = new_id("GAP")
 
@@ -1050,6 +1060,7 @@ class ContextRepository:
             now=now,
             work=work,
             on_behalf_of=on_behalf_of,
+            trigger_event_id=trigger_event_id,
         )
 
     async def propose(
@@ -1067,6 +1078,7 @@ class ContextRepository:
         evidence_event_ids: Sequence[str],
         rationale: str,
         on_behalf_of: str | None = None,
+        trigger_event_id: str | None = None,
     ) -> tuple[dict[str, Any], bool]:
         """An agent proposal: origin agent_proposal, status unverified, recorded now (R2:
         the proposal is itself the recording event), derived from existing events."""
@@ -1116,6 +1128,7 @@ class ContextRepository:
             now=now,
             work=work,
             on_behalf_of=on_behalf_of,
+            trigger_event_id=trigger_event_id,
         )
 
     async def flag(
@@ -1128,6 +1141,7 @@ class ContextRepository:
         reason: str,
         evidence_event_ids: Sequence[str],
         on_behalf_of: str | None = None,
+        trigger_event_id: str | None = None,
     ) -> tuple[dict[str, Any], bool]:
         flag_id = new_id("FLAG")
 
@@ -1165,6 +1179,7 @@ class ContextRepository:
             now=now,
             work=work,
             on_behalf_of=on_behalf_of,
+            trigger_event_id=trigger_event_id,
         )
 
 

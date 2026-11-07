@@ -76,6 +76,12 @@ When = Annotated[
     Field(description="ISO-8601 UTC instant; defaults to now"),
 ]
 EntityId = Annotated[str, Field(description="graph entity id, e.g. TRN-017, TNC-1X, SEG-042")]
+OnBehalfOf = Annotated[
+    str | None, Field(description="the person the agent acted for, e.g. a Slack user")
+]
+TriggerEventId = Annotated[
+    str | None, Field(description="the event that prompted this write, e.g. an alarm id")
+]
 IdempotencyKey = Annotated[
     str,
     Field(
@@ -349,9 +355,8 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         port: str | None = None,
         observed_at: When = None,
         evidence_ref: str | None = None,
-        on_behalf_of: Annotated[
-            str | None, Field(description="the person the agent acted for, e.g. a Slack user")
-        ] = None,
+        on_behalf_of: OnBehalfOf = None,
+        trigger_event_id: TriggerEventId = None,
     ) -> Annotated[CallToolResult, OutcomeRecorded]:
         """Record what happened after an action. Becomes evidence for the assertion:
         resolved supports it; not_resolved refutes it only if its conditions were met."""
@@ -367,6 +372,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
                 port=port,
                 evidence_ref=evidence_ref,
                 on_behalf_of=on_behalf_of,
+                trigger_event_id=trigger_event_id,
             )
         )
 
@@ -376,6 +382,8 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         entity_ids: Annotated[list[str], Field(min_length=1)],
         idempotency_key: IdempotencyKey,
         context: str | None = None,
+        on_behalf_of: OnBehalfOf = None,
+        trigger_event_id: TriggerEventId = None,
     ) -> Annotated[CallToolResult, GapOpened]:
         """Record that something isn't documented; it is routed to the most likely expert."""
         return await _call(
@@ -385,6 +393,8 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
                 entity_ids=entity_ids,
                 idempotency_key=idempotency_key,
                 context=context,
+                on_behalf_of=on_behalf_of,
+                trigger_event_id=trigger_event_id,
             )
         )
 
@@ -401,6 +411,8 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         qualifiers: dict[str, Any] | None = None,
         valid_from: When = None,
         valid_to: Annotated[datetime | None, Field(description="exclusive end, if any")] = None,
+        on_behalf_of: OnBehalfOf = None,
+        trigger_event_id: TriggerEventId = None,
     ) -> Annotated[CallToolResult, ProposalCreated]:
         """Propose new knowledge. It is stored as unverified until a person confirms it."""
         return await _call(
@@ -415,6 +427,8 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
                 qualifiers=qualifiers,
                 valid_from=valid_from,
                 valid_to=valid_to,
+                on_behalf_of=on_behalf_of,
+                trigger_event_id=trigger_event_id,
             )
         )
 
@@ -424,6 +438,8 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         reason: str,
         idempotency_key: IdempotencyKey,
         evidence_event_ids: list[str] | None = None,
+        on_behalf_of: OnBehalfOf = None,
+        trigger_event_id: TriggerEventId = None,
     ) -> Annotated[CallToolResult, FlagRecorded]:
         """Ask for a person to review a piece of knowledge (sets review_due)."""
         return await _call(
@@ -433,6 +449,8 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
                 reason=reason,
                 evidence_event_ids=evidence_event_ids or [],
                 idempotency_key=idempotency_key,
+                on_behalf_of=on_behalf_of,
+                trigger_event_id=trigger_event_id,
             )
         )
 

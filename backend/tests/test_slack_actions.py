@@ -76,7 +76,14 @@ class Answerer:
     def __init__(self, answer: OpsAnswer | Exception = ADVICE) -> None:
         self.answer, self.asked = answer, []
 
-    async def ask(self, question: str, *, request_id: str, asker: str | None = None) -> OpsAnswer:
+    async def ask(
+        self,
+        question: str,
+        *,
+        request_id: str,
+        asker: str | None = None,
+        trigger_event_id: str | None = None,
+    ) -> OpsAnswer:
         self.asked.append((question, request_id))
         if isinstance(self.answer, Exception):
             raise self.answer
@@ -153,7 +160,12 @@ def test_buttons_fit_the_answer() -> None:
     fault = a.answer_blocks(ADVICE, fault=FAULT[2])
     assert _action_ids(fault) == [a.RUN_BOUNCE, a.DONE_MANUALLY, a.DIDNT_WORK]
     value = json.loads(fault[-1]["elements"][0]["value"])
-    assert value == {"node": "TRN-017", "port": "1/1/2", "assertion_id": "ASR-0001"}
+    assert value == {
+        "node": "TRN-017",
+        "port": "1/1/2",
+        "assertion_id": "ASR-0001",
+        "trigger": "SIM-2",
+    }
     assert _action_ids(a.answer_blocks(UNKNOWN, question="q")) == [a.GAP_ASK, a.GAP_DONT_ASK]
     # Not documented never offers outcome buttons: there is no advice to confirm.
     assert a.RUN_BOUNCE not in _action_ids(a.answer_blocks(UNKNOWN, fault=FAULT[2]))
@@ -212,6 +224,7 @@ async def test_run_bounce_reports_a_network_confirmed_outcome_through_mcp() -> N
         "observed_at": NOW.isoformat(),  # when it was done: conditions are judged before it
         "evidence_ref": None,
         "on_behalf_of": "U5",
+        "trigger_event_id": "SIM-2",  # the fault the advice answered
         "idempotency_key": "slack:CALARM:9.000002",  # a double click replays
     }
     progress, final = client.updated

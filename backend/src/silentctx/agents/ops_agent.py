@@ -294,13 +294,21 @@ class OpsAgent:
                 log.info("ops_agent_ready", tools=sorted(t.name for t in self._tools))
             return self._tools, self._rules
 
-    async def ask(self, question: str, *, request_id: str, asker: str | None = None) -> OpsAnswer:
+    async def ask(
+        self,
+        question: str,
+        *,
+        request_id: str,
+        asker: str | None = None,
+        trigger_event_id: str | None = None,
+    ) -> OpsAnswer:
         tools, rules = await self._setup()
         now = datetime.now(UTC).replace(microsecond=0).isoformat()
         system = (
             f"{rules}\n\nCurrent time: {now} (UTC). Times you pass to tools are ISO-8601 UTC."
-            f"\nIf you open a knowledge gap, use idempotency_key={request_id!r}."
-            "\nFinish by returning the OpsAnswer."
+            f"\nIf you open a knowledge gap, use idempotency_key={request_id!r}"
+            + (f" and trigger_event_id={trigger_event_id!r}." if trigger_event_id else ".")
+            + "\nFinish by returning the OpsAnswer."
         )
         agent = create_agent(
             model=get_chat_model(self._settings, ModelRole.CHAT),

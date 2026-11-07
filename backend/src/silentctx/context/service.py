@@ -340,6 +340,7 @@ class ContextService:
         port: str | None = None,
         evidence_ref: str | None = None,
         on_behalf_of: str | None = None,
+        trigger_event_id: str | None = None,
     ) -> OutcomeRecorded:
         await self._require_entities([entity_id])
         observed = self._t(observed_at)
@@ -367,6 +368,7 @@ class ContextService:
             evidence_ref=evidence_ref,
             conditions_met=conditions_met,
             on_behalf_of=on_behalf_of,
+            trigger_event_id=trigger_event_id,
         )
         return OutcomeRecorded.model_validate({**out, "replayed": replayed})
 
@@ -379,6 +381,7 @@ class ContextService:
         idempotency_key: str,
         context: str | None = None,
         on_behalf_of: str | None = None,
+        trigger_event_id: str | None = None,
     ) -> GapOpened:
         if not question.strip():
             raise ContextError("the question is empty")
@@ -393,6 +396,7 @@ class ContextService:
             context=context,
             routed_to=routed_to,
             on_behalf_of=on_behalf_of,
+            trigger_event_id=trigger_event_id,
         )
         return GapOpened.model_validate({**out, "replayed": replayed})
 
@@ -410,6 +414,7 @@ class ContextService:
         valid_from: datetime | None = None,
         valid_to: datetime | None = None,
         on_behalf_of: str | None = None,
+        trigger_event_id: str | None = None,
     ) -> ProposalCreated:
         if not statement.strip():
             raise ContextError("the statement is empty")
@@ -439,6 +444,7 @@ class ContextService:
             evidence_event_ids=evidence_event_ids,
             rationale=rationale.strip(),
             on_behalf_of=on_behalf_of,
+            trigger_event_id=trigger_event_id,
         )
         out["bindings"] = [Binding.model_validate(b) for b in out["bindings"]]
         return ProposalCreated.model_validate({**out, "replayed": replayed})
@@ -452,6 +458,7 @@ class ContextService:
         evidence_event_ids: Sequence[str],
         idempotency_key: str,
         on_behalf_of: str | None = None,
+        trigger_event_id: str | None = None,
     ) -> FlagRecorded:
         if not reason.strip():
             raise ContextError("a flag needs a reason")
@@ -466,6 +473,7 @@ class ContextService:
             reason=reason.strip(),
             evidence_event_ids=evidence_event_ids,
             on_behalf_of=on_behalf_of,
+            trigger_event_id=trigger_event_id,
         )
         return FlagRecorded.model_validate({**out, "replayed": replayed})
 

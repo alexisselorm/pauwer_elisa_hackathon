@@ -446,8 +446,32 @@ async def test_mcp_tools_end_to_end(neo4j_url: str, make_settings: Callable[...,
             question="Which firmware fixes the forwarding bug?",
             entity_ids=["TNC-1X"],
             idempotency_key="it-gap-1",
+            on_behalf_of="U-ELISA",
+            trigger_event_id=first["event_id"],
         )["structuredContent"]
         assert gap["routed_to"] == "erkki"
+        [act] = _query(
+            neo4j_url,
+            "MATCH (e:AgentAction {tool: 'open_knowledge_gap'}) "
+            "OPTIONAL MATCH (e)-[:TRIGGERED_BY]->(t:Event) "
+            "RETURN e.on_behalf_of AS by, e.trigger_event_id AS trigger, t.event_id AS linked",
+        )
+        assert act == {"by": "U-ELISA", "trigger": first["event_id"], "linked": first["event_id"]}
+
+        # ST-52: an unknown entity is a tool error and nothing is written.
+        writes = "MATCH (n) WHERE n:Outcome OR n:KnowledgeGap OR n:AgentAction RETURN count(n) AS n"
+        before = _query(neo4j_url, writes)
+        for tool, call_args in [
+            ("report_outcome", {**args, "entity_id": "NOPE-1", "idempotency_key": "it-nope-1"}),
+            (
+                "open_knowledge_gap",
+                {"question": "q?", "entity_ids": ["NOPE-1"], "idempotency_key": "it-nope-2"},
+            ),
+        ]:
+            refused_write = mcp.call(tool, **call_args)
+            assert refused_write["isError"] is True
+            assert "NOPE-1" in refused_write["content"][0]["text"]
+        assert _query(neo4j_url, writes) == before
 
         proposal = mcp.call(
             "propose_assertion",

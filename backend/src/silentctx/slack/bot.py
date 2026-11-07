@@ -43,7 +43,12 @@ log = get_logger(__name__)
 
 class Answerer(Protocol):
     async def ask(
-        self, question: str, *, request_id: str, asker: str | None = None
+        self,
+        question: str,
+        *,
+        request_id: str,
+        asker: str | None = None,
+        trigger_event_id: str | None = None,
     ) -> OpsAnswer: ...
 
 

@@ -64,7 +64,14 @@ class _Answerer:
         self.asked: list[tuple[str, str, str | None]] = []
         self.fail = fail
 
-    async def ask(self, question: str, *, request_id: str, asker: str | None = None) -> OpsAnswer:
+    async def ask(
+        self,
+        question: str,
+        *,
+        request_id: str,
+        asker: str | None = None,
+        trigger_event_id: str | None = None,
+    ) -> OpsAnswer:
         self.asked.append((question, request_id, asker))
         if self.fail:
             raise TimeoutError("featherless slow")

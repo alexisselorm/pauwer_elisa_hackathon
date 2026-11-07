@@ -214,9 +214,35 @@
           "title": "Idempotency Key",
           "type": "string"
         },
+        "on_behalf_of": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the person the agent acted for, e.g. a Slack user",
+          "title": "On Behalf Of"
+        },
         "reason": {
           "title": "Reason",
           "type": "string"
+        },
+        "trigger_event_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the event that prompted this write, e.g. an alarm id",
+          "title": "Trigger Event Id"
         }
       },
       "required": [
@@ -2273,10 +2299,36 @@
           "title": "Idempotency Key",
           "type": "string"
         },
+        "on_behalf_of": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the person the agent acted for, e.g. a Slack user",
+          "title": "On Behalf Of"
+        },
         "question": {
           "description": "the question nobody has documented",
           "title": "Question",
           "type": "string"
+        },
+        "trigger_event_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the event that prompted this write, e.g. an alarm id",
+          "title": "Trigger Event Id"
         }
       },
       "required": [
@@ -2399,6 +2451,19 @@
           "title": "Idempotency Key",
           "type": "string"
         },
+        "on_behalf_of": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the person the agent acted for, e.g. a Slack user",
+          "title": "On Behalf Of"
+        },
         "qualifiers": {
           "anyOf": [
             {
@@ -2431,6 +2496,19 @@
           ],
           "default": null,
           "title": "Topic"
+        },
+        "trigger_event_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the event that prompted this write, e.g. an alarm id",
+          "title": "Trigger Event Id"
         },
         "valid_from": {
           "anyOf": [
@@ -2672,6 +2750,19 @@
         },
         "result": {
           "$ref": "#/$defs/OutcomeResult"
+        },
+        "trigger_event_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the event that prompted this write, e.g. an alarm id",
+          "title": "Trigger Event Id"
         }
       },
       "required": [

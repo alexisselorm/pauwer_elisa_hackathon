@@ -46,7 +46,12 @@ TRAFFIC_MBPS = 0.01  # the "traffic zero" threshold of the telemetry spec
 
 class Answerer(Protocol):
     async def ask(
-        self, question: str, *, request_id: str, asker: str | None = None
+        self,
+        question: str,
+        *,
+        request_id: str,
+        asker: str | None = None,
+        trigger_event_id: str | None = None,
     ) -> OpsAnswer: ...
 
 
@@ -112,6 +117,7 @@ def answer_blocks(
             "node": fault["ne_id"],
             "port": fault["port"],
             "assertion_id": answer.steps[0].assertion_ids[0],
+            "trigger": fault.get("event_id"),
         }
         blocks.append(
             actions(
@@ -254,7 +260,9 @@ class OpsActions:
             f"{port} and say what to do next."
         )
         try:
-            answer = await self.answerer.ask(question, request_id=f"sim:{ev['event_id']}")
+            answer = await self.answerer.ask(
+                question, request_id=f"sim:{ev['event_id']}", trigger_event_id=ev["event_id"]
+            )
             text, blocks = format_answer(answer), answer_blocks(answer, fault=ev)
         except Exception as exc:  # the alarm thread always gets a reply
             log.exception("proactive_answer_failed", event_id=ev["event_id"])
@@ -308,6 +316,7 @@ class OpsActions:
                     "observed_at": acted_at.isoformat(),
                     "evidence_ref": evidence,
                     "on_behalf_of": user,
+                    "trigger_event_id": v.get("trigger"),
                     "idempotency_key": f"slack:{channel}:{ts}",
                 },
             )
