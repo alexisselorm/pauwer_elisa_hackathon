@@ -51,10 +51,14 @@ Answer with relevant, kind and a one-line reason."""
 
 EXTRACT_PROMPT = """Extract the reusable operational knowledge from this thread as rules.
 Usually there is one rule; return none if there is no answer that teaches something.
+When people disagree (one says "I just power-cycle it", another "do NOT power-cycle"),
+extract EACH side as its own rule, even the one that was argued against.
 
 Rules for every field:
 - Every quote is copied EXACTLY from one message (same words, no paraphrase). No quote, no field.
 - The action is what the answering expert said to do. Never take it from a question.
+  For site access the action is how to get in: who has the key or code, or what to open
+  (get_key, get_code), quoted from where it was said.
   A suggestion that was rejected ("So another SFP?" -> "No") goes into avoid.
 - value is a short snake_case token. Use these where they fit:
   symptoms: oper_up, rx_power_normal, counters_zero, alarms_cleared
@@ -75,7 +79,9 @@ assertion, say how the new one relates to it:
 - duplicate: the same knowledge
 - corroborates: agrees with it, from another source or angle
 - supersedes: something changed in the world (new lock, new firmware), so the new one replaces
-  it from now on. Use this even when the author calls it a "correction" of their earlier advice
+  it from now on. A new statement that a thing "was changed / replaced / is now" something
+  else, about the same place or equipment, supersedes the earlier description of it.
+  Use this even when the author calls it a "correction" of their earlier advice
   because of a change.
 - corrects: the earlier statement misread the same conversation, or a detail of it was wrong
   from the start (a wrong port, a typo)
@@ -106,6 +112,20 @@ def _thread_text(thread: ThreadView) -> str:
     )
 
 
+def _parsed(out: Any) -> Any:
+    """LangChain's parse if it worked, else the JSON the model actually wrote."""
+    if out.get("parsed") is not None:
+        return out["parsed"]
+    raw = out.get("raw")
+    calls = getattr(raw, "tool_calls", None) or []
+    if calls:
+        return calls[0]["args"]
+    text = str(getattr(raw, "content", "") or "").strip()
+    if text.startswith("```"):
+        text = text.strip("`").removeprefix("json").strip()
+    return json.loads(text)
+
+
 def _unwrap(schema: type[BaseModel], out: Any) -> Any:
     """Kimi sometimes answers `{"rules": [...]}` as a bare `[...]` or `[{"rules": [...]}]`.
     For a schema that is one list field, take either shape instead of paying for a retry."""
@@ -133,7 +153,11 @@ class LlmJudge:
     async def _call[T: BaseModel](
         self, role: ModelRole, schema: type[T], system: str, user: str
     ) -> T:
-        runnable = self._model(role).with_structured_output(schema)
+        # A dict schema, not the class: the OpenAI client would otherwise validate inside the
+        # call and reject Kimi's bare-list answers before `_unwrap` sees them.
+        runnable = self._model(role).with_structured_output(
+            schema.model_json_schema() | {"title": schema.__name__}, include_raw=True
+        )
         last: Exception | None = None
         for attempt in (1, 2):
             start = time.monotonic()
@@ -141,7 +165,7 @@ class LlmJudge:
                 out = await asyncio.wait_for(
                     runnable.ainvoke([("system", system), ("user", user)]), TIMEOUT_S
                 )
-                result = schema.model_validate(_unwrap(schema, out))
+                result = schema.model_validate(_unwrap(schema, _parsed(out)))
             except Exception as exc:  # noqa: BLE001  # timeout, provider error, bad JSON: retry
                 last = exc
                 log.warning(
@@ -172,7 +196,9 @@ class LlmJudge:
         user = f"Kind of knowledge: {kind}\n\n{_thread_text(thread)}"
         return await self._call(ModelRole.CHAT, Extraction, system, user)
 
-    async def relate(self, draft: RuleDraft, candidates: list[dict[str, Any]]) -> list[Relation]:
+    async def relate(
+        self, draft: RuleDraft, candidates: list[dict[str, Any]], starts: str = ""
+    ) -> list[Relation]:
         if not candidates:
             return []
         earlier = [
@@ -182,11 +208,14 @@ class LlmJudge:
                 "author": c.get("author"),
                 "source": c.get("platform"),
                 "recorded_at": str(c.get("recorded_at")),
+                "valid_from": str(c.get("valid_from")),
+                "action": json.loads(c.get("qualifiers_json") or "{}").get("action"),
             }
             for c in candidates
         ]
         user = (
             f"New: {draft.statement}\n"
+            f"Starts: {starts or 'when it was said'}\n"
             f"Action: {draft.action.value if draft.action else None}; "
             f"avoid: {[a.value for a in draft.avoid]}\n\n"
             f"Earlier:\n{json.dumps(earlier, indent=1)}"

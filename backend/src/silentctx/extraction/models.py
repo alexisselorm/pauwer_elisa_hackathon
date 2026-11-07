@@ -108,5 +108,5 @@ class Judge(Protocol):
     ) -> Extraction: ...
 
     async def relate(
-        self, draft: RuleDraft, candidates: list[dict[str, Any]]
+        self, draft: RuleDraft, candidates: list[dict[str, Any]], starts: str = ""
     ) -> list[Relation]: ...

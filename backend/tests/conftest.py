@@ -45,3 +45,15 @@ def make_settings(tmp_path: Path) -> Callable[..., Settings]:
         return Settings(_env_file=None, **values)
 
     return _make
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Live tests call real LLMs and post to the real Slack workspace: they run only when
+    asked for by name (`-m live`). Any other -m expression would otherwise select them."""
+    expr = config.option.markexpr or ""
+    if "live" in expr and "not live" not in expr:
+        return
+    skip = pytest.mark.skip(reason="live test: run with -m live")
+    for item in items:
+        if "live" in item.keywords:
+            item.add_marker(skip)

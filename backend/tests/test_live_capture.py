@@ -7,6 +7,7 @@ import asyncio
 import json
 import time
 from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -19,7 +20,13 @@ from silentctx.extraction.llm import LlmJudge
 from silentctx.ingest.store import MessageView, ThreadView
 from silentctx.seed.sources import MockData
 from tests.capture_helpers import MOCK_DATA, elisa_thread
-from tests.test_integration_capture import MSG8, Rig, driver, slack_events  # noqa: F401
+from tests.test_integration_capture import (  # noqa: F401
+    MSG8,
+    Rig,
+    _thread,
+    driver,
+    slack_events,
+)
 from tests.test_integration_neo4j import neo4j_url  # noqa: F401
 
 pytestmark = [pytest.mark.live, pytest.mark.integration]
@@ -156,3 +163,66 @@ async def test_live_triage_and_resolution_ignore_chatter(judge: LlmJudge) -> Non
     assert not kept[-1], "H-04 must be ignored"
     assert sum(kept) / len(threads) <= 0.1
     assert sum(fired) / len(threads) <= 0.1
+
+
+def _corpus(conversation: str) -> list[tuple[datetime, str, str, str]]:
+    return [
+        (datetime.fromisoformat(m["created_at"]), m["author_name"], m["role"], m["text"])
+        for m in MockData(MOCK_DATA).teams_messages()
+        if m["conversation_id"] == conversation
+    ]
+
+
+KEMI_BARRIER = "19:a6b3a2e9d6e224ea4f96ab06@thread.v2"
+KMAX_PAIR = "19:db38376029ab9bc7df60d2f1@thread.v2"
+CODE_LOCK_EMAIL = (
+    "Kemi site: new code lock installed (action for field ops)\n\nHello,\n\nThe Kemi transport "
+    "room gate lock was changed to a code lock during the barrier repair on 3 August. The new "
+    "code is handed out by site security. Please update the access register; I have not been "
+    "able to access the register so this email is the source.\n\nTimo"
+)
+
+
+async def test_live_corpus_access_supersession_and_dispute(
+    driver: AsyncDriver,  # noqa: F811
+    judge: LlmJudge,
+) -> None:
+    """With the real models on corpus text: ST-09a (the Kemi barrier thread is kept as
+    access), ST-11 (bound to SEG-042, not a node), ST-22 (the code-lock email supersedes the
+    padlock from 3 August) and the KMAX-4K pair (both disputed)."""
+    rig = Rig(driver, judge)  # type: ignore[arg-type]
+
+    await _thread(rig, "kemi-barrier", _corpus(KEMI_BARRIER), platform="teams")
+    (barrier,) = await rig.loop.sweep_once()
+    print(f"\nbarrier: {barrier.status} {barrier.kind}: {barrier.reason}")
+    assert barrier.kind == "access"  # ST-09a
+    assert barrier.status == "captured"
+    (padlock_id,) = barrier.assertion_ids
+    (padlock,) = await rig.repo.assertions([padlock_id])
+    bound = {b.entity_id for b in padlock.bindings}
+    print(" padlock:", padlock.statement, sorted(bound))
+    assert "SEG-042" in bound  # ST-11
+    assert not any(e.startswith("TRN-") for e in bound)
+
+    sent = datetime(2026, 8, 18, 10, 20, 40, tzinfo=UTC)
+    await _thread(
+        rig, "kemi-email", [(sent, "Timo Heikkinen", "", CODE_LOCK_EMAIL)], platform="email"
+    )
+    (email,) = await rig.loop.sweep_once()
+    (code_id,) = email.assertion_ids
+    old, new = await rig.repo.assertions([padlock_id, code_id])
+    print(" code lock:", new.statement, new.valid_from, "| padlock:", old.status, old.valid_to)
+    aug3 = datetime(2026, 8, 2, 21, tzinfo=UTC)
+    assert new.valid_from == aug3  # ST-22
+    assert new.recorded_at == sent
+    assert old.status == "superseded"
+    assert old.valid_to == aug3
+
+    await _thread(rig, "kmax", _corpus(KMAX_PAIR), platform="teams")
+    (kmax,) = await rig.loop.sweep_once()
+    views = await rig.repo.assertions(kmax.assertion_ids)
+    print(" kmax:", [(v.statement[:60], v.status, v.qualifiers.get("action")) for v in views])
+    restart = [v for v in views if v.qualifiers.get("action") == "power_cycle_radio"]
+    assert restart, "the power-cycle rule is captured"
+    assert all(v.status == "disputed" for v in restart)
+    assert any(v.contradicts for v in views)

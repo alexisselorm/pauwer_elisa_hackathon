@@ -52,13 +52,22 @@ class SlackIngest:
         channels: Collection[str] = (),
         skip_channels: Collection[str] = (),
         workspace_url: str | None = None,
+        persona_bot_id: str | None = None,
         clock: Callable[[], datetime] = _now,
     ) -> None:
         self.store = store
+        # The demo replay (002 §3.6) posts people's words as personas through this bot:
+        # a message from this bot WITH a `username` override is a person's; the bot's own
+        # cards and answers never set one, and other bots are never captured.
+        self.persona_bot_id = persona_bot_id
         self.channels = set(channels)
         self.skip = set(skip_channels)
         self.workspace_url = (workspace_url or "").rstrip("/") or None
         self.clock = clock
+
+    def _not_people(self, m: Mapping[str, Any]) -> bool:
+        persona = bool(m.get("username")) and m.get("bot_id") == self.persona_bot_id
+        return _from_bot(m) and not (self.persona_bot_id and persona)
 
     def watched(self, channel: str | None) -> bool:
         if not channel or channel in self.skip:
@@ -85,7 +94,7 @@ class SlackIngest:
             thread_id=slack_thread_id(channel, m),
             event_time=slack_ts_to_datetime(at),
             platform_seq=at,
-            author=m.get("user"),
+            author=m.get("user") or m.get("username"),
             text=text,
             permalink=self._permalink(channel, m["ts"], m.get("thread_ts")),
             resolution=trigger.is_resolution(text),
@@ -104,7 +113,7 @@ class SlackIngest:
         subtype = event.get("subtype")
         if subtype == "message_changed":
             m = event.get("message") or {}
-            if _from_bot(m) or "ts" not in m:
+            if self._not_people(m) or "ts" not in m:
                 return None
             at = (m.get("edited") or {}).get("ts") or event["ts"]
             original = slack_event_id(channel, m["ts"])
@@ -113,7 +122,7 @@ class SlackIngest:
             )
         if subtype == "message_deleted":
             prev = event.get("previous_message") or {"ts": event.get("deleted_ts")}
-            if _from_bot(prev) or not prev.get("ts"):
+            if self._not_people(prev) or not prev.get("ts"):
                 return None
             original = slack_event_id(channel, prev["ts"])
             msg = self._message(
@@ -124,7 +133,7 @@ class SlackIngest:
                 deletes=original,
             )
             return msg.model_copy(update={"text": "", "resolution": False})
-        if subtype not in _WORDS or _from_bot(event) or "ts" not in event:
+        if subtype not in _WORDS | {"bot_message"} or self._not_people(event) or "ts" not in event:
             return None
         return self._message(
             channel, event, event_id=slack_event_id(channel, event["ts"]), at=event["ts"]

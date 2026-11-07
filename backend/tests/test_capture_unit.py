@@ -629,3 +629,95 @@ def test_llm_list_answers_are_unwrapped_instead_of_retried() -> None:
     assert len(Extraction.model_validate(wrapped).rules) == 1
     triage = {"relevant": True, "kind": "rule", "reason": "x"}
     assert _unwrap(Triage, triage) == triage
+
+
+async def test_replay_personas_are_people_but_the_bots_own_posts_are_not() -> None:
+    """002 §3.6: the demo replay posts as personas through this bot."""
+    ingest, _ = _ingest(persona_bot_id="B_US")
+    persona = {
+        **MSG,
+        "user": None,
+        "bot_id": "B_US",
+        "subtype": "bot_message",
+        "username": "Erkki Expert",
+    }
+    msg = await ingest.on_message(persona)
+    assert msg is not None
+    assert msg.author == "Erkki Expert"
+    card = {**MSG, "ts": "1760422999.000000", "user": None, "bot_id": "B_US"}
+    assert await ingest.on_message(card) is None  # our own card or answer
+    other = {**persona, "ts": "1760423000.000000", "bot_id": "B_OTHER"}
+    assert await ingest.on_message(other) is None  # someone else's bot
+
+
+def test_a_rejected_parse_falls_back_to_the_raw_answer() -> None:
+    from langchain_core.messages import AIMessage
+
+    from silentctx.extraction.llm import _parsed, _unwrap
+    from silentctx.extraction.models import Extraction
+
+    rule = ELISA_RULE.model_dump(mode="json")
+    raw = AIMessage(content="```json\n" + json.dumps([{"rules": [rule]}]) + "\n```")
+    out = {"raw": raw, "parsed": None, "parsing_error": ValueError("list")}
+    assert len(Extraction.model_validate(_unwrap(Extraction, _parsed(out))).rules) == 1
+    assert _parsed({"raw": raw, "parsed": {"rules": []}}) == {"rules": []}
+
+
+def test_when_no_mention_resolves_the_thread_text_still_links_the_place() -> None:
+    text = "Locked barrier at the start of the private road to the Kemi transport room."
+    linked = link([Mention(surface_form="key box")], text, TriageKind.ACCESS, inventory(), MSG8)
+    assert {b.entity_id for b in linked.bindings} == {"SEG-042"}
+
+
+def test_a_supersession_minutes_later_in_the_same_thread_is_a_disagreement() -> None:
+    """Live finding on the KMAX-4K pair; H-07 (weeks apart) still supersedes."""
+    minutes = _decide("supersedes", _cand("A", thread="t1"), vf=T1 + timedelta(minutes=12))
+    assert minutes.contradicts == ["A"]
+    assert minutes.supersede is None
+    assert (
+        _decide("supersedes", _cand("A", thread="t1"), vf=T1 + timedelta(weeks=7)).supersede == "A"
+    )
+
+
+def test_do_x_against_avoid_x_is_a_contradiction_whatever_the_judge_says() -> None:
+    """Live finding on the KMAX-4K pair: the judge missed it in one run."""
+    juhani = _cand("J", thread="t1", qualifiers_json=json.dumps({"avoid": ["power_cycle_radio"]}))
+    d = reconcile.decide(
+        thread_id="t1",
+        valid_from=T1,
+        candidates=[juhani],
+        relations=[Relation(assertion_id="J", relation="unrelated")],
+        action="power_cycle_radio",
+    )
+    assert d.contradicts == ["J"]
+    heikki = _cand("H", qualifiers_json=json.dumps({"action": "power_cycle_radio"}))
+    d2 = reconcile.decide(
+        thread_id="t1",
+        valid_from=T1,
+        candidates=[heikki],
+        relations=[],
+        action="export_config",
+        avoid=["power_cycle_radio"],
+    )
+    assert d2.contradicts == ["H"]
+
+
+def test_same_action_from_the_same_thread_is_the_rule_already_captured() -> None:
+    """Live finding: after messages 10-12 the judge didn't call the re-read a duplicate."""
+    mine = _cand("A", thread="t1", qualifiers_json=json.dumps({"action": "bounce_interface"}))
+    d = reconcile.decide(
+        thread_id="t1",
+        valid_from=T1,
+        candidates=[mine],
+        relations=[Relation(assertion_id="A", relation="corroborates")],
+        action="bounce_interface",
+    )
+    assert d.skip_as == "A"
+    fixed = reconcile.decide(
+        thread_id="t1",
+        valid_from=T1,
+        candidates=[mine],
+        relations=[Relation(assertion_id="A", relation="corrects")],
+        action="bounce_interface",
+    )
+    assert fixed.correct == "A"

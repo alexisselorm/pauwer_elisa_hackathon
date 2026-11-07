@@ -132,7 +132,9 @@ class FakeJudge:
         self.calls.append("extract")
         return Extraction(rules=self.rules)
 
-    async def relate(self, draft: RuleDraft, candidates: list[dict[str, Any]]) -> list[Relation]:
+    async def relate(
+        self, draft: RuleDraft, candidates: list[dict[str, Any]], starts: str = ""
+    ) -> list[Relation]:
         self.calls.append("relate")
         out = []
         for c in candidates:

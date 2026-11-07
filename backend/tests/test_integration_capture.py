@@ -636,3 +636,76 @@ async def test_backfill_is_idempotent_and_respects_the_demo_profile(driver: Asyn
         "MATCH (m:Message {event_id: 'elisa:teams_chat:8'}) RETURN m.event_time AS t"
     )
     assert records[0]["t"].to_native() == MSG8
+
+
+async def test_two_experts_disagreeing_in_one_thread_are_both_disputed(
+    driver: AsyncDriver,
+) -> None:
+    """KMAX-4K, as in the corpus: both rules come from ONE conversation, so the second rule
+    must be reconciled against the first after it is persisted."""
+    t = datetime(2026, 6, 2, 11, tzinfo=UTC)
+    rows = [
+        (
+            t,
+            "Heikki Lehtonen",
+            "Contractor Coordinator",
+            "RF alarm is up on the Kajaani hop. "
+            "I usually just power-cycle the radio (the KMAX-4K).",
+        ),
+        (
+            t + timedelta(minutes=12),
+            "Juhani Virtanen",
+            "Access Engineer",
+            "Please do NOT power-cycle KMAX-4K. Export the config first and escalate.",
+        ),
+    ]
+    rig = Rig(driver, FakeJudge(relations={"*": "contradicts"}))
+    rig.judge.rules = [
+        _rule(
+            "Power-cycle a KMAX-4K on an RF alarm.",
+            ("power_cycle_radio", "power-cycle the radio"),
+            ["KMAX-4K"],
+        ),
+        _rule(
+            "Never power-cycle a KMAX-4K; export the config first.",
+            ("export_config", "Export the config first and escalate"),
+            ["KMAX-4K"],
+        ),
+    ]
+    await _thread(rig, "kmax", rows)
+    (r,) = await rig.loop.sweep_once()
+    one, two = r.assertion_ids
+    x, y = await rig.repo.assertions([one, two])
+    assert (x.status, y.status) == ("disputed", "disputed")
+    assert y.contradicts == [one]
+
+
+async def test_vector_search_finds_a_candidate_topic_and_entity_would_miss(
+    driver: AsyncDriver,
+) -> None:
+    """BE-3.3: candidates include the vector hits (real Neo4j vector index)."""
+    vec = [1.0] + [0.0] * 1023
+    rig = Rig(driver, FakeJudge())
+    await rig.q(
+        "CREATE (:Event:Document {event_id: 'pdf-1', event_time: datetime('2019-11-12T09:00:00Z'), "
+        "platform: 'pdf', test_capture: true})"
+    )
+    note = await rig.repo.assert_(
+        AssertionIn(
+            statement="Gen1 units: a port bounce cleared the forwarding issue in 4/4 cases.",
+            topic="upgrade_notes",  # neither the draft's topic nor its entities
+            bindings=[{"entity_id": "TOPIC:upgrade_sfp_400g", "scope": "activity"}],
+            sources=[{"event_id": "pdf-1", "quote": "port bounce cleared"}],
+        )
+    )
+    await rig.repo.set_embeddings([{"id": note.assertion_id, "vector": vec}])
+    await rig.q("CALL db.awaitIndexes(60)")
+
+    async def embed(text: str) -> list[float] | None:
+        return vec
+
+    rig.loop.extractor.embed = embed
+    rig.judge.relations = {note.assertion_id: "corroborates"}
+    aid = await _capture_elisa(rig)
+    (a,) = await rig.repo.assertions([aid])
+    assert a.corroborates == [note.assertion_id]

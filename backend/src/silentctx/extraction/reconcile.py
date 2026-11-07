@@ -16,9 +16,10 @@ recency > author role > channel.
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Mapping, Sequence
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from pydantic import BaseModel
@@ -49,6 +50,12 @@ def rank_key(recorded_at: datetime, role: str | None, platform: str | None) -> t
     return (recorded_at, role_rank(role), channel_authority(platform))
 
 
+# Nothing changes in the world mid-conversation: a reply that "supersedes" advice given
+# minutes earlier in the same thread is a disagreement (KMAX-4K), while H-07's correction
+# seven weeks later is a supersession.
+SAME_CONVERSATION = timedelta(days=1)
+
+
 class Decision(BaseModel):
     skip_as: str | None = None  # already known from this thread: nothing to write
     correct: str | None = None
@@ -63,10 +70,33 @@ def decide(
     valid_from: datetime,
     candidates: Sequence[Mapping[str, Any]],
     relations: Sequence[Relation],
+    action: str | None = None,
+    avoid: Sequence[str] = (),
 ) -> Decision:
     by_id = {c["assertion_id"]: c for c in candidates}
     d = Decision()
     superseded: list[Mapping[str, Any]] = []
+    # One says do X, the other says avoid X: a disagreement, whatever the judge said.
+    judged = {r.assertion_id: r for r in relations}
+    for cand in candidates:
+        q = json.loads(cand.get("qualifiers_json") or "{}")
+        if (action and action in (q.get("avoid") or [])) or (q.get("action") in avoid):
+            judged[cand["assertion_id"]] = Relation(
+                assertion_id=cand["assertion_id"], relation=RelationKind.CONTRADICTS
+            )
+        # The thread re-read after more replies: the same action from the same thread is
+        # the knowledge already captured, unless the judge says the new one corrects it.
+        elif (
+            action
+            and q.get("action") == action
+            and thread_id in (cand.get("threads") or [])
+            and getattr(judged.get(cand["assertion_id"]), "relation", None)
+            is not RelationKind.CORRECTS
+        ):
+            judged[cand["assertion_id"]] = Relation(
+                assertion_id=cand["assertion_id"], relation=RelationKind.DUPLICATE
+            )
+    relations = list(judged.values())
     for r in relations:
         c = by_id.get(r.assertion_id)
         if c is None or r.relation is RelationKind.UNRELATED:
@@ -78,7 +108,11 @@ def decide(
             d.corroborates.append(c["assertion_id"])
         elif r.relation is RelationKind.CORRECTS and same_thread:
             d.correct = d.correct or c["assertion_id"]
-        elif r.relation is RelationKind.SUPERSEDES and valid_from > c["valid_from"]:
+        elif (
+            r.relation is RelationKind.SUPERSEDES
+            and valid_from > c["valid_from"]
+            and not (same_thread and valid_from - c["valid_from"] < SAME_CONVERSATION)
+        ):
             superseded.append(c)
         else:  # contradicts, a correction from elsewhere, or a "supersedes" that starts earlier
             d.contradicts.append(c["assertion_id"])

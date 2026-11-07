@@ -213,6 +213,7 @@ async def run(settings: Settings) -> None:
     identity = await app.client.auth_test()
     cards.client = app.client
     ingest.workspace_url = (identity.get("url") or "").rstrip("/") or None
+    ingest.persona_bot_id = identity.get("bot_id")
     if (log_target := await cards.log_target(app.client)) is not None:
         ingest.skip.add(log_target)  # the audit channel is not a source
     handler = AsyncSocketModeHandler(app, settings.slack_app_token.get_secret_value())

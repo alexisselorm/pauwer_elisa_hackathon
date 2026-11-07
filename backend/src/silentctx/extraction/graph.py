@@ -73,6 +73,7 @@ class State(TypedDict, total=False):
     thread: ThreadView
     triage: Triage
     items: list[Item]
+    cursor: int  # the rule reconcile and persist are on
     failed: str
 
 
@@ -100,7 +101,9 @@ class Extractor:
         g.add_edge("link", "validate")
         g.add_edge("validate", "reconcile")
         g.add_edge("reconcile", "persist")
-        g.add_edge("persist", END)
+        # One rule at a time, so a rule sees the ones persisted before it from the same
+        # thread (the KMAX-4K pair disagrees within one conversation).
+        g.add_conditional_edges("persist", self._more, {True: "reconcile", False: END})
         self.graph = g.compile()
 
     async def run(self, thread: ThreadView) -> CaptureResult:
@@ -145,6 +148,10 @@ class Extractor:
     @staticmethod
     def _has_items(state: State) -> bool:
         return bool(state.get("items"))
+
+    @staticmethod
+    def _more(state: State) -> bool:
+        return state["cursor"] < len(state["items"])
 
     # --- Nodes -------------------------------------------------------------------------------
 
@@ -216,7 +223,7 @@ class Extractor:
                     if result["telemetry"] == "agrees":
                         break
             items.append(item.model_copy(update=update))
-        return {"items": items}
+        return {"items": items, "cursor": 0}
 
     async def _check(
         self, entity_id: str, named: list[str], claimed: list[str], g: gates.Grounded
@@ -240,9 +247,9 @@ class Extractor:
     async def _reconcile(self, state: State) -> dict[str, Any]:
         thread = state["thread"]
         items = []
-        for item in state["items"]:
+        for i, item in enumerate(state["items"]):
             g, linked = item.grounded, item.linked
-            if item.dropped or g is None or linked is None:
+            if i != state["cursor"] or item.dropped or g is None or linked is None:
                 items.append(item)
                 continue
             extra: list[str] = []
@@ -260,12 +267,14 @@ class Extractor:
                 ),
                 reverse=True,
             )
-            relations = await self.judge.relate(g.draft, candidates)
+            relations = await self.judge.relate(g.draft, candidates, g.valid_from.isoformat())
             decision = reconcile.decide(
                 thread_id=thread.thread_id,
                 valid_from=g.valid_from,
                 candidates=candidates,
                 relations=relations,
+                action=g.draft.action.value if g.draft.action else None,
+                avoid=[a.value for a in g.draft.avoid],
             )
             items.append(item.model_copy(update={"decision": decision}))
         return {"items": items}
@@ -273,9 +282,9 @@ class Extractor:
     async def _persist(self, state: State) -> dict[str, Any]:
         thread, triage = state["thread"], state["triage"]
         items = []
-        for item in state["items"]:
+        for i, item in enumerate(state["items"]):
             g, linked, d = item.grounded, item.linked, item.decision
-            if item.dropped or g is None or linked is None or d is None:
+            if i != state["cursor"] or item.dropped or g is None or linked is None or d is None:
                 items.append(item)
                 continue
             if d.skip_as:
@@ -343,4 +352,4 @@ class Extractor:
                     }
                 )
             )
-        return {"items": items}
+        return {"items": items, "cursor": state["cursor"] + 1}

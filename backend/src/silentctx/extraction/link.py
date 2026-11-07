@@ -256,6 +256,15 @@ def link(
                 by_id[top.entity_id.casefold()], mention.role, top.confidence, mention.surface_form
             )
 
+    # Nothing named resolved: the thread's own words ("the private road to the Kemi transport
+    # room"), so the model's choice of mentions can't lose a place the people did name.
+    if not any(b.scope is not Scope.ACTIVITY for b in found.values()):
+        whole = resolve(thread_text, inventory, {}, valid_from)
+        if kind is TriageKind.ACCESS:
+            whole = [c for c in whole if c.entity_type != "device"] or whole
+        if whole and (len(whole) == 1 or whole[0].confidence - whole[1].confidence >= TIE):
+            bind(by_id[whole[0].entity_id.casefold()], None, whole[0].confidence, "the thread")
+
     # A model brings its generation, and a generation with a single model brings it.
     for b in list(found.values()):
         e = by_id[b.entity_id.casefold()]

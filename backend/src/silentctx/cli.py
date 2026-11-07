@@ -132,3 +132,24 @@ def backfill(
             await driver.close()
 
     typer.echo(asyncio.run(go()))
+
+
+@app.command()
+def replay(
+    channel: Annotated[str, typer.Option(help="Channel id to post into (e.g. #noc-transport).")],
+    elisa_dir: Annotated[Path, typer.Option(help="Elisa's example folder.")] = Path(
+        "../Elisa_SinceAI2026/ELISA_HIDDEN_KNOWLEDGE_EXAMPLE_2026"
+    ),
+    speed: Annotated[float, typer.Option(help="How much faster than the original.")] = 30.0,
+) -> None:
+    """Post Elisa's thread into Slack as personas (plan 002 §3.6), for the live demo."""
+    from slack_sdk.web.async_client import AsyncWebClient
+
+    from silentctx.slack.replay import replay_elisa
+
+    settings = get_settings()
+    if settings.slack_bot_token is None:
+        raise typer.BadParameter("SLACK_BOT_TOKEN is not set")
+    client = AsyncWebClient(token=settings.slack_bot_token.get_secret_value())
+    for p in asyncio.run(replay_elisa(client, channel, elisa_dir, speed=speed)):
+        typer.echo(f"{p.seq:>2} {p.ts} {p.author}: {p.text.splitlines()[0][:60]}")
