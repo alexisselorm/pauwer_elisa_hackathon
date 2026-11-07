@@ -126,6 +126,22 @@ async def test_supersede_closes_the_predecessor_at_the_successor_start(
         await repo.supersede(pad.assertion_id, _item("third", 4, valid_from=start))
 
 
+async def test_a_change_announced_in_advance_still_sees_what_it_replaces(
+    driver: AsyncDriver,
+) -> None:
+    """ST-24: "padlock until 1 Dec", "code lock from 1 Dec". The code lock starts where the
+    padlock ends, so reconcile must still offer the padlock as a candidate, and only until
+    something has superseded it."""
+    repo = ContextRepository(driver, "neo4j")
+    start = T0 + timedelta(days=30)
+    pad = await repo.assert_(_item("padlock until December", 0, valid_to=start.isoformat()))
+    found = await repo.reconcile_candidates("site_access", ["WP-SEG"], start)
+    assert pad.assertion_id in {c["assertion_id"] for c in found}
+    await repo.supersede(pad.assertion_id, _item("code lock from December", 1, valid_from=start))
+    found = await repo.reconcile_candidates("site_access", ["WP-SEG"], start)
+    assert pad.assertion_id not in {c["assertion_id"] for c in found}
+
+
 async def test_correct_retracts_the_wrong_version_and_keeps_its_window(
     driver: AsyncDriver,
 ) -> None:

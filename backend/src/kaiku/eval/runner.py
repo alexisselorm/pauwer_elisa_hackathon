@@ -37,7 +37,7 @@ from kaiku.eval.score import (
     SetResult,
     field_accuracy,
     load_heldout,
-    match,
+    match_all,
     scoped,
     score_answer,
     score_assertion,
@@ -367,10 +367,9 @@ class Harness:
             elif not exp.expected_assertions:  # H-01: corroborate, never duplicate
                 dup = [v.assertion_id for v in views if elisa_rule not in v.corroborates]
                 checks.append(Check(name="no_duplicate", passed=not dup, detail=str(dup)))
-            matched = {}
+            matched = match_all(exp.expected_assertions, views)
             for ea in exp.expected_assertions:
-                view = match(ea, views)
-                matched[ea.key] = view
+                view = matched[ea.key]
                 checks += [
                     c.model_copy(update={"detail": f"{ea.key}: {c.detail}"})
                     for c in score_assertion(ea, view, SNAPSHOT)

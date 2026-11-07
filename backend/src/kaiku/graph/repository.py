@@ -999,11 +999,15 @@ class ContextRepository:
         extra_ids: Sequence[str] = (),
     ) -> list[dict[str, Any]]:
         """V6 candidates: live assertions on the same topic, bound to one of the entities or
-        found by vector search (`extra_ids`), valid at t, with where they came from."""
+        found by vector search (`extra_ids`), valid at t, with where they came from.
+        One that ends exactly at t and has no successor yet is included: a change announced
+        in advance ("padlock until 30 Nov", "code lock from 1 Dec") starts where its
+        predecessor stops, and must still see it to supersede it (ST-24)."""
         rows: list[dict[str, Any]] = py(
             await self._read(
                 "MATCH (a:ContextAssertion) WHERE a.retracted_at IS NULL "
-                "AND a.valid_from <= $t AND $t < coalesce(a.valid_to, " + END_OF_TIME + ") "
+                "AND a.valid_from <= $t AND ($t < coalesce(a.valid_to, " + END_OF_TIME + ") "
+                "  OR (a.valid_to = $t AND a.superseded_by IS NULL)) "
                 "AND ((a.topic IS NOT NULL AND a.topic = $topic) OR a.assertion_id IN $extra "
                 "  OR EXISTS { MATCH (a)-[:ABOUT]->(e:Entity) WHERE e.entity_id IN $ids }) "
                 "RETURN a.assertion_id AS assertion_id, a.statement AS statement, "

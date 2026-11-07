@@ -181,15 +181,36 @@ def same_status(got: str, want: str) -> bool:
     return got == want or (got in CURRENT and want in CURRENT)
 
 
-def match(expected: ExpectedAssertion, views: Sequence[AssertionView]) -> AssertionView | None:
-    def rank(v: AssertionView) -> tuple[int, int]:
-        entities = scoped(v, "observed_on") | scoped(v, "applies_to")
-        overlap = len(set(expected.observed_on) & entities)
-        words = sum(w.casefold() in v.statement.casefold() for w in expected.statement_contains)
-        return overlap, words
+def _rank(expected: ExpectedAssertion, v: AssertionView) -> tuple[int, int]:
+    entities = scoped(v, "observed_on") | scoped(v, "applies_to")
+    overlap = len(set(expected.observed_on) & entities)
+    words = sum(w.casefold() in v.statement.casefold() for w in expected.statement_contains)
+    return overlap, words
 
-    best = max(views, key=rank, default=None)
-    return best if best is not None and rank(best)[0] > 0 else None
+
+def match_all(
+    expected: Sequence[ExpectedAssertion], views: Sequence[AssertionView]
+) -> dict[str, AssertionView | None]:
+    """One captured assertion per expected one. Two sides of a dispute often share their
+    words ("bounce" and "reseat" in both), so matching each alone could score one assertion
+    twice. Pairs are taken best first; an assertion used once is not reused."""
+    pairs = sorted(
+        (
+            (_rank(e, v), -j, -k, e.key, v)
+            for k, e in enumerate(expected)
+            for j, v in enumerate(views)
+            if _rank(e, v)[0] > 0
+        ),
+        key=lambda p: p[:3],
+        reverse=True,
+    )
+    out: dict[str, AssertionView | None] = {e.key: None for e in expected}
+    used: set[str] = set()
+    for _, _, _, key, v in pairs:
+        if out[key] is None and v.assertion_id not in used:
+            out[key] = v
+            used.add(v.assertion_id)
+    return out
 
 
 def _same(name: str, actual: datetime | None, wanted: str | None, alts: Sequence[str]) -> Check:
