@@ -1,0 +1,1725 @@
+{
+  "started_at": "2026-11-07T16:15:29.348790Z",
+  "finished_at": "2026-11-07T16:27:00.691470Z",
+  "models": {
+    "chat": "featherless:moonshotai/Kimi-K2-Instruct-0905",
+    "fast": "featherless:Qwen/Qwen3-4B-Instruct-2507",
+    "embedding": "Qwen/Qwen3-Embedding-8B"
+  },
+  "graph": "extracted-only (gold never loaded)",
+  "sets": [
+    {
+      "name": "T0 Elisa",
+      "items": [
+        {
+          "id": "ST-21",
+          "passed": true,
+          "checks": [
+            {
+              "name": "strictly_increasing",
+              "passed": true,
+              "detail": ""
+            },
+            {
+              "name": "message_8_time",
+              "passed": true,
+              "detail": "2025-10-14 06:22:08+00:00"
+            }
+          ],
+          "skipped": false,
+          "note": "",
+          "assertions": [],
+          "answer": null
+        },
+        {
+          "id": "ST-01",
+          "passed": true,
+          "checks": [
+            {
+              "name": "one_assertion",
+              "passed": true,
+              "detail": "['ASR-F19F2A3F31'] If link is up but traffic counters remain zero on older transmission nodes, disable and re-enable the interface to restore forwarding state."
+            }
+          ],
+          "skipped": false,
+          "note": "",
+          "assertions": [],
+          "answer": null
+        },
+        {
+          "id": "ST-10",
+          "passed": false,
+          "checks": [
+            {
+              "name": "observed_on",
+              "passed": true,
+              "detail": "['TRN-042']"
+            },
+            {
+              "name": "applies_to",
+              "passed": true,
+              "detail": "['Gen1', 'TNC-1X']"
+            },
+            {
+              "name": "activity",
+              "passed": true,
+              "detail": "['sfp_replacement']"
+            },
+            {
+              "name": "action",
+              "passed": true,
+              "detail": "bounce_interface"
+            },
+            {
+              "name": "avoid",
+              "passed": false,
+              "detail": "['reboot_node']"
+            }
+          ],
+          "skipped": false,
+          "note": "",
+          "assertions": [],
+          "answer": null
+        },
+        {
+          "id": "ST-20",
+          "passed": true,
+          "checks": [
+            {
+              "name": "recorded_at",
+              "passed": true,
+              "detail": "2025-10-14 06:22:08+00:00"
+            },
+            {
+              "name": "valid_from",
+              "passed": true,
+              "detail": "2025-10-14 06:22:08+00:00"
+            },
+            {
+              "name": "valid_to",
+              "passed": true,
+              "detail": "None"
+            }
+          ],
+          "skipped": false,
+          "note": "",
+          "assertions": [],
+          "answer": null
+        },
+        {
+          "id": "ST-02",
+          "passed": true,
+          "checks": [
+            {
+              "name": "no_new_rule",
+              "passed": true,
+              "detail": "['ASR-6A7622E4C0']"
+            },
+            {
+              "name": "corroborates",
+              "passed": true,
+              "detail": "['ASR-6A7622E4C0']"
+            }
+          ],
+          "skipped": false,
+          "note": "",
+          "assertions": [],
+          "answer": null
+        },
+        {
+          "id": "ST-30",
+          "passed": false,
+          "checks": [
+            {
+              "name": "action",
+              "passed": true,
+              "detail": "disable port 1/1/2, wait briefly, then re-enable it"
+            },
+            {
+              "name": "avoid_sfp",
+              "passed": false,
+              "detail": "['reboot_node']"
+            },
+            {
+              "name": "avoid_reboot",
+              "passed": true,
+              "detail": "['reboot_node']"
+            },
+            {
+              "name": "citation",
+              "passed": true,
+              "detail": "['ASR-6A7622E4C0', 'ASR-F19F2A3F31']"
+            }
+          ],
+          "skipped": false,
+          "note": "",
+          "assertions": [],
+          "answer": null
+        }
+      ],
+      "field_accuracy": {}
+    },
+    {
+      "name": "T2 held-out capture",
+      "items": [
+        {
+          "id": "H-07",
+          "passed": false,
+          "checks": [
+            {
+              "name": "captured",
+              "passed": true,
+              "detail": "H-07a: ASR-A6AF199BB8"
+            },
+            {
+              "name": "link_observed_on",
+              "passed": true,
+              "detail": "H-07a: got ['ACC-007'], want ['ACC-007']"
+            },
+            {
+              "name": "link_applies_to",
+              "passed": true,
+              "detail": "H-07a: got ['ACC-007', 'KMAX-4K'], want ['KMAX-4K']"
+            },
+            {
+              "name": "valid_from",
+              "passed": false,
+              "detail": "H-07a: got 2026-09-30 21:00:00+00:00, want 2026-09-15T09:00:00Z"
+            },
+            {
+              "name": "valid_to",
+              "passed": false,
+              "detail": "H-07a: got None, want 2026-11-04T14:00:00Z"
+            },
+            {
+              "name": "status",
+              "passed": false,
+              "detail": "H-07a: got unverified, want superseded"
+            },
+            {
+              "name": "captured",
+              "passed": false,
+              "detail": "H-07b: no matching assertion"
+            },
+            {
+              "name": "supersedes",
+              "passed": false,
+              "detail": "H-07b>H-07a"
+            }
+          ],
+          "skipped": false,
+          "note": "Firmware upgrade changed behavior: power-cycle now wipes config on KMAX-4K, requiring export first; contradicts earlier advice from September",
+          "assertions": [
+            {
+              "assertion_id": "ASR-A6AF199BB8",
+              "statement": "Since the October firmware a power-cycle wipes the config on the KMAX-4K; export the config first, then restart.",
+              "topic": "power_cycle_config_loss",
+              "status": "unverified",
+              "origin": "extracted",
+              "confidence": null,
+              "valid_from": "2026-09-30T21:00:00Z",
+              "valid_to": null,
+              "recorded_at": "2026-11-04T14:00:00Z",
+              "retracted_at": null,
+              "review_due": false,
+              "support_n": 0,
+              "refute_n": 0,
+              "qualifiers": {
+                "action": "export_config",
+                "applies_to": [
+                  "KMAX-4K"
+                ],
+                "avoid": [
+                  "power_cycle_radio"
+                ],
+                "quotes": {
+                  "action": "Export the config first, then restart",
+                  "avoid": [
+                    "just power-cycle it"
+                  ],
+                  "conditions": [
+                    "since the October firmware"
+                  ]
+                },
+                "symptom": [
+                  "firmware_october"
+                ],
+                "telemetry": "unknown",
+                "thread_id": "slack:C-ACCESS-NORTH:1789462800.000000"
+              },
+              "bindings": [
+                {
+                  "entity_id": "ACC-007",
+                  "scope": "observed_on",
+                  "candidate": false
+                },
+                {
+                  "entity_id": "KMAX-4K",
+                  "scope": "applies_to",
+                  "candidate": false
+                }
+              ],
+              "citations": [
+                {
+                  "source_type": "slack",
+                  "source_ref": "https://eval.slack.example/archives/C-ACCESS-NORTH/p1793800800000000?thread_ts=1789462800.000000&cid=C-ACCESS-NORTH",
+                  "detail": "Correction to what I said in September: since the October firmware a power-cycle wipes the config on the KMAX-4K. Export the config first, then restart.",
+                  "author": "Pekka Hämäläinen",
+                  "recorded_at": "2026-11-04T14:00:00Z"
+                },
+                {
+                  "source_type": "slack",
+                  "source_ref": "https://eval.slack.example/archives/C-ACCESS-NORTH/p1789462800000000",
+                  "detail": "KMAX-4K radio on ACC-007 hanging again, just power-cycle it, it always comes back.",
+                  "author": "Pekka Hämäläinen",
+                  "recorded_at": "2026-09-15T09:00:00Z"
+                }
+              ],
+              "contradicts": [],
+              "corroborates": [],
+              "superseded_by": null,
+              "supersedes": null,
+              "match": null,
+              "score": 0.448
+            }
+          ],
+          "answer": null
+        },
+        {
+          "id": "H-01",
+          "passed": true,
+          "checks": [
+            {
+              "name": "no_duplicate",
+              "passed": true,
+              "detail": "[]"
+            }
+          ],
+          "skipped": false,
+          "note": "If counters stay at zero with the link up on a Gen1 box, shut/no shut the port while keeping the module and chassis unchanged.",
+          "assertions": [
+            {
+              "assertion_id": "ASR-DA338249EC",
+              "statement": "On Gen1 boxes, after swapping optics on a port, shut/no shut the port to restore traffic counters without reloading the chassis or replacing the module.",
+              "topic": "forwarding_state_after_sfp_swap",
+              "status": "unverified",
+              "origin": "extracted",
+              "confidence": null,
+              "valid_from": "2026-10-27T07:43:55Z",
+              "valid_to": null,
+              "recorded_at": "2026-10-27T07:43:55Z",
+              "retracted_at": null,
+              "review_due": false,
+              "support_n": 0,
+              "refute_n": 0,
+              "qualifiers": {
+                "action": "bounce_interface",
+                "applies_to": [
+                  "Gen1",
+                  "TNC-1X"
+                ],
+                "avoid": [
+                  "reboot_node",
+                  "replace_sfp"
+                ],
+                "quotes": {
+                  "action": "Shut / no shut the port",
+                  "avoid": [
+                    "leave the module alone",
+                    "don't reload the chassis"
+                  ],
+                  "conditions": [
+                    "Port is up",
+                    "rx -4.2 dBm",
+                    "in/out is flat zero for 40 min now"
+                  ]
+                },
+                "symptom": [
+                  "counters_zero",
+                  "oper_up",
+                  "rx_power_normal"
+                ],
+                "telemetry": "unknown",
+                "thread_id": "slack:C-NOC-TRANSPORT:1793086872.000000"
+              },
+              "bindings": [
+                {
+                  "entity_id": "Gen1",
+                  "scope": "applies_to",
+                  "candidate": false
+                },
+                {
+                  "entity_id": "TRN-017",
+                  "scope": "observed_on",
+                  "candidate": false
+                },
+                {
+                  "entity_id": "TNC-1X",
+                  "scope": "applies_to",
+                  "candidate": false
+                }
+              ],
+              "citations": [
+                {
+                  "source_type": "slack",
+                  "source_ref": "https://eval.slack.example/archives/C-NOC-TRANSPORT/p1793087035000000?thread_ts=1793086872.000000&cid=C-NOC-TRANSPORT",
+                  "detail": "Gen1 box, right? Same thing as Kemi last year. Shut / no shut the port, leave the module alone and don't reload the chassis",
+                  "author": "Erkki Expert",
+                  "recorded_at": "2026-10-27T07:43:55Z"
+                },
+                {
+                  "source_type": "slack",
+                  "source_ref": "https://eval.slack.example/archives/C-NOC-TRANSPORT/p1793086872000000",
+                  "detail": "TRN-017 Pori: swapped the optics on 1/1/2 this morning. Port is up, rx -4.2 dBm, no alarms, but in/out is flat zero for 40 min now",
+                  "author": "Aino Korhonen",
+                  "recorded_at": "2026-10-27T07:41:12Z"
+                }
+              ],
+              "contradicts": [],
+              "corroborates": [
+                "ASR-6A7622E4C0",
+                "ASR-F19F2A3F31"
+              ],
+              "superseded_by": null,
+              "supersedes": null,
+              "match": null,
+              "score": 0.448
+            }
+          ],
+          "answer": null
+        },
+        {
+          "id": "H-02",
+          "passed": false,
+          "checks": [
+            {
+              "name": "captured",
+              "passed": true,
+              "detail": "H-02a: ASR-D9B181D68B"
+            },
+            {
+              "name": "link_observed_on",
+              "passed": false,
+              "detail": "H-02a: got ['TRN-015'], want ['SEG-015']"
+            },
+            {
+              "name": "link_applies_to",
+              "passed": false,
+              "detail": "H-02a: got ['TRN-015'], want ['SEG-015', 'TRN-015']"
+            },
+            {
+              "name": "valid_from",
+              "passed": true,
+              "detail": "H-02a: got 2026-10-28 12:05:00+00:00, want 2026-10-28T12:05:00Z"
+            },
+            {
+              "name": "valid_to",
+              "passed": true,
+              "detail": "H-02a: got 2026-11-30 22:00:00+00:00, want 2026-11-30T22:00:00Z"
+            },
+            {
+              "name": "recorded_at",
+              "passed": true,
+              "detail": "H-02a: got 2026-10-28 12:05:00+00:00, want 2026-10-28T12:05:00Z"
+            },
+            {
+              "name": "status",
+              "passed": true,
+              "detail": "H-02a: got believed_true, want believed_true"
+            },
+            {
+              "name": "captured",
+              "passed": true,
+              "detail": "H-02b: ASR-F83128AFFF"
+            },
+            {
+              "name": "link_observed_on",
+              "passed": false,
+              "detail": "H-02b: got ['TRN-015'], want ['SEG-015']"
+            },
+            {
+              "name": "link_applies_to",
+              "passed": false,
+              "detail": "H-02b: got ['TRN-015'], want ['SEG-015', 'TRN-015']"
+            },
+            {
+              "name": "valid_from",
+              "passed": true,
+              "detail": "H-02b: got 2026-11-30 22:00:00+00:00, want 2026-11-30T22:00:00Z"
+            },
+            {
+              "name": "valid_to",
+              "passed": true,
+              "detail": "H-02b: got None, want None"
+            },
+            {
+              "name": "recorded_at",
+              "passed": true,
+              "detail": "H-02b: got 2026-10-28 12:06:40+00:00, want 2026-10-28T12:06:40Z"
+            },
+            {
+              "name": "status",
+              "passed": true,
+              "detail": "H-02b: got unverified, want believed_true"
+            },
+            {
+              "name": "supersedes",
+              "passed": true,
+              "detail": "H-02b>H-02a"
+            }
+          ],
+          "skipped": false,
+          "note": "Provides specific access instructions for a site, including key location and future code lock transition.",
+          "assertions": [
+            {
+              "assertion_id": "ASR-D9B181D68B",
+              "statement": "The private road to Kajaani (TRN-015) has a boom with a padlock, and the key is at the K-Market service desk in town.",
+              "topic": "access_keys",
+              "status": "superseded",
+              "origin": "extracted",
+              "confidence": null,
+              "valid_from": "2026-10-28T12:05:00Z",
+              "valid_to": "2026-11-30T22:00:00Z",
+              "recorded_at": "2026-10-28T12:05:00Z",
+              "retracted_at": null,
+              "review_due": false,
+              "support_n": 0,
+              "refute_n": 0,
+              "qualifiers": {
+                "action": "get_key",
+                "applies_to": [],
+                "avoid": [],
+                "quotes": {
+                  "action": "Key is at the K-Market service desk in town, ask for the Elisa key.",
+                  "avoid": [],
+                  "conditions": []
+                },
+                "symptom": [],
+                "telemetry": "unknown",
+                "thread_id": "slack:C-FIELD-OPS:1793189100.000000"
+              },
+              "bindings": [
+                {
+                  "entity_id": "TRN-015",
+                  "scope": "observed_on",
+                  "candidate": false
+                }
+              ],
+              "citations": [
+                {
+                  "source_type": "slack",
+                  "source_ref": "https://eval.slack.example/archives/C-FIELD-OPS/p1793189100000000",
+                  "detail": "FYI for anyone going to Kajaani (TRN-015): the private road has a boom with a padlock. Key is at the K-Market service desk in town, ask for the Elisa key.",
+                  "author": "Pekka Hämäläinen",
+                  "recorded_at": "2026-10-28T12:05:00Z"
+                }
+              ],
+              "contradicts": [],
+              "corroborates": [],
+              "superseded_by": "ASR-F83128AFFF",
+              "supersedes": null,
+              "match": null,
+              "score": 0.56
+            },
+            {
+              "assertion_id": "ASR-F83128AFFF",
+              "statement": "From 1 December, the boom at Kajaani (TRN-015) will have a code lock instead of a padlock, and the code comes from site security (Tiina Rantanen).",
+              "topic": "access_keys",
+              "status": "unverified",
+              "origin": "extracted",
+              "confidence": null,
+              "valid_from": "2026-11-30T22:00:00Z",
+              "valid_to": null,
+              "recorded_at": "2026-10-28T12:06:40Z",
+              "retracted_at": null,
+              "review_due": false,
+              "support_n": 0,
+              "refute_n": 0,
+              "qualifiers": {
+                "action": "get_code",
+                "applies_to": [],
+                "avoid": [],
+                "quotes": {
+                  "action": "the code comes from site security (Tiina Rantanen).",
+                  "avoid": [],
+                  "conditions": []
+                },
+                "symptom": [],
+                "telemetry": "unknown",
+                "thread_id": "slack:C-FIELD-OPS:1793189100.000000"
+              },
+              "bindings": [
+                {
+                  "entity_id": "TRN-015",
+                  "scope": "observed_on",
+                  "candidate": false
+                }
+              ],
+              "citations": [
+                {
+                  "source_type": "slack",
+                  "source_ref": "https://eval.slack.example/archives/C-FIELD-OPS/p1793189200000000?thread_ts=1793189100.000000&cid=C-FIELD-OPS",
+                  "detail": "The landowner is switching to a code lock on 1 December. After that no key, the code comes from site security (Tiina Rantanen).",
+                  "author": "Pekka Hämäläinen",
+                  "recorded_at": "2026-10-28T12:06:40Z"
+                }
+              ],
+              "contradicts": [],
+              "corroborates": [],
+              "superseded_by": null,
+              "supersedes": "ASR-D9B181D68B",
+              "match": null,
+              "score": 0.448
+            }
+          ],
+          "answer": null
+        },
+        {
+          "id": "H-04",
+          "passed": true,
+          "checks": [
+            {
+              "name": "nothing_captured",
+              "passed": true,
+              "detail": "0 captured: greetings, small talk, lunch planning and scheduling logistics"
+            }
+          ],
+          "skipped": false,
+          "note": "greetings, small talk, lunch planning and scheduling logistics",
+          "assertions": [],
+          "answer": null
+        },
+        {
+          "id": "H-05",
+          "passed": true,
+          "checks": [
+            {
+              "name": "nothing_captured",
+              "passed": true,
+              "detail": "0 captured: kept by triage (Suspect SFP as potential cause of CRC errors on a specific port, suggesting a diagnostic rule for recurring link issues.), but nothing passed the gates: no rule in the thread"
+            }
+          ],
+          "skipped": false,
+          "note": "kept by triage (Suspect SFP as potential cause of CRC errors on a specific port, suggesting a diagnostic rule for recurring link issues.), but nothing passed the gates: no rule in the thread",
+          "assertions": [],
+          "answer": null
+        },
+        {
+          "id": "H-03",
+          "passed": false,
+          "checks": [
+            {
+              "name": "captured",
+              "passed": false,
+              "detail": "H-03a: no matching assertion"
+            }
+          ],
+          "skipped": false,
+          "note": "kept by triage (Provides specific access alternative due to road closure, relevant for site visits.), but nothing passed the gates: V1: no action",
+          "assertions": [],
+          "answer": null
+        },
+        {
+          "id": "H-06",
+          "passed": false,
+          "checks": [
+            {
+              "name": "captured",
+              "passed": true,
+              "detail": "H-06a: ASR-0EC78A74FD"
+            },
+            {
+              "name": "link_observed_on",
+              "passed": true,
+              "detail": "H-06a: got ['TRN-019'], want ['TRN-019']"
+            },
+            {
+              "name": "link_applies_to",
+              "passed": true,
+              "detail": "H-06a: got ['TRN-019'], want ['TRN-019']"
+            },
+            {
+              "name": "valid_from",
+              "passed": false,
+              "detail": "H-06a: got 2026-11-03 08:25:00+00:00, want 2026-11-03T08:10:00Z"
+            },
+            {
+              "name": "valid_to",
+              "passed": true,
+              "detail": "H-06a: got None, want None"
+            },
+            {
+              "name": "status",
+              "passed": false,
+              "detail": "H-06a: got unverified, want disputed"
+            },
+            {
+              "name": "captured",
+              "passed": false,
+              "detail": "H-06b: no matching assertion"
+            },
+            {
+              "name": "contradicts",
+              "passed": false,
+              "detail": "H-06a<>H-06b"
+            },
+            {
+              "name": "contradicts",
+              "passed": false,
+              "detail": "H-06b<>H-06a"
+            }
+          ],
+          "skipped": false,
+          "note": "Provides a symptom-action rule about TRN-019's non-responsive zero-traffic state requiring reseat instead of port bounce.",
+          "assertions": [
+            {
+              "assertion_id": "ASR-0EC78A74FD",
+              "statement": "On TRN-019, a port bounce does clear the zero-traffic state; reseating the card takes the whole node down and should be avoided.",
+              "topic": "forwarding_state_after_sfp_swap",
+              "status": "unverified",
+              "origin": "extracted",
+              "confidence": null,
+              "valid_from": "2026-11-03T08:25:00Z",
+              "valid_to": null,
+              "recorded_at": "2026-11-03T08:25:00Z",
+              "retracted_at": null,
+              "review_due": false,
+              "support_n": 0,
+              "refute_n": 0,
+              "qualifiers": {
+                "action": "bounce_interface",
+                "applies_to": [],
+                "avoid": [
+                  "reseat_line_card"
+                ],
+                "quotes": {
+                  "action": "the bounce worked on 019",
+                  "avoid": [
+                    "Reseating the card takes the whole node down"
+                  ],
+                  "conditions": []
+                },
+                "symptom": [],
+                "telemetry": "unknown",
+                "thread_id": "slack:C-NOC-TRANSPORT:1793693400.000000"
+              },
+              "bindings": [
+                {
+                  "entity_id": "TRN-019",
+                  "scope": "observed_on",
+                  "candidate": false
+                }
+              ],
+              "citations": [
+                {
+                  "source_type": "slack",
+                  "source_ref": "https://eval.slack.example/archives/C-NOC-TRANSPORT/p1793694300000000?thread_ts=1793693400.000000&cid=C-NOC-TRANSPORT",
+                  "detail": "I don't agree, the bounce worked on 019 when we had this in spring. Reseating the card takes the whole node down.",
+                  "author": "Erkki Expert",
+                  "recorded_at": "2026-11-03T08:25:00Z"
+                }
+              ],
+              "contradicts": [],
+              "corroborates": [
+                "ASR-6A7622E4C0",
+                "ASR-DA338249EC",
+                "ASR-F19F2A3F31"
+              ],
+              "superseded_by": null,
+              "supersedes": null,
+              "match": null,
+              "score": 0.448
+            }
+          ],
+          "answer": null
+        },
+        {
+          "id": "H-08",
+          "passed": true,
+          "checks": [
+            {
+              "name": "captured",
+              "passed": true,
+              "detail": "H-08a: ASR-456DFCA117"
+            },
+            {
+              "name": "link_observed_on",
+              "passed": true,
+              "detail": "H-08a: got ['TRN-017'], want ['TRN-017']"
+            },
+            {
+              "name": "link_applies_to",
+              "passed": true,
+              "detail": "H-08a: got ['TRN-017'], want ['TRN-017']"
+            },
+            {
+              "name": "valid_from",
+              "passed": true,
+              "detail": "H-08a: got 2026-11-08 22:00:00+00:00, want 2026-11-08T22:00:00Z"
+            },
+            {
+              "name": "valid_to",
+              "passed": true,
+              "detail": "H-08a: got None, want None"
+            },
+            {
+              "name": "recorded_at",
+              "passed": true,
+              "detail": "H-08a: got 2026-11-04 15:30:00+00:00, want 2026-11-04T15:30:00Z"
+            },
+            {
+              "name": "status",
+              "passed": true,
+              "detail": "H-08a: got unverified, want believed_true"
+            }
+          ],
+          "skipped": false,
+          "note": "Provides specific access requirement and source for a site (Pori TRN-017) with a clear action (get badge from facilities desk)",
+          "assertions": [
+            {
+              "assertion_id": "ASR-456DFCA117",
+              "statement": "From Monday the Pori transport room (TRN-017) needs an access badge, the old keys no longer work.",
+              "topic": "access_keys",
+              "status": "unverified",
+              "origin": "extracted",
+              "confidence": null,
+              "valid_from": "2026-11-08T22:00:00Z",
+              "valid_to": null,
+              "recorded_at": "2026-11-04T15:30:00Z",
+              "retracted_at": null,
+              "review_due": false,
+              "support_n": 0,
+              "refute_n": 0,
+              "qualifiers": {
+                "action": "get_badge",
+                "applies_to": [],
+                "avoid": [],
+                "quotes": {
+                  "action": "Badges from the facilities desk.",
+                  "avoid": [],
+                  "conditions": []
+                },
+                "symptom": [],
+                "telemetry": "unknown",
+                "thread_id": "slack:C-FIELD-OPS:1793806200.000000"
+              },
+              "bindings": [
+                {
+                  "entity_id": "TRN-017",
+                  "scope": "observed_on",
+                  "candidate": false
+                }
+              ],
+              "citations": [
+                {
+                  "source_type": "slack",
+                  "source_ref": "https://eval.slack.example/archives/C-FIELD-OPS/p1793806200000000",
+                  "detail": "From Monday the Pori transport room (TRN-017) needs an access badge, the old keys no longer work. Badges from the facilities desk.",
+                  "author": "Veikko Vikkelä",
+                  "recorded_at": "2026-11-04T15:30:00Z"
+                }
+              ],
+              "contradicts": [],
+              "corroborates": [],
+              "superseded_by": null,
+              "supersedes": null,
+              "match": null,
+              "score": 0.448
+            }
+          ],
+          "answer": null
+        },
+        {
+          "id": "H-09",
+          "passed": false,
+          "checks": [
+            {
+              "name": "captured",
+              "passed": true,
+              "detail": "H-09a: ASR-8892F9AC85"
+            },
+            {
+              "name": "link_observed_on",
+              "passed": true,
+              "detail": "H-09a: got ['TRN-010'], want ['TRN-010']"
+            },
+            {
+              "name": "link_applies_to",
+              "passed": false,
+              "detail": "H-09a: got ['Gen2', 'TNC-2X', 'TRN-010'], want ['TNC-2X']; widened to ['Gen2']"
+            },
+            {
+              "name": "valid_from",
+              "passed": true,
+              "detail": "H-09a: got 2026-11-05 11:02:00+00:00, want 2026-11-05T11:02:00Z"
+            },
+            {
+              "name": "valid_to",
+              "passed": true,
+              "detail": "H-09a: got None, want None"
+            },
+            {
+              "name": "recorded_at",
+              "passed": true,
+              "detail": "H-09a: got 2026-11-05 11:02:00+00:00, want 2026-11-05T11:02:00Z"
+            },
+            {
+              "name": "status",
+              "passed": true,
+              "detail": "H-09a: got unverified, want unverified"
+            }
+          ],
+          "skipped": false,
+          "note": "After an optics swap, if a link shows 'up, light OK, no traffic', a 'shut/no shut' restart fixes it, applicable to TNC-2X units as well as older Gen1.",
+          "assertions": [
+            {
+              "assertion_id": "ASR-8892F9AC85",
+              "statement": "After an optics swap on a TNC-2X, the interface may show up with light OK but pass no traffic, and a shut/no shut fixes it.",
+              "topic": "forwarding_state_after_sfp_swap",
+              "status": "unverified",
+              "origin": "extracted",
+              "confidence": null,
+              "valid_from": "2026-11-05T11:02:00Z",
+              "valid_to": null,
+              "recorded_at": "2026-11-05T11:02:00Z",
+              "retracted_at": null,
+              "review_due": false,
+              "support_n": 0,
+              "refute_n": 0,
+              "qualifiers": {
+                "action": "bounce_interface",
+                "applies_to": [
+                  "Gen2",
+                  "TNC-2X"
+                ],
+                "avoid": [],
+                "quotes": {
+                  "action": "A shut/no shut fixed it",
+                  "avoid": [],
+                  "conditions": []
+                },
+                "symptom": [
+                  "counters_zero",
+                  "rx_power_normal"
+                ],
+                "telemetry": "unknown",
+                "thread_id": "email:subject:trn-010 zero traffic after optics swap"
+              },
+              "bindings": [
+                {
+                  "entity_id": "TNC-2X",
+                  "scope": "applies_to",
+                  "candidate": false
+                },
+                {
+                  "entity_id": "TRN-010",
+                  "scope": "observed_on",
+                  "candidate": false
+                },
+                {
+                  "entity_id": "TOPIC:sfp_replacement",
+                  "scope": "activity",
+                  "candidate": false
+                },
+                {
+                  "entity_id": "Gen2",
+                  "scope": "applies_to",
+                  "candidate": false
+                }
+              ],
+              "citations": [
+                {
+                  "source_type": "email",
+                  "source_ref": "email:<H-09@heldout.example>",
+                  "detail": "TRN-010 zero traffic after optics swap\n\nHi Erkki,\n\nFYI: TRN-010 in Lahti (a TNC-2X, not one of the old Gen1 units) did exactly the Kemi thing yesterday after an optics swap on 1/1/1: up, light OK, no ",
+                  "author": "Aino Korhonen",
+                  "recorded_at": "2026-11-05T11:02:00Z"
+                }
+              ],
+              "contradicts": [],
+              "corroborates": [
+                "ASR-0EC78A74FD",
+                "ASR-6A7622E4C0",
+                "ASR-DA338249EC",
+                "ASR-F19F2A3F31"
+              ],
+              "superseded_by": null,
+              "supersedes": null,
+              "match": null,
+              "score": 0.448
+            }
+          ],
+          "answer": null
+        }
+      ],
+      "field_accuracy": {
+        "captured": "6/9",
+        "contradicts": "0/2",
+        "link_applies_to": "3/6",
+        "link_observed_on": "4/6",
+        "no_duplicate": "1/1",
+        "nothing_captured": "2/2",
+        "recorded_at": "4/4",
+        "status": "4/6",
+        "supersedes": "1/2",
+        "valid_from": "4/6",
+        "valid_to": "5/6"
+      }
+    },
+    {
+      "name": "T2 held-out QA",
+      "items": [
+        {
+          "id": "HQ-01",
+          "passed": true,
+          "checks": [
+            {
+              "name": "answered",
+              "passed": true,
+              "detail": "got answered"
+            },
+            {
+              "name": "action",
+              "passed": true,
+              "detail": "shut then no-shut port 1/1/2 on trn-017"
+            },
+            {
+              "name": "avoid",
+              "passed": true,
+              "detail": "replace_sfp"
+            },
+            {
+              "name": "avoid",
+              "passed": true,
+              "detail": "reboot_node"
+            },
+            {
+              "name": "citation",
+              "passed": true,
+              "detail": "cited ['ASR-6A7622E4C0', 'ASR-DA338249EC', 'ASR-F19F2A3F31'], want any of ['ASR-6A7622E4C0', 'ASR-DA338249EC', 'ASR-F19F2A3F31']"
+            }
+          ],
+          "skipped": false,
+          "note": "answered: Bounce the interface (shut/no shut) on port 1/1/2 to restore traffic counters. This is a known Gen1/TNC-1X behavior after SFP swaps where the forwarding state doesn't recover automatically.",
+          "assertions": [],
+          "answer": {
+            "status": "answered",
+            "summary": "Bounce the interface (shut/no shut) on port 1/1/2 to restore traffic counters. This is a known Gen1/TNC-1X behavior after SFP swaps where the forwarding state doesn't recover automatically.",
+            "entity_ids": [
+              "TRN-017"
+            ],
+            "steps": [
+              {
+                "action": "Shut then no-shut port 1/1/2 on TRN-017",
+                "assertion_ids": [
+                  "ASR-DA338249EC",
+                  "ASR-F19F2A3F31",
+                  "ASR-6A7622E4C0"
+                ]
+              }
+            ],
+            "avoid": [
+              "Reboot the node",
+              "Replace the SFP again"
+            ],
+            "conditions": [
+              {
+                "assertion_id": "ASR-DA338249EC",
+                "name": "counters_zero",
+                "status": "unknown",
+                "detail": "No telemetry available; user reports zero traffic"
+              },
+              {
+                "assertion_id": "ASR-DA338249EC",
+                "name": "oper_up",
+                "status": "unknown",
+                "detail": "No telemetry available; user reports port up"
+              },
+              {
+                "assertion_id": "ASR-DA338249EC",
+                "name": "rx_power_normal",
+                "status": "unknown",
+                "detail": "No telemetry available; user reports optics fine"
+              }
+            ],
+            "sources": [
+              {
+                "assertion_id": "ASR-DA338249EC",
+                "who": "Erkki Expert",
+                "where": "slack",
+                "when": "2026-10-27",
+                "link": "https://eval.slack.example/archives/C-NOC-TRANSPORT/p1793087035000000?thread_ts=1793086872.000000&cid=C-NOC-TRANSPORT",
+                "ref": null,
+                "detail": "Gen1 box, right? Same thing as Kemi last year. Shut / no shut the port, leave the module alone and don't reload the chassis"
+              },
+              {
+                "assertion_id": "ASR-F19F2A3F31",
+                "who": "Erkki Expert",
+                "where": "slack",
+                "when": "2025-10-14",
+                "link": "https://eval.slack.example/archives/C-NOC-TRANSPORT/p1760422928000000?thread_ts=1760422445.000000&cid=C-NOC-TRANSPORT",
+                "ref": null,
+                "detail": "That's it.\nDisable the interface, wait a little, then enable it again. Don't reboot the whole unit unless that fails."
+              },
+              {
+                "assertion_id": "ASR-6A7622E4C0",
+                "who": "Erkki Expert",
+                "where": "email",
+                "when": "2025-10-14",
+                "link": null,
+                "ref": "elisa:email",
+                "detail": "RE: TRN-042 traffic not recovering after SFP replacement\n\nHi Veikko,\n\nThat sounds like the behaviour we have seen with some of the older transmission units.\n\nThe confusing part is that everything can "
+              }
+            ],
+            "records": [],
+            "gap_id": null,
+            "gap_routed_to": null,
+            "review_notes": [
+              "Telemetry unavailable; proceeding based on user-reported symptoms matching documented pattern"
+            ]
+          }
+        },
+        {
+          "id": "HQ-02",
+          "passed": true,
+          "checks": [
+            {
+              "name": "answered",
+              "passed": true,
+              "detail": "got answered"
+            },
+            {
+              "name": "contains",
+              "passed": true,
+              "detail": "padlock"
+            },
+            {
+              "name": "contains",
+              "passed": true,
+              "detail": "K-Market"
+            },
+            {
+              "name": "citation",
+              "passed": true,
+              "detail": "cited ['ASR-D9B181D68B'], want any of ['ASR-D9B181D68B', 'ASR-F83128AFFF']"
+            }
+          ],
+          "skipped": false,
+          "note": "answered: To access Kajaani TRN-015 on 2026-11-20: The private road has a boom with a padlock. Get the key from the K-Market service desk in town—ask for the \"Elisa key\". Note: From 1 December 2026, t",
+          "assertions": [],
+          "answer": {
+            "status": "answered",
+            "summary": "To access Kajaani TRN-015 on 2026-11-20: The private road has a boom with a padlock. Get the key from the K-Market service desk in town—ask for the \"Elisa key\". Note: From 1 December 2026, this switches to a code lock; the code will come from site security (Tiina Rantanen).",
+            "entity_ids": [
+              "TRN-015"
+            ],
+            "steps": [
+              {
+                "action": "Go to K-Market service desk in town and ask for the Elisa key for the Kajaani boom gate",
+                "assertion_ids": [
+                  "ASR-D9B181D68B"
+                ]
+              }
+            ],
+            "avoid": [],
+            "conditions": [],
+            "sources": [
+              {
+                "assertion_id": "ASR-D9B181D68B",
+                "who": "Pekka Hämäläinen",
+                "where": "slack",
+                "when": "2026-10-28",
+                "link": "https://eval.slack.example/archives/C-FIELD-OPS/p1793189100000000",
+                "ref": null,
+                "detail": "FYI for anyone going to Kajaani (TRN-015): the private road has a boom with a padlock. Key is at the K-Market service desk in town, ask for the Elisa key."
+              }
+            ],
+            "records": [],
+            "gap_id": null,
+            "gap_routed_to": null,
+            "review_notes": [
+              "ASR-D9B181D68B was superseded by ASR-F83128AFFF from 2026-12-01 00:00 Helsinki time.",
+              "Current key-based access valid until 2026-11-30. From 2026-12-01, superseded by ASR-F83128AFFF (code lock from site security/Tiina Rantanen)."
+            ]
+          }
+        },
+        {
+          "id": "HQ-03",
+          "passed": true,
+          "checks": [
+            {
+              "name": "answered",
+              "passed": true,
+              "detail": "got answered"
+            },
+            {
+              "name": "contains",
+              "passed": true,
+              "detail": "code lock"
+            },
+            {
+              "name": "contains",
+              "passed": true,
+              "detail": "Tiina Rantanen"
+            },
+            {
+              "name": "citation",
+              "passed": true,
+              "detail": "cited ['ASR-F83128AFFF'], want any of ['ASR-D9B181D68B', 'ASR-F83128AFFF']"
+            }
+          ],
+          "skipped": false,
+          "note": "answered: To access TRN-015 on 2026-12-03: the site has a boom gate with a code lock (changed 1 Dec). Get the code from site security contact Tiina Rantanen.",
+          "assertions": [],
+          "answer": {
+            "status": "answered",
+            "summary": "To access TRN-015 on 2026-12-03: the site has a boom gate with a code lock (changed 1 Dec). Get the code from site security contact Tiina Rantanen.",
+            "entity_ids": [
+              "TRN-015"
+            ],
+            "steps": [
+              {
+                "action": "Contact Tiina Rantanen (site security) to obtain the gate code",
+                "assertion_ids": [
+                  "ASR-F83128AFFF"
+                ]
+              }
+            ],
+            "avoid": [],
+            "conditions": [],
+            "sources": [
+              {
+                "assertion_id": "ASR-F83128AFFF",
+                "who": "Pekka Hämäläinen",
+                "where": "slack",
+                "when": "2026-10-28",
+                "link": "https://eval.slack.example/archives/C-FIELD-OPS/p1793189200000000?thread_ts=1793189100.000000&cid=C-FIELD-OPS",
+                "ref": null,
+                "detail": "The landowner is switching to a code lock on 1 December. After that no key, the code comes from site security (Tiina Rantanen)."
+              }
+            ],
+            "records": [],
+            "gap_id": null,
+            "gap_routed_to": null,
+            "review_notes": [
+              "Access knowledge is unverified (no corroboration yet)"
+            ]
+          }
+        },
+        {
+          "id": "HQ-04",
+          "passed": false,
+          "checks": [
+            {
+              "name": "answered",
+              "passed": false,
+              "detail": "got not_documented"
+            },
+            {
+              "name": "contains",
+              "passed": false,
+              "detail": "Vuotso"
+            },
+            {
+              "name": "citation",
+              "passed": false,
+              "detail": "cited [], want any of []"
+            }
+          ],
+          "skipped": false,
+          "note": "not_documented: No access knowledge is documented for Sodankylä TRN-021. The site is on a private road with a boom barrier (SEG-021), but there are no records of key locations, contacts, or access pro",
+          "assertions": [],
+          "answer": {
+            "status": "not_documented",
+            "summary": "No access knowledge is documented for Sodankylä TRN-021. The site is on a private road with a boom barrier (SEG-021), but there are no records of key locations, contacts, or access procedures. A knowledge gap has been opened.",
+            "entity_ids": [
+              "TRN-021",
+              "SEG-021"
+            ],
+            "steps": [],
+            "avoid": [],
+            "conditions": [],
+            "sources": [],
+            "records": [],
+            "gap_id": "GAP-50D4E9C117",
+            "gap_routed_to": null,
+            "review_notes": [
+              "Private road with boom barrier exists but access procedures are not documented."
+            ]
+          }
+        },
+        {
+          "id": "HQ-05",
+          "passed": false,
+          "checks": [
+            {
+              "name": "answered",
+              "passed": false,
+              "detail": "got not_documented"
+            },
+            {
+              "name": "not_contains",
+              "passed": true,
+              "detail": "Vuotso"
+            },
+            {
+              "name": "not_contains",
+              "passed": true,
+              "detail": "closed"
+            }
+          ],
+          "skipped": false,
+          "note": "not_documented: TRN-021 (Sodankylä) has no documented access issues for today. The site is reached via SEG-021 which has a private road with a boom barrier. No access register entries are on file. If ",
+          "assertions": [],
+          "answer": {
+            "status": "not_documented",
+            "summary": "TRN-021 (Sodankylä) has no documented access issues for today. The site is reached via SEG-021 which has a private road with a boom barrier. No access register entries are on file. If you encounter problems with the boom or road access, that knowledge is not documented.",
+            "entity_ids": [
+              "TRN-021"
+            ],
+            "steps": [],
+            "avoid": [],
+            "conditions": [],
+            "sources": [],
+            "records": [],
+            "gap_id": null,
+            "gap_routed_to": null,
+            "review_notes": [
+              "No access knowledge assertions recorded for this site."
+            ]
+          }
+        },
+        {
+          "id": "HQ-06",
+          "passed": false,
+          "checks": [
+            {
+              "name": "dispute_shown",
+              "passed": false,
+              "detail": "got answered"
+            },
+            {
+              "name": "citation",
+              "passed": true,
+              "detail": "cited ['ASR-0EC78A74FD', 'ASR-DA338249EC', 'ASR-F19F2A3F31'], want any of ['ASR-0EC78A74FD', 'ASR-6A7622E4C0', 'ASR-DA338249EC', 'ASR-F19F2A3F31']"
+            }
+          ],
+          "skipped": false,
+          "note": "answered: Bounce the port (shut/no shut). Do not reseat the card - it takes the whole TRN-019 node down. This has worked on TRN-019 before and matches the Gen1/TNC-1X pattern.",
+          "assertions": [],
+          "answer": {
+            "status": "answered",
+            "summary": "Bounce the port (shut/no shut). Do not reseat the card - it takes the whole TRN-019 node down. This has worked on TRN-019 before and matches the Gen1/TNC-1X pattern.",
+            "entity_ids": [
+              "TRN-019"
+            ],
+            "steps": [
+              {
+                "action": "Shut/no shut the affected port to restore traffic counters",
+                "assertion_ids": [
+                  "ASR-0EC78A74FD",
+                  "ASR-DA338249EC",
+                  "ASR-F19F2A3F31"
+                ]
+              }
+            ],
+            "avoid": [
+              "Reseating the line card - it takes the whole node down"
+            ],
+            "conditions": [
+              {
+                "assertion_id": "ASR-F19F2A3F31",
+                "name": "counters_zero",
+                "status": "unknown",
+                "detail": "no telemetry available"
+              },
+              {
+                "assertion_id": "ASR-F19F2A3F31",
+                "name": "oper_up",
+                "status": "unknown",
+                "detail": "no telemetry available"
+              },
+              {
+                "assertion_id": "ASR-F19F2A3F31",
+                "name": "rx_power_normal",
+                "status": "unknown",
+                "detail": "no telemetry available"
+              },
+              {
+                "assertion_id": "ASR-F19F2A3F31",
+                "name": "alarms_cleared",
+                "status": "unknown",
+                "detail": "no telemetry available"
+              }
+            ],
+            "sources": [
+              {
+                "assertion_id": "ASR-0EC78A74FD",
+                "who": "Erkki Expert",
+                "where": "slack",
+                "when": "2026-11-03",
+                "link": "https://eval.slack.example/archives/C-NOC-TRANSPORT/p1793694300000000?thread_ts=1793693400.000000&cid=C-NOC-TRANSPORT",
+                "ref": null,
+                "detail": "I don't agree, the bounce worked on 019 when we had this in spring. Reseating the card takes the whole node down."
+              },
+              {
+                "assertion_id": "ASR-DA338249EC",
+                "who": "Erkki Expert",
+                "where": "slack",
+                "when": "2026-10-27",
+                "link": "https://eval.slack.example/archives/C-NOC-TRANSPORT/p1793087035000000?thread_ts=1793086872.000000&cid=C-NOC-TRANSPORT",
+                "ref": null,
+                "detail": "Gen1 box, right? Same thing as Kemi last year. Shut / no shut the port, leave the module alone and don't reload the chassis"
+              },
+              {
+                "assertion_id": "ASR-F19F2A3F31",
+                "who": "Erkki Expert",
+                "where": "slack",
+                "when": "2025-10-14",
+                "link": "https://eval.slack.example/archives/C-NOC-TRANSPORT/p1760422928000000?thread_ts=1760422445.000000&cid=C-NOC-TRANSPORT",
+                "ref": null,
+                "detail": "That's it.\nDisable the interface, wait a little, then enable it again. Don't reboot the whole unit unless that fails."
+              }
+            ],
+            "records": [],
+            "gap_id": null,
+            "gap_routed_to": null,
+            "review_notes": [
+              "Telemetry conditions unknown - no recent data available, but assertions are specific to this scenario"
+            ]
+          }
+        },
+        {
+          "id": "HQ-07",
+          "passed": true,
+          "checks": [
+            {
+              "name": "answered",
+              "passed": true,
+              "detail": "got partial"
+            },
+            {
+              "name": "contains",
+              "passed": true,
+              "detail": "export"
+            },
+            {
+              "name": "not_recommended",
+              "passed": true,
+              "detail": "just power-cycle"
+            },
+            {
+              "name": "citation",
+              "passed": true,
+              "detail": "cited ['ASR-A6AF199BB8'], want any of ['ASR-A6AF199BB8']"
+            }
+          ],
+          "skipped": false,
+          "note": "partial: Do not power-cycle ACC-007 yet. Since October firmware, power-cycling a KMAX-4K can wipe the configuration. Export the config first, then restart. The device's firmware version (v9.1.1) canno",
+          "assertions": [],
+          "answer": {
+            "status": "partial",
+            "summary": "Do not power-cycle ACC-007 yet. Since October firmware, power-cycling a KMAX-4K can wipe the configuration. Export the config first, then restart. The device's firmware version (v9.1.1) cannot be confirmed as pre- or post-October change via telemetry.",
+            "entity_ids": [
+              "ACC-007",
+              "KMAX-4K"
+            ],
+            "steps": [
+              {
+                "action": "Export the config from ACC-007 before any restart",
+                "assertion_ids": [
+                  "ASR-A6AF199BB8"
+                ]
+              }
+            ],
+            "avoid": [
+              "Just power-cycle the radio without exporting config first"
+            ],
+            "conditions": [],
+            "sources": [
+              {
+                "assertion_id": "ASR-A6AF199BB8",
+                "who": "Pekka Hämäläinen",
+                "where": "slack",
+                "when": "2026-11-04",
+                "link": "https://eval.slack.example/archives/C-ACCESS-NORTH/p1793800800000000?thread_ts=1789462800.000000&cid=C-ACCESS-NORTH",
+                "ref": null,
+                "detail": "Correction to what I said in September: since the October firmware a power-cycle wipes the config on the KMAX-4K. Export the config first, then restart."
+              }
+            ],
+            "records": [
+              "ACC-007"
+            ],
+            "gap_id": "GAP-90D6218831",
+            "gap_routed_to": "Pekka Hämäläinen",
+            "review_notes": [
+              "Firmware version check unknown - cannot verify if v9.1.1 is before or after October firmware change",
+              "Knowledge gap opened for complete recovery procedure"
+            ]
+          }
+        },
+        {
+          "id": "HQ-08",
+          "passed": true,
+          "checks": [
+            {
+              "name": "answered",
+              "passed": true,
+              "detail": "got answered"
+            },
+            {
+              "name": "contains",
+              "passed": true,
+              "detail": "badge"
+            },
+            {
+              "name": "citation",
+              "passed": true,
+              "detail": "cited ['ASR-456DFCA117'], want any of ['ASR-456DFCA117']"
+            }
+          ],
+          "skipped": false,
+          "note": "answered: To enter the Pori transport room (TRN-017) on 2026-11-12, you need an access badge from the facilities desk. The old keys no longer work as of Monday 2026-11-08.",
+          "assertions": [],
+          "answer": {
+            "status": "answered",
+            "summary": "To enter the Pori transport room (TRN-017) on 2026-11-12, you need an access badge from the facilities desk. The old keys no longer work as of Monday 2026-11-08.",
+            "entity_ids": [
+              "TRN-017"
+            ],
+            "steps": [
+              {
+                "action": "Get an access badge from the facilities desk",
+                "assertion_ids": [
+                  "ASR-456DFCA117"
+                ]
+              }
+            ],
+            "avoid": [],
+            "conditions": [],
+            "sources": [
+              {
+                "assertion_id": "ASR-456DFCA117",
+                "who": "Veikko Vikkelä",
+                "where": "slack",
+                "when": "2026-11-04",
+                "link": "https://eval.slack.example/archives/C-FIELD-OPS/p1793806200000000",
+                "ref": null,
+                "detail": "From Monday the Pori transport room (TRN-017) needs an access badge, the old keys no longer work. Badges from the facilities desk."
+              }
+            ],
+            "records": [],
+            "gap_id": null,
+            "gap_routed_to": null,
+            "review_notes": [
+              "Status is unverified - no corroborating reports yet"
+            ]
+          }
+        },
+        {
+          "id": "HQ-09",
+          "passed": true,
+          "checks": [
+            {
+              "name": "not_recommended",
+              "passed": true,
+              "detail": "badge required"
+            }
+          ],
+          "skipped": false,
+          "note": "not_documented: Access requirements for the Pori transport room (TRN-017) are not documented. No information about keys, locks, gates, or entry procedures is on record.",
+          "assertions": [],
+          "answer": {
+            "status": "not_documented",
+            "summary": "Access requirements for the Pori transport room (TRN-017) are not documented. No information about keys, locks, gates, or entry procedures is on record.",
+            "entity_ids": [
+              "TRN-017"
+            ],
+            "steps": [],
+            "avoid": [],
+            "conditions": [],
+            "sources": [],
+            "records": [],
+            "gap_id": "GAP-BE3B012F14",
+            "gap_routed_to": "Erkki Expert",
+            "review_notes": []
+          }
+        },
+        {
+          "id": "HQ-10",
+          "passed": true,
+          "checks": [
+            {
+              "name": "not_documented",
+              "passed": true,
+              "detail": "got not_documented"
+            },
+            {
+              "name": "false_confident",
+              "passed": true,
+              "detail": "steps given"
+            }
+          ],
+          "skipped": false,
+          "note": "not_documented: The torque specification for TNC-1X SFP cage screws is not documented in the knowledge base.",
+          "assertions": [],
+          "answer": {
+            "status": "not_documented",
+            "summary": "The torque specification for TNC-1X SFP cage screws is not documented in the knowledge base.",
+            "entity_ids": [
+              "TNC-1X"
+            ],
+            "steps": [],
+            "avoid": [],
+            "conditions": [],
+            "sources": [],
+            "records": [],
+            "gap_id": "GAP-D4271C783C",
+            "gap_routed_to": "Erkki Expert",
+            "review_notes": [
+              "No torque specifications found for TNC-1X SFP cage screws in the knowledge base."
+            ]
+          }
+        },
+        {
+          "id": "HQ-11",
+          "passed": true,
+          "checks": [
+            {
+              "name": "not_documented",
+              "passed": true,
+              "detail": "got not_documented"
+            },
+            {
+              "name": "false_confident",
+              "passed": true,
+              "detail": "steps given"
+            }
+          ],
+          "skipped": false,
+          "note": "not_documented: No firmware release is documented that fixes the TNC-2X forwarding stall. The knowledge base only contains workarounds: after an SFP swap, if the interface shows UP with normal RX powe",
+          "assertions": [],
+          "answer": {
+            "status": "not_documented",
+            "summary": "No firmware release is documented that fixes the TNC-2X forwarding stall. The knowledge base only contains workarounds: after an SFP swap, if the interface shows UP with normal RX power but passes no traffic, perform a shut/no shut on the interface (ASR-8892F9AC85, ASR-F19F2A3F31). A knowledge gap has been opened and routed to Aino Korhonen.",
+            "entity_ids": [
+              "TNC-2X"
+            ],
+            "steps": [],
+            "avoid": [],
+            "conditions": [],
+            "sources": [
+              {
+                "assertion_id": "ASR-8892F9AC85",
+                "who": "Aino Korhonen",
+                "where": "email",
+                "when": "2026-11-05",
+                "link": null,
+                "ref": "email:<H-09@heldout.example>",
+                "detail": "TRN-010 zero traffic after optics swap\n\nHi Erkki,\n\nFYI: TRN-010 in Lahti (a TNC-2X, not one of the old Gen1 units) did exactly the Kemi thing yesterday after an optics swap on 1/1/1: up, light OK, no "
+              },
+              {
+                "assertion_id": "ASR-F19F2A3F31",
+                "who": "Erkki Expert",
+                "where": "slack",
+                "when": "2025-10-14",
+                "link": "https://eval.slack.example/archives/C-NOC-TRANSPORT/p1760422928000000?thread_ts=1760422445.000000&cid=C-NOC-TRANSPORT",
+                "ref": null,
+                "detail": "That's it.\nDisable the interface, wait a little, then enable it again. Don't reboot the whole unit unless that fails."
+              }
+            ],
+            "records": [],
+            "gap_id": "GAP-FDA15FDD5B",
+            "gap_routed_to": "Aino Korhonen",
+            "review_notes": []
+          }
+        },
+        {
+          "id": "HQ-12",
+          "passed": false,
+          "checks": [
+            {
+              "name": "not_documented",
+              "passed": false,
+              "detail": "got answered"
+            },
+            {
+              "name": "false_confident",
+              "passed": false,
+              "detail": "steps given"
+            }
+          ],
+          "skipped": false,
+          "note": "answered: The Kajaani K-Market desk key arrangement is being replaced. Currently (until 30 Nov 2026), the Elisa key for the boom padlock is at the K-Market service desk in town. From 1 December 2026, ",
+          "assertions": [],
+          "answer": {
+            "status": "answered",
+            "summary": "The Kajaani K-Market desk key arrangement is being replaced. Currently (until 30 Nov 2026), the Elisa key for the boom padlock is at the K-Market service desk in town. From 1 December 2026, the boom will have a code lock instead, and the code comes from site security (Tiina Rantanen).",
+            "entity_ids": [
+              "TRN-015"
+            ],
+            "steps": [
+              {
+                "action": "Before 1 Dec 2026: Ask for the Elisa key at the K-Market service desk in town",
+                "assertion_ids": [
+                  "ASR-D9B181D68B"
+                ]
+              },
+              {
+                "action": "From 1 Dec 2026: Contact Tiina Rantanen (site security) for the boom code",
+                "assertion_ids": [
+                  "ASR-F83128AFFF"
+                ]
+              }
+            ],
+            "avoid": [],
+            "conditions": [],
+            "sources": [
+              {
+                "assertion_id": "ASR-D9B181D68B",
+                "who": "Pekka Hämäläinen",
+                "where": "slack",
+                "when": "2026-10-28",
+                "link": "https://eval.slack.example/archives/C-FIELD-OPS/p1793189100000000",
+                "ref": null,
+                "detail": "FYI for anyone going to Kajaani (TRN-015): the private road has a boom with a padlock. Key is at the K-Market service desk in town, ask for the Elisa key."
+              },
+              {
+                "assertion_id": "ASR-F83128AFFF",
+                "who": "Pekka Hämäläinen",
+                "where": "slack",
+                "when": "2026-10-28",
+                "link": "https://eval.slack.example/archives/C-FIELD-OPS/p1793189200000000?thread_ts=1793189100.000000&cid=C-FIELD-OPS",
+                "ref": null,
+                "detail": "The landowner is switching to a code lock on 1 December. After that no key, the code comes from site security (Tiina Rantanen)."
+              }
+            ],
+            "records": [],
+            "gap_id": null,
+            "gap_routed_to": null,
+            "review_notes": [
+              "ASR-D9B181D68B was superseded by ASR-F83128AFFF from 2026-12-01 00:00 Helsinki time.",
+              "Current key arrangement (ASR-D9B181D68B) is superseded as of 2026-11-30T22:00:00Z by ASR-F83128AFFF which introduces a code lock from 1 December 2026."
+            ]
+          }
+        }
+      ],
+      "field_accuracy": {
+        "action": "1/1",
+        "answered": "5/7",
+        "avoid": "2/2",
+        "citation": "6/7",
+        "contains": "6/7",
+        "dispute_shown": "0/1",
+        "false_confident": "2/3",
+        "not_contains": "2/2",
+        "not_documented": "2/3",
+        "not_recommended": "2/2"
+      }
+    }
+  ],
+  "elisa_rule": "ASR-F19F2A3F31",
+  "saved_captures": true,
+  "rescored_at": null,
+  "caveat": "T0 is Elisa's own example. T2 is hand-written and held out, n = 9 threads / 12 questions; one run, so no variance is reported."
+}
