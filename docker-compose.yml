@@ -17,12 +17,19 @@ x-backend: &backend
   env_file:
     - path: backend/.env
       required: true
+  # Every backend service reads the corpus and Elisa's example: the api for seed/backfill/eval,
+  # the slackbot for the capture loop and the telemetry gate (V4), the sim for its nodes.
+  # A service that lists its own `volumes` replaces this list, so api and slackbot repeat it.
+  volumes:
+    - ./mock_data:/data/mock_data:ro
+    - ./Elisa_SinceAI2026/ELISA_HIDDEN_KNOWLEDGE_EXAMPLE_2026:/data/elisa:ro
   environment: &backend-env
     # Inside compose these always win over backend/.env.
     NEO4J_URI: bolt://neo4j:7687
     NEO4J_USER: neo4j
     NEO4J_PASSWORD: ${NEO4J_PASSWORD:-silentctx-local-dev}
     DATA_DIR: /data/mock_data
+    ELISA_DIR: /data/elisa  # `kaiku replay` and `kaiku backfill --elisa-dir` default to it
     STATE_DIR: /state
     # Traces of every LLM call, pipeline step and agent tool call (UI-1).
     PHOENIX_COLLECTOR_ENDPOINT: http://phoenix:6006/v1/traces
@@ -62,7 +69,8 @@ services:
       - "127.0.0.1:8000:8000"  # REST + MCP at http://localhost:8000/mcp
     volumes:
       - ./mock_data:/data/mock_data:ro
-      - ./eval:/data/eval:ro
+      - ./Elisa_SinceAI2026/ELISA_HIDDEN_KNOWLEDGE_EXAMPLE_2026:/data/elisa:ro
+      - ./eval:/data/eval  # writable: `kaiku eval run` writes /data/eval/results for the Scorecard
       - api-state:/state  # LangGraph SQLite checkpointer
     healthcheck:
       # /readyz is 200 when Neo4j answers and the schema is applied (degraded counts as up).
@@ -81,6 +89,8 @@ services:
       SIM_URL: http://sim:8100  # fault events for #noc-alarms, and the simulated bounce
       EMAIL_DROP_DIR: /data/email_drop  # drop a .eml here to capture it (BE-2.2)
     volumes:
+      - ./mock_data:/data/mock_data:ro
+      - ./Elisa_SinceAI2026/ELISA_HIDDEN_KNOWLEDGE_EXAMPLE_2026:/data/elisa:ro
       - ./email_drop:/data/email_drop:ro
     depends_on:
       api:
