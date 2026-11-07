@@ -164,14 +164,18 @@ async def similarities(
     vector: Sequence[float],
 ) -> list[VectorHit]:
     """Exact cosine for every candidate that has an embedding, with no top-k cut: the
-    caller combines it with other weights before choosing what to keep (R12, plan 004)."""
+    caller combines it with other weights before choosing what to keep (R12, plan 004).
+
+    Raw cosine in [-1, 1]. Neo4j's `vector.similarity.cosine` returns (1 + cos) / 2, so an
+    unrelated statement (cos 0) would score 0.5 and a confidence or status weight would
+    outweigh the wording; the query maps it back."""
     if not ids:
         return []
     query: LiteralString = (
         "MATCH (n:" + spec.label + ") WHERE n." + spec.id_property + " IN $ids "
         "AND n.embedding IS NOT NULL "
         "RETURN n." + spec.id_property + " AS id, "
-        "vector.similarity.cosine(n.embedding, $vector) AS score"
+        "2 * vector.similarity.cosine(n.embedding, $vector) - 1 AS score"
     )
     records, _, _ = await driver.execute_query(
         query, ids=list(ids), vector=list(vector), database_=database

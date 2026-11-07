@@ -31,6 +31,8 @@ class Match(StrEnum):
     SITE = "site"  # bound to the site the device stands at
     SEGMENT = "segment"  # bound to a segment that connects it (site access, roads)
     SAME_MODEL_DEVICE = "same_model_device"  # observed on another device of the same model
+    # search_context only: valid at t, but outside the scope of the entities the query names
+    OUTSIDE_SCOPE = "outside_scope"
 
 
 # --- Entities -----------------------------------------------------------------------------------

@@ -53,6 +53,9 @@ MATCH_WEIGHT = {
     Match.SITE: 0.85,
     Match.SEGMENT: 0.8,
     Match.SAME_MODEL_DEVICE: 0.5,
+    # Below another device of the same model: when the query names an entity, knowledge
+    # about unrelated ones is the least likely to apply (plan 004 R12).
+    Match.OUTSIDE_SCOPE: 0.4,
 }
 STATUS_WEIGHT = {
     AssertionStatus.BELIEVED_TRUE: 1.0,

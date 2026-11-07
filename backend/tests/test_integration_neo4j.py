@@ -214,6 +214,7 @@ async def test_similarities_score_every_candidate_beyond_max_k(
     n = vector.MAX_K + 20
     rows = [{"id": f"SIM-{i:03d}", "e": _unit(0, mix=(1, i / n))} for i in range(n)]
     rows.append({"id": "SIM-none", "e": None})
+    rows.append({"id": "SIM-orth", "e": _unit(2)})
     async with AsyncGraphDatabase.driver(neo4j_url, auth=("neo4j", PASSWORD)) as driver:
         await driver.execute_query(
             "UNWIND $rows AS r CREATE (:ContextAssertion {assertion_id: r.id, embedding: r.e})",
@@ -223,8 +224,12 @@ async def test_similarities_score_every_candidate_beyond_max_k(
             hits = await vector.similarities(
                 driver, "neo4j", vector.ASSERTIONS, [r["id"] for r in rows], _unit(0)
             )
-            assert len(hits) == n  # every embedded candidate; the one without a vector is not
-            assert "SIM-none" not in {h.id for h in hits}
+            assert len(hits) == n + 1  # every embedded candidate; the one without a vector is not
+            scores = {h.id: h.score for h in hits}
+            assert "SIM-none" not in scores
+            # Raw cosine, not Neo4j's (1 + cos) / 2: unrelated is 0, not 0.5.
+            assert scores["SIM-000"] == pytest.approx(1.0)
+            assert scores["SIM-orth"] == pytest.approx(0.0)
             assert await vector.similarities(driver, "neo4j", vector.ASSERTIONS, [], _unit(0)) == []
         finally:
             await driver.execute_query(
@@ -783,6 +788,9 @@ async def test_search_scopes_by_query_entities_and_embeds_on_demand(
             by_id = {a.assertion_id: a for a in res.assertions}
             assert "ASR-0001" not in by_id
             assert by_id["ASR-0020"].match == "direct"
+            # Knowledge about unrelated entities is still listed, weighted below scope.
+            assert by_id["ASR-0025"].match == "outside_scope"
+            assert res.assertions[0].assertion_id == "ASR-0020"
 
             # TRN-017 is Gen1: the rule comes in through its hardware model, weighted 0.9
             # instead of the unscoped 0.7, and ranks first.
@@ -795,6 +803,7 @@ async def test_search_scopes_by_query_entities_and_embeds_on_demand(
             res = await svc.search_context("zero traffic after the SFP swap", limit=50)
             assert res.resolved_entities == []
             assert {"ASR-0001", "ASR-0020"} <= {a.assertion_id for a in res.assertions}
+            assert all(a.match is None for a in res.assertions)
 
             # A capture the minute-by-minute backfill hasn't reached is embedded on the spot.
             await driver.execute_query(

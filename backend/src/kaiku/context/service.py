@@ -99,9 +99,10 @@ def rank_by_similarity(
 ) -> list[AssertionView]:
     """R12: score = max(0, similarity) * the structural score (match * status * confidence),
     so a disputed or review_due assertion never ranks level with a believed one just because
-    its wording is closer. Neo4j's cosine is already in [0, 1]; the clamp guards any other
-    source. With `keep_unmatched` false (keyword mode), candidates sharing no term with the
-    query are left out; in semantic mode every candidate is ranked."""
+    its wording is closer. Similarity is raw cosine (or keyword overlap): unrelated is about
+    0 and opposed is negative, clamped to 0. With `keep_unmatched` false (keyword mode),
+    candidates sharing no term with the query are left out; in semantic mode every
+    candidate is ranked."""
     ranked = [
         a.model_copy(update={"score": round(max(0.0, sim) * score(a), 3)})
         for a in candidates
@@ -244,9 +245,9 @@ class ContextService:
         With `entity_id`, only that entity's scope is searched. Without it, entities read
         from the query (`resolve`, confidence >= RESOLVE_MIN_CONFIDENCE) bring their scope
         in as get_context sees it: with its match weight (direct 1.0, model 0.9, ...) and
-        its qualifier filter. The rest of the valid knowledge is ranked alongside with the
-        unscoped weight (0.7), so a wrong reading of the query lowers nothing below what an
-        unscoped search would give, and hides nothing. What get_context leaves out for a
+        its qualifier filter. The rest of the valid knowledge is ranked alongside, as
+        `outside_scope` (weight 0.4, below another device of the same model), so a wrong
+        reading of the query hides nothing. What get_context leaves out for a
         resolved device is not brought back: knowledge bound to its scope but filtered out,
         and knowledge whose models, generation or firmware match none of the devices named
         (R9), such as a Gen1 rule when the question is about a Gen3 node."""
@@ -266,8 +267,9 @@ class ContextService:
             scope = await self._in_scope(resolved, t)
             first = scope.assertions
             taken = {a.assertion_id for a in first}
+            outside = Match.OUTSIDE_SCOPE if resolved else None
             rest = [
-                a
+                a.model_copy(update={"match": outside})
                 for a in await self.repo.assertions(await self.repo.valid_assertion_ids(t, k), t, k)
                 if a.assertion_id not in taken
                 and not any(b.entity_id in scope.entity_ids for b in a.bindings)
@@ -653,6 +655,7 @@ def match_label(match: Match | None) -> str:
             Match.SITE: "about its site",
             Match.SEGMENT: "about its site/road",
             Match.SAME_MODEL_DEVICE: "seen on another device of the same model",
+            Match.OUTSIDE_SCOPE: "not about the entities named",
         }.get(match, "related")
         if match
         else "related"

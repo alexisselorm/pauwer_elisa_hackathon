@@ -949,7 +949,7 @@ export interface components {
          * @description Why an assertion is in scope for the entity asked about (ranking order).
          * @enum {string}
          */
-        Match: "direct" | "model" | "site" | "segment" | "same_model_device";
+        Match: "direct" | "model" | "site" | "segment" | "same_model_device" | "outside_scope";
         /** Mention */
         Mention: {
             /**

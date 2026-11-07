@@ -716,7 +716,8 @@
             "model",
             "site",
             "segment",
-            "same_model_device"
+            "same_model_device",
+            "outside_scope"
           ],
           "title": "Match",
           "type": "string"
@@ -1680,7 +1681,8 @@
             "model",
             "site",
             "segment",
-            "same_model_device"
+            "same_model_device",
+            "outside_scope"
           ],
           "title": "Match",
           "type": "string"
@@ -2200,7 +2202,8 @@
             "model",
             "site",
             "segment",
-            "same_model_device"
+            "same_model_device",
+            "outside_scope"
           ],
           "title": "Match",
           "type": "string"
@@ -3466,7 +3469,8 @@
             "model",
             "site",
             "segment",
-            "same_model_device"
+            "same_model_device",
+            "outside_scope"
           ],
           "title": "Match",
           "type": "string"
