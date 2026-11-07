@@ -210,3 +210,28 @@ async def test_correcting_a_superseded_version_keeps_it_superseded(driver: Async
     assert cview.supersedes == fixed.assertion_id
     with pytest.raises(WriteRejectedError, match="already superseded"):
         await repo.supersede(fixed.assertion_id, _item("third", 4, valid_from=start))
+
+
+async def test_a_fix_keeps_the_dispute_and_the_corroboration(driver: AsyncDriver) -> None:
+    """Found live in Slack: ✏️ Fix dropped every CONTRADICTS / CORROBORATES link, so a
+    disputed rule came back believed_true. A correction is not a resolution."""
+    repo = ContextRepository(driver, "neo4j")
+    other = await repo.assert_(_item("reseat the module", 0))
+    agrees = await repo.assert_(_item("bounce the port (email)", 1))
+    wrong = await repo.assert_(
+        _item(
+            "bounce the port",
+            2,
+            contradicts=[other.assertion_id],
+            corroborates=[agrees.assertion_id],
+        )
+    )
+    fixed = await repo.correct(
+        wrong.assertion_id,
+        _item("bounce the port, TRN-042 only", 2, status="believed_true"),
+        "WP-MSG-5",
+    )
+    [view] = await repo.assertions([fixed.assertion_id])
+    assert view.contradicts == [other.assertion_id]
+    assert view.corroborates == [agrees.assertion_id]
+    assert view.status == "disputed"

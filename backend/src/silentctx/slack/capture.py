@@ -111,7 +111,15 @@ def card_blocks(
         texts.append(f"Captured: {v.statement}")
         blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": "\n".join(body)}})
 
-        own = [c for c in v.citations if c.recorded_at is not None]
+        # Who said it: the latest message it derives from, never a click on this card.
+        own = sorted(
+            (
+                c
+                for c in v.citations
+                if c.recorded_at is not None and not (c.source_ref or "").startswith("card:")
+            ),
+            key=lambda c: c.recorded_at or v.recorded_at,
+        )
         meta = [
             f"Valid from <!date^{int(v.valid_from.timestamp())}^{{date_short_pretty}} {{time}}"
             f"|{v.valid_from:%Y-%m-%d %H:%M} UTC>"

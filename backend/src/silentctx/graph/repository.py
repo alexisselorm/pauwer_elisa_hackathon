@@ -695,6 +695,16 @@ class ContextRepository:
                 "  SET f.status = 'superseded', f.superseded_by = s.assertion_id } "
                 "CALL (w, f) { MATCH (w)-[:SUPERSEDES]->(p:ContextAssertion) "
                 "  CREATE (f)-[:SUPERSEDES]->(p) SET p.superseded_by = f.assertion_id } "
+                # A fix corrects the wording or scope, not a disagreement with other
+                # knowledge: it inherits the live CORROBORATES / CONTRADICTS links, and
+                # stays disputed unless it outranks the other side (V6).
+                "CALL (w, f) { MATCH (w)-[:CORROBORATES]-(x:ContextAssertion) "
+                "  WHERE x.retracted_at IS NULL AND x <> f MERGE (f)-[:CORROBORATES]->(x) } "
+                "CALL (w, f) { MATCH (w)-[:CONTRADICTS]-(x:ContextAssertion) "
+                "  WHERE x.retracted_at IS NULL AND x <> f MERGE (f)-[:CONTRADICTS]->(x) "
+                "  WITH f, max(coalesce(x.authority, 1)) AS top "
+                "  SET f.status = CASE WHEN f.status IN ['superseded', 'expired'] THEN f.status "
+                "    WHEN coalesce(f.authority, 1) > top THEN f.status ELSE 'disputed' END } "
                 "RETURN [(f)-[:SUPERSEDES]->(p:ContextAssertion) | p.assertion_id] AS preds",
                 wrong=wrong_id,
                 fixed=out.assertion_id,
