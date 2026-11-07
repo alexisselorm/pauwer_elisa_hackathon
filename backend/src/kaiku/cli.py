@@ -243,6 +243,25 @@ def eval_retrieval(
     raise typer.Exit(0 if result.passed == result.scored else 1)
 
 
+@eval_app.command("rescore")
+def eval_rescore(
+    results: Annotated[Path, typer.Argument(help="A saved run, eval/results/<start>.json.")],
+    heldout_dir: Annotated[Path, typer.Option(help="The held-out set.")] = Path("../eval/heldout"),
+) -> None:
+    """Score a saved run again with the current scorer and held-out key. No Neo4j, no LLM:
+    seconds instead of a full run. Writes <start>-rescored.json/.md next to it."""
+    from kaiku.eval.runner import EvalReport, rescore, to_markdown, write
+
+    report = EvalReport.model_validate_json(results.read_text("utf-8"))
+    try:
+        again = rescore(report, heldout_dir)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    js, md = write(again, results.parent)
+    typer.echo(to_markdown(again))
+    typer.echo(f"results: {js} and {md}", err=True)
+
+
 @eval_app.command("time")
 def eval_time(
     at: Annotated[

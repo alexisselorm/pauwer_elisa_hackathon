@@ -60,3 +60,47 @@ def test_each_expected_assertion_gets_its_own_capture() -> None:
     assert {got["a"].assertion_id, got["b"].assertion_id} == {"A-reseat", "A-bounce"}  # type: ignore[union-attr]
     only_one = match_all(exp, [reseat])
     assert sum(v is not None for v in only_one.values()) == 1
+
+
+def test_a_saved_run_is_rescored_without_neo4j_or_an_llm() -> None:
+    """H-02 bound to the device rather than its segment counts as captured (and fails
+    linking); HQ-02 cites H-02 through the saved capture."""
+    from pathlib import Path
+
+    import pytest
+
+    from kaiku.agents.ops_agent import AnswerStatus, OpsAnswer, Source
+    from kaiku.eval.runner import T2_CAPTURE, T2_QA, EvalReport, rescore
+    from kaiku.eval.score import ItemResult, SetResult
+
+    on_015 = [Binding(entity_id="TRN-015", scope="observed_on")]
+    pad = _view(
+        assertion_id="A-pad",
+        statement="Kajaani: boom with a padlock, key at the K-Market desk",
+        bindings=on_015,
+    )
+    answer = OpsAnswer.model_validate(
+        {
+            "status": AnswerStatus.ANSWERED,
+            "summary": "Padlock; the key is at the K-Market service desk.",
+            "sources": [Source.model_validate({"assertion_id": "A-pad"})],
+        }
+    )
+    capture = ItemResult(id="H-02", passed=False, note="kept", assertions=[pad])
+    qa = ItemResult(id="HQ-02", passed=False, answer=answer)
+    report = EvalReport(
+        started_at=T,
+        saved_captures=True,
+        sets=[SetResult(name=T2_CAPTURE, items=[capture]), SetResult(name=T2_QA, items=[qa])],
+    )
+    again = rescore(report, Path(__file__).parents[2] / "eval" / "heldout")
+    [h02] = again.sets[0].items
+    checks = {(c.name, c.detail.split(":")[0]): c.passed for c in h02.checks}
+    assert checks[("captured", "H-02a")]
+    assert not checks[("link_observed_on", "H-02a")]  # TRN-015, not SEG-015
+    [hq02] = again.sets[1].items
+    assert {c.name: c.passed for c in hq02.checks}["citation"]
+    assert again.rescored_at is not None
+
+    with pytest.raises(ValueError, match="predates"):
+        rescore(report.model_copy(update={"saved_captures": False}), Path("."))

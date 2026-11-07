@@ -35,13 +35,12 @@ from kaiku.eval.score import (
     HeldoutThread,
     ItemResult,
     SetResult,
+    cite_map,
     field_accuracy,
     load_heldout,
-    match_all,
     scoped,
-    score_answer,
-    score_assertion,
-    score_relations,
+    score_question,
+    score_thread,
 )
 from kaiku.extraction.graph import CaptureResult, Extractor
 from kaiku.extraction.llm import LlmJudge
@@ -65,6 +64,8 @@ log = get_logger(__name__)
 NEO4J_IMAGE = "neo4j:2026.10.1-community"  # same as docker-compose.yml
 NEO4J_START_S = 600  # testcontainers polls once a second
 SNAPSHOT = datetime(2026, 11, 7, tzinfo=UTC)  # eval/heldout: "status at snapshot"
+T2_CAPTURE = "T2 held-out capture"
+T2_QA = "T2 held-out QA"
 ELISA_MSG8 = datetime(2025, 10, 14, 6, 22, 8, tzinfo=UTC)  # R8: 09:22 EEST, seconds synthetic
 ST30_QUESTION = "TRN-017 port 1/1/2: up, optics fine, zero traffic after an SFP swap. What next?"
 FAR = datetime(2100, 1, 1, tzinfo=UTC)  # the sweeper's clock: every stored thread is due
@@ -78,6 +79,10 @@ class EvalReport(BaseModel):
     sets: list[SetResult] = []
     # The temporal checks on the graph the run left behind.
     temporal: list[CheckResult] = []
+    elisa_rule: str | None = None  # the T0 assertion; held-out QA may cite it
+    # Items carry their assertions and answers, so `rescore` works. False on older files.
+    saved_captures: bool = False
+    rescored_at: datetime | None = None
     caveat: str = (
         "T0 is Elisa's own example. T2 is hand-written and held out, n = 9 threads / "
         "12 questions; one run, so no variance is reported."
@@ -343,42 +348,22 @@ class Harness:
     async def t2(self, folder: Path, elisa_rule: str | None) -> list[SetResult]:
         threads, expected, questions = load_heldout(folder)
         by_id = {e.thread_id: e for e in expected}
-        cite: dict[str, set[str]] = {}
-        if elisa_rule:
-            cite["Elisa TRN-042 Teams message 8"] = {elisa_rule}
-            cite["Elisa TRN-042 email"] = {elisa_rule}
+        captured: dict[str, list[AssertionView]] = {}
         items: list[ItemResult] = []
         for t in sorted(threads, key=lambda t: t.messages[0].ts):
-            exp = by_id[t.thread_id]
             res = await self.capture(self._heldout_messages(t))
             views = await self.views(res.assertion_ids)
-            cite[t.thread_id] = set(res.assertion_ids)
-            for v in views:
-                cite[t.thread_id] |= set(v.corroborates)
-            checks: list[Check] = []
-            if not exp.expected_assertions and not exp.expected_relations:
-                checks.append(
-                    Check(
-                        name="nothing_captured",
-                        passed=not res.assertion_ids,
-                        detail=f"{res.status}: {res.reason}",
-                    )
+            captured[t.thread_id] = views
+            items.append(
+                score_thread(
+                    by_id[t.thread_id], views, note=res.reason, elisa_rule=elisa_rule,
+                    snapshot=SNAPSHOT,
                 )
-            elif not exp.expected_assertions:  # H-01: corroborate, never duplicate
-                dup = [v.assertion_id for v in views if elisa_rule not in v.corroborates]
-                checks.append(Check(name="no_duplicate", passed=not dup, detail=str(dup)))
-            matched = match_all(exp.expected_assertions, views)
-            for ea in exp.expected_assertions:
-                view = matched[ea.key]
-                checks += [
-                    c.model_copy(update={"detail": f"{ea.key}: {c.detail}"})
-                    for c in score_assertion(ea, view, SNAPSHOT)
-                ]
-            checks += score_relations(exp.expected_assertions, matched)
-            items.append(ItemResult.of(t.thread_id, checks, note=res.reason[:200]))
-        capture = SetResult(name="T2 held-out capture", items=items)
+            )  # fmt: skip
+        capture = SetResult(name=T2_CAPTURE, items=items)
         capture.field_accuracy = field_accuracy(items)
 
+        cite = cite_map(elisa_rule, captured)
         qa_items: list[ItemResult] = []
         for q in questions:
             if self.agent is None:
@@ -392,14 +377,45 @@ class Harness:
                     ItemResult(id=q.id, passed=False, note=f"{type(exc).__name__}: {exc}"[:200])
                 )
                 continue
-            qa_items.append(
-                ItemResult.of(
-                    q.id, score_answer(q, ans, cite), note=f"{ans.status}: {ans.summary}"[:200]
-                )
-            )
-        qa = SetResult(name="T2 held-out QA", items=qa_items)
+            qa_items.append(score_question(q, ans, cite))
+        qa = SetResult(name=T2_QA, items=qa_items)
         qa.field_accuracy = field_accuracy(qa_items)
         return [capture, qa]
+
+
+def rescore(report: EvalReport, heldout_dir: Path) -> EvalReport:
+    """Score a saved run again with the current scorer and held-out key: no Neo4j, no LLM.
+    T2 only (T0 is scored inline). Runs from before the captures were saved can't be."""
+    if not report.saved_captures:
+        raise ValueError("this report predates saved captures; it can only be re-run")
+    _, expected, questions = load_heldout(heldout_dir)
+    by_id = {e.thread_id: e for e in expected}
+    by_q = {q.id: q for q in questions}
+    sets: list[SetResult] = []
+    captured: dict[str, list[AssertionView]] = {}
+    for s in report.sets:
+        if s.name == T2_CAPTURE:
+            items = [
+                score_thread(
+                    by_id[i.id], i.assertions, note=i.note, elisa_rule=report.elisa_rule,
+                    snapshot=SNAPSHOT,
+                )
+                if i.id in by_id else i
+                for i in s.items
+            ]  # fmt: skip
+            captured = {i.id: i.assertions for i in items}
+            s = SetResult(name=s.name, items=items, field_accuracy=field_accuracy(items))
+        sets.append(s)
+    cite = cite_map(report.elisa_rule, captured)
+    for k, s in enumerate(sets):
+        if s.name == T2_QA:
+            items = [
+                score_question(by_q[i.id], i.answer, cite)
+                if i.answer is not None and i.id in by_q else i
+                for i in s.items
+            ]  # fmt: skip
+            sets[k] = SetResult(name=s.name, items=items, field_accuracy=field_accuracy(items))
+    return report.model_copy(update={"sets": sets, "rescored_at": datetime.now(UTC)})
 
 
 def _has_llm(settings: Settings) -> bool:
@@ -417,6 +433,7 @@ async def run_eval(
 ) -> EvalReport:
     report = EvalReport(
         started_at=datetime.now(UTC),
+        saved_captures=True,
         models={"chat": base.chat_model, "fast": base.fast_model,
                 "embedding": base.embedding_model},
     )  # fmt: skip
@@ -441,6 +458,7 @@ async def run_eval(
                 h.agent = OpsAgent(settings.model_copy(update={"mcp_url": f"{url}/mcp"}))
                 t0, rule = await h.t0()
                 report.sets.append(t0)
+                report.elisa_rule = rule
                 if "heldout" in sets:
                     report.sets += await h.t2(heldout_dir, rule)
             report.temporal = await run_checks(h.driver, settings.neo4j_database)
@@ -459,6 +477,11 @@ def to_markdown(report: EvalReport) -> str:
         + ".",
         "",
         f"_{report.caveat}_",
+        *(
+            ["", f"Re-scored {report.rescored_at:%Y-%m-%d %H:%M} UTC from the saved run."]
+            if report.rescored_at
+            else []
+        ),
         "",
         "| Set | Passed | Field accuracy |",
         "|---|---|---|",
@@ -481,8 +504,12 @@ def to_markdown(report: EvalReport) -> str:
 
 
 def write(report: EvalReport, out_dir: Path) -> tuple[Path, Path]:
+    """`<start>.json/.md`; a re-score is `<start>-rescored.*`, which sorts after its run, so
+    the console shows it as the latest."""
     out_dir.mkdir(parents=True, exist_ok=True)
     stem = report.started_at.strftime("%Y%m%dT%H%M%SZ")
+    if report.rescored_at is not None:
+        stem += "-rescored"
     js, md = out_dir / f"{stem}.json", out_dir / f"{stem}.md"
     js.write_text(report.model_dump_json(indent=2), "utf-8")
     md.write_text(to_markdown(report), "utf-8")

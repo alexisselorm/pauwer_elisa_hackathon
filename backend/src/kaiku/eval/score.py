@@ -118,6 +118,9 @@ class ItemResult(BaseModel):
     checks: list[Check] = []
     skipped: bool = False
     note: str = ""
+    # What was scored, saved so `kaiku eval rescore` can score again without a run.
+    assertions: list[AssertionView] = []
+    answer: OpsAnswer | None = None
 
     @classmethod
     def of(cls, id: str, checks: list[Check], note: str = "") -> ItemResult:
@@ -182,8 +185,10 @@ def same_status(got: str, want: str) -> bool:
 
 
 def _rank(expected: ExpectedAssertion, v: AssertionView) -> tuple[int, int]:
+    # Either field: a capture bound to the device instead of its segment (H-02) is still
+    # the same knowledge, and fails the linking check rather than counting as missing.
     entities = scoped(v, "observed_on") | scoped(v, "applies_to")
-    overlap = len(set(expected.observed_on) & entities)
+    overlap = len((set(expected.observed_on) | set(expected.applies_to)) & entities)
     words = sum(w.casefold() in v.statement.casefold() for w in expected.statement_contains)
     return overlap, words
 
@@ -341,3 +346,61 @@ def score_answer(q: Question, answer: OpsAnswer, cite_ids: Mapping[str, set[str]
             )
         )
     return checks
+
+
+# --- One thread, one question: pure, so a saved run can be scored again --------------------
+
+
+def score_thread(
+    exp: Expected,
+    views: Sequence[AssertionView],
+    *,
+    note: str,
+    elisa_rule: str | None,
+    snapshot: datetime,
+) -> ItemResult:
+    checks: list[Check] = []
+    if not exp.expected_assertions and not exp.expected_relations:
+        checks.append(
+            Check(
+                name="nothing_captured",
+                passed=not views,
+                detail=f"{len(views)} captured: {note}",
+            )
+        )
+    elif not exp.expected_assertions:  # H-01: corroborate, never duplicate
+        dup = [v.assertion_id for v in views if elisa_rule not in v.corroborates]
+        checks.append(Check(name="no_duplicate", passed=not dup, detail=str(dup)))
+    matched = match_all(exp.expected_assertions, views)
+    for ea in exp.expected_assertions:
+        checks += [
+            c.model_copy(update={"detail": f"{ea.key}: {c.detail}"})
+            for c in score_assertion(ea, matched[ea.key], snapshot)
+        ]
+    checks += score_relations(exp.expected_assertions, matched)
+    item = ItemResult.of(exp.thread_id, checks, note=note[:200])
+    item.assertions = list(views)
+    return item
+
+
+def cite_map(
+    elisa_rule: str | None, captured: Mapping[str, Sequence[AssertionView]]
+) -> dict[str, set[str]]:
+    """Source name in questions.jsonl -> the assertion ids that count as citing it."""
+    cite: dict[str, set[str]] = {}
+    if elisa_rule:
+        cite["Elisa TRN-042 Teams message 8"] = {elisa_rule}
+        cite["Elisa TRN-042 email"] = {elisa_rule}
+    for thread_id, views in captured.items():
+        cite[thread_id] = {v.assertion_id for v in views}
+        for v in views:
+            cite[thread_id] |= set(v.corroborates)
+    return cite
+
+
+def score_question(q: Question, answer: OpsAnswer, cite: Mapping[str, set[str]]) -> ItemResult:
+    item = ItemResult.of(
+        q.id, score_answer(q, answer, cite), note=f"{answer.status}: {answer.summary}"[:200]
+    )
+    item.answer = answer
+    return item
