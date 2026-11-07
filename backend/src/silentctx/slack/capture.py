@@ -160,6 +160,10 @@ def card_blocks(
             )
         if q.get("time_note"):
             blocks.append(context(f":grey_question: {q['time_note']}. Use ✏️ Fix to change it."))
+        # Review buttons only while a person still has something to decide; once confirmed
+        # (✅ or a saved ✏️ fix) the card is done. Later changes come from the thread itself.
+        if v.status not in (AssertionStatus.UNVERIFIED, AssertionStatus.DISPUTED):
+            continue
         buttons = []
         if v.status is AssertionStatus.UNVERIFIED:
             buttons.append(

@@ -498,7 +498,11 @@ def test_card_asks_its_one_question_inside_the_card() -> None:
     ]
     assert [json.loads(e["value"])["e"] for e in binds] == ["TRN-042", "TRN-142"]
     confirmed = cap.card_blocks([_view(status=AssertionStatus.BELIEVED_TRUE)], THREAD, {})[1]
-    assert cap.CARD_CONFIRM not in json.dumps(confirmed)
+    assert not [b for b in confirmed if b["type"] == "actions"]  # done: no buttons at all
+    disputed = cap.card_blocks([_view(status=AssertionStatus.DISPUTED)], THREAD, {})[1]
+    assert cap.CARD_CONFIRM not in json.dumps(disputed)
+    assert cap.CARD_FIX in json.dumps(disputed)
+    assert cap.CARD_RETRACT in json.dumps(disputed)
     removed = cap.card_blocks([_view(retracted_at=MSG8)], THREAD, {})[1]
     assert "Not knowledge: removed" in json.dumps(removed)
 
