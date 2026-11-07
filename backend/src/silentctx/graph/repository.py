@@ -95,20 +95,24 @@ _ASSERTION_FIELDS: LiteralString = """
   [(a)-[b:ABOUT]->(e:Entity) | {entity_id: e.entity_id, scope: b.scope}] AS bindings,
   [(a)-[:CONTRADICTS]-(x:ContextAssertion) | x.assertion_id] AS contradicts,
   [(a)-[:CORROBORATES]-(x:ContextAssertion) | x.assertion_id] AS corroborates,
-  head([(x:ContextAssertion)-[:SUPERSEDES]->(a) | x.assertion_id]) AS superseded_by,
-  head([(x:ContextAssertion)-[:SUPERSEDES]->(a) | x.recorded_at]) AS superseded_recorded_at,
-  head([(a)-[:SUPERSEDES]->(x:ContextAssertion) | x.assertion_id]) AS supersedes,
+  head([(x:ContextAssertion)-[:SUPERSEDES]->(a) WHERE x.retracted_at IS NULL | x.assertion_id]
+    + [(x:ContextAssertion)-[:SUPERSEDES]->(a) | x.assertion_id]) AS superseded_by,
+  [(x:ContextAssertion)-[:SUPERSEDES]->(a) | x.recorded_at] AS superseded_recorded_at,
+  head([(a)-[:SUPERSEDES]->(x:ContextAssertion) WHERE x.retracted_at IS NULL | x.assertion_id]
+    + [(a)-[:SUPERSEDES]->(x:ContextAssertion) | x.assertion_id]) AS supersedes,
   [(a)-[:DERIVED_FROM]->(ev:Event) | ev { .event_id, .event_time, .platform, .author,
       .channel, .permalink, .text }] AS sources
 """
 
 _KNOWN: LiteralString = "a.recorded_at <= $k AND (a.retracted_at IS NULL OR a.retracted_at > $k)"
 # R10: validity as it was known at k. A supersession is recorded when its successor is
-# (R2), so if the successor was recorded after k, the predecessor was still open-ended then:
-# "why did the AI dispatch to Kemi on 08-10 with the padlock key?"
+# (R2), so if no successor was on record by k, the predecessor was still open-ended then:
+# "why did the AI dispatch to Kemi on 08-10 with the padlock key?" A corrected successor
+# hands over to its fix at the correction instant, so the earliest one decides.
 _VALID_TO_AT_K: LiteralString = (
-    "CASE WHEN EXISTS { MATCH (succ:ContextAssertion)-[:SUPERSEDES]->(a) "
-    "WHERE succ.recorded_at > $k } THEN null ELSE a.valid_to END"
+    "CASE WHEN EXISTS { MATCH (:ContextAssertion)-[:SUPERSEDES]->(a) } AND NOT EXISTS { "
+    "MATCH (succ:ContextAssertion)-[:SUPERSEDES]->(a) WHERE succ.recorded_at <= $k } "
+    "THEN null ELSE a.valid_to END"
 )
 _VALID: LiteralString = (
     "a.valid_from <= $t AND $t < coalesce(" + _VALID_TO_AT_K + ", " + END_OF_TIME + ")"
@@ -122,7 +126,7 @@ def assertion_view(
     recorded later is not applied (open-ended, believed true, no successor yet)."""
     a = py(dict(record["a"]))
     superseded_by = record.get("superseded_by")
-    succ_recorded = py(record.get("superseded_recorded_at"))
+    succ_recorded = min(py(record.get("superseded_recorded_at") or []), default=None)
     if known_at is not None and succ_recorded is not None and succ_recorded > known_at:
         a["valid_to"] = None
         if a.get("status") == "superseded":
@@ -605,8 +609,8 @@ class ContextRepository:
                 raise WriteRejectedError(f"{predecessor_id} is retracted; nothing to supersede")
             if await _single(
                 tx,
-                "MATCH (:ContextAssertion)-[:SUPERSEDES]->(:ContextAssertion {assertion_id: $id}) "
-                "RETURN true AS x",
+                "MATCH (s:ContextAssertion)-[:SUPERSEDES]->(:ContextAssertion {assertion_id: $id}) "
+                "WHERE s.retracted_at IS NULL RETURN true AS x",
                 id=predecessor_id,
             ):
                 raise WriteRejectedError(f"{predecessor_id} is already superseded")
@@ -665,16 +669,27 @@ class ContextRepository:
                 return out
             if out.recorded_at != fixed_state.recorded_at:
                 raise WriteRejectedError("a source of the fix is later than the correction (R2)")
-            await tx.run(
+            preds = await _single(
+                tx,
                 "MATCH (w:ContextAssertion {assertion_id: $wrong}), "
                 "(f:ContextAssertion {assertion_id: $fixed}) "
-                "SET w.retracted_at = $at CREATE (f)-[:CORRECTS]->(w)",
+                "SET w.retracted_at = $at CREATE (f)-[:CORRECTS]->(w) "
+                # The fix takes the wrong version's place in the supersession chain. The
+                # wrong version keeps its edges: what was believed then stays on record (R6).
+                "WITH w, f "
+                "CALL (w, f) { MATCH (s:ContextAssertion)-[:SUPERSEDES]->(w) "
+                "  WHERE s.retracted_at IS NULL "
+                "  CREATE (s)-[:SUPERSEDES]->(f) "
+                "  SET f.status = 'superseded', f.superseded_by = s.assertion_id } "
+                "CALL (w, f) { MATCH (w)-[:SUPERSEDES]->(p:ContextAssertion) "
+                "  CREATE (f)-[:SUPERSEDES]->(p) SET p.superseded_by = f.assertion_id } "
+                "RETURN [(f)-[:SUPERSEDES]->(p:ContextAssertion) | p.assertion_id] AS preds",
                 wrong=wrong_id,
                 fixed=out.assertion_id,
                 at=fixed_state.recorded_at,
             )
-            await _check_v5(tx, [wrong_id, out.assertion_id])
-            return out
+            await _check_v5(tx, [wrong_id, out.assertion_id, *preds])
+            return await _out(tx, out.assertion_id, replayed=False)
 
         return await self._tx(work)
 
@@ -1203,7 +1218,7 @@ OPTIONAL MATCH (a)-[:DERIVED_FROM]->(ev:Event)
 WITH a, max(ev.event_time) AS last_source, count(ev) AS n_sources
 OPTIONAL MATCH (a)-[:ABOUT]->(e:Entity)
 WITH a, last_source, n_sources, count(e) AS n_bindings
-OPTIONAL MATCH (succ:ContextAssertion)-[:SUPERSEDES]->(a)
+OPTIONAL MATCH (succ:ContextAssertion)-[:SUPERSEDES]->(a) WHERE succ.retracted_at IS NULL
 WITH a, last_source, n_sources, n_bindings, collect(succ.valid_from) AS succ_from
 RETURN a.assertion_id AS id, [x IN [
   CASE WHEN a.valid_to IS NOT NULL AND a.valid_to <= a.valid_from

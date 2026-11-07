@@ -172,3 +172,41 @@ async def test_contradiction_disputes_both_sides(driver: AsyncDriver) -> None:
     views = {v.assertion_id: v for v in await repo.assertions([old.assertion_id, new.assertion_id])}
     assert {v.status for v in views.values()} == {"disputed"}
     assert views[old.assertion_id].contradicts == [new.assertion_id]
+
+
+async def test_correcting_a_successor_hands_the_supersession_to_the_fix(
+    driver: AsyncDriver,
+) -> None:
+    repo = ContextRepository(driver, "neo4j")
+    start = T0 + timedelta(days=1)
+    pad = await repo.assert_(_item("padlock", 0))
+    wrong = await repo.supersede(pad.assertion_id, _item("code lock 1111", 2, valid_from=start))
+    fixed = await repo.correct(wrong.assertion_id, _item("code lock 2222", 2), "WP-MSG-4")
+    assert fixed.valid_from == start
+
+    [view] = await repo.assertions([pad.assertion_id])
+    assert (view.superseded_by, view.valid_to) == (fixed.assertion_id, start)
+    [fview] = await repo.assertions([fixed.assertion_id])
+    assert fview.supersedes == pad.assertion_id
+
+    # R10: the padlock was known to be superseded from the first (wrong) version on.
+    later = T0 + timedelta(days=2)
+    for hours, in_scope in ((1, True), (3, False), (5, False)):
+        found = await repo.assertions([pad.assertion_id], later, T0 + timedelta(hours=hours))
+        assert bool(found) is in_scope, hours
+
+
+async def test_correcting_a_superseded_version_keeps_it_superseded(driver: AsyncDriver) -> None:
+    repo = ContextRepository(driver, "neo4j")
+    start = T0 + timedelta(days=1)
+    wrong = await repo.assert_(_item("padlock, key at Kemi depot", 0))
+    code = await repo.supersede(wrong.assertion_id, _item("code lock", 3, valid_from=start))
+    fixed = await repo.correct(wrong.assertion_id, _item("padlock, key at Tornio", 0), "WP-MSG-5")
+    assert (fixed.status, fixed.valid_from, fixed.valid_to) == ("superseded", T0, start)
+
+    [fview] = await repo.assertions([fixed.assertion_id])
+    assert fview.superseded_by == code.assertion_id
+    [cview] = await repo.assertions([code.assertion_id])
+    assert cview.supersedes == fixed.assertion_id
+    with pytest.raises(WriteRejectedError, match="already superseded"):
+        await repo.supersede(fixed.assertion_id, _item("third", 4, valid_from=start))
