@@ -38,9 +38,9 @@ export function App() {
   return (
     <div className="app">
       <header className="top">
-        <Link to="/" className="brand" aria-label="silentctx home">
+        <Link to="/" className="brand" aria-label="kaiku home">
           <img src="/favicon.svg" alt="" />
-          <b>silentctx</b>
+          <b>kaiku</b>
           <span>Context layer</span>
         </Link>
         <nav className="tabs" aria-label="Views">

@@ -142,6 +142,6 @@ ST-70…ST-73 are specified in [plan 004 §6](004-temporal-aware-retrieval.md#6-
 ### 2.5 CLI
 
 ```
-silentctx eval --set elisa|regression|heldout|all --graph extracted|gold|both --runs 3
-silentctx eval time      # no LLM needed for the R-rule checks on stored data
+kaiku eval --set elisa|regression|heldout|all --graph extracted|gold|both --runs 3
+kaiku eval time      # no LLM needed for the R-rule checks on stored data
 ```

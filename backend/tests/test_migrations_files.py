@@ -6,7 +6,7 @@ import re
 
 from neo4j_python_migrations.loader import load
 
-from silentctx.graph.schema import MIGRATIONS_DIR
+from kaiku.graph.schema import MIGRATIONS_DIR
 
 
 def test_every_migration_file_is_loaded() -> None:

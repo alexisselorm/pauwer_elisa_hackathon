@@ -8,8 +8,8 @@ from typing import Any
 
 from langchain_core.messages import ToolMessage
 
-from silentctx.agents.ops_agent import AnswerStatus, ConditionReport, OpsAnswer, Step, opened_gap
-from silentctx.slack import actions as a
+from kaiku.agents.ops_agent import AnswerStatus, ConditionReport, OpsAnswer, Step, opened_gap
+from kaiku.slack import actions as a
 
 NOW = datetime(2026, 11, 7, 12, 0, tzinfo=UTC)
 FAULT = [
@@ -66,7 +66,7 @@ class Client:
     async def users_list(self, **kw: Any) -> dict[str, Any]:
         return {
             "members": [
-                {"id": "UBOT", "name": "silentctx", "is_bot": True},
+                {"id": "UBOT", "name": "kaiku", "is_bot": True},
                 {"id": "U9", "name": "erkki.v", "profile": {"real_name": "Erkki Virtanen"}},
             ]
         }
@@ -302,8 +302,8 @@ def test_gap_routing_comes_from_the_tool_result_not_the_model() -> None:
 
 
 def test_slack_sources_link_to_the_message() -> None:
-    from silentctx.agents.ops_agent import Source
-    from silentctx.slack.format import format_answer
+    from kaiku.agents.ops_agent import Source
+    from kaiku.slack.format import format_answer
 
     answer = ADVICE.model_copy(
         update={
@@ -363,8 +363,8 @@ async def test_with_no_known_expert_the_channel_is_asked() -> None:
 
 
 def test_sources_are_grounded_in_the_tool_citations() -> None:
-    from silentctx.agents.ops_agent import Source, ground_sources
-    from silentctx.slack.format import format_answer
+    from kaiku.agents.ops_agent import Source, ground_sources
+    from kaiku.slack.format import format_answer
 
     context = {
         "assertions": [

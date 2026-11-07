@@ -9,8 +9,8 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from silentctx.domain.models import AssertionStatus, Platform
-from silentctx.domain.time import (
+from kaiku.domain.models import AssertionStatus, Platform
+from kaiku.domain.time import (
     ELISA_SYNTHETIC_SECONDS,
     EntityWindow,
     EventTime,

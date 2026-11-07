@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>silentctx Console</title>
+<title>kaiku Console</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
@@ -286,7 +286,7 @@ tr:last-child td { border-bottom: 0; }
   <header>
     <div class="brand">
       <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="4" cy="4" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="6" cy="12" r="2"/><path d="M5.8 4.6 10.2 5.4M4.6 5.9 5.4 10.1M7.6 11 10.6 7.4"/></svg></div>
-      <b>silentctx</b><span>Context layer</span>
+      <b>kaiku</b><span>Context layer</span>
     </div>
     <nav class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-view="graph">Graph</button>
@@ -387,7 +387,7 @@ tr:last-child td { border-bottom: 0; }
         <div class="detail-head" style="margin-bottom:0">
           <h2>Scorecard</h2>
           <span class="pill mute">Sample values</span>
-          <div class="right"><span class="mono subtle">silentctx eval --set all --graph both --runs 3</span></div>
+          <div class="right"><span class="mono subtle">kaiku eval --set all --graph both --runs 3</span></div>
         </div>
         <div class="tiles">
           <div class="card tile good"><div class="v">0</div><div class="k">Extra work per capture</div><div class="n">human actions · 17 threads</div></div>
@@ -845,7 +845,7 @@ $("#toast-open").addEventListener("click", () => { $("#toast").classList.remove(
 
 /* ---------- Captures ---------- */
 const P = (who, time, html, tag) => ({ who, time, html, tag });
-const PEOPLE = { Veikko: ["VV", "#7a9bff", "Field Engineer"], Erkki: ["EE", "#101064", "Network Expert"], Mika: ["MK", "#f27513", "Transport"], Sanna: ["SL", "#008253", "NOC"], Bot: ["⚡", "#2323ff", "silentctx"] };
+const PEOPLE = { Veikko: ["VV", "#7a9bff", "Field Engineer"], Erkki: ["EE", "#101064", "Network Expert"], Mika: ["MK", "#f27513", "Transport"], Sanna: ["SL", "#008253", "NOC"], Bot: ["⚡", "#2323ff", "kaiku"] };
 const THREADS = [
   { id: "T1", title: "TRN-042 traffic not back after SFP swap", where: "#noc-transport", when: "14 Oct 2025, 09:14", status: "captured", outcome: "1 rule · supersedes KB",
     pipe: [["Triage", "0.4 s", "rule", "done"], ["Extract", "3.1 s", "1 rule · 7 quotes", "done"], ["Link", "0.2 s", "3 entities", "done"], ["Validate", "0.3 s", "telemetry agrees", "done"], ["Reconcile", "0.1 s", "supersedes 1", "done"], ["Persist", "0.1 s", "1 tx · V5 ok", "done"]],
@@ -908,7 +908,7 @@ function selectThread(id) {
       <div>
         <div class="card sect"><h3>Source</h3>
           <div class="legend-row" style="margin-bottom:8px"><mark class="c">condition</mark><mark class="a">action</mark><mark class="v">avoid</mark><mark class="s">scope</mark><mark class="e">entity</mark></div>
-          ${t.msgs.map(m => { const p = PEOPLE[m.who]; return `<div class="msg"><div class="avatar" style="background:${p[1]}">${p[0]}</div><div><div class="who">${m.who === "Bot" ? "silentctx" : m.who}<span>${p[2]} · ${m.time}</span></div><div class="txt">${m.html}</div>${m.tag ? `<div class="tag">${m.tag}</div>` : ""}</div></div>`; }).join("")}
+          ${t.msgs.map(m => { const p = PEOPLE[m.who]; return `<div class="msg"><div class="avatar" style="background:${p[1]}">${p[0]}</div><div><div class="who">${m.who === "Bot" ? "kaiku" : m.who}<span>${p[2]} · ${m.time}</span></div><div class="txt">${m.html}</div>${m.tag ? `<div class="tag">${m.tag}</div>` : ""}</div></div>`; }).join("")}
         </div>
       </div>
       <div>
@@ -941,14 +941,14 @@ const RUNS = [
     ],
     answer: { do: "Disable and re-enable 1/1/2", avoid: ["Replacing the SFP again", "Rebooting TRN-017"], sources: ["ASR-0001", "ASR-0006"], dropped: "1 step dropped: no citation" },
     outcome: "Run bounce → counters recovered · network-confirmed · support +1" },
-  { id: "R2", title: "How do I get into the Kemi site?", trigger: "@silentctx · DM", when: "Yesterday", status: "answered", total: "4.1 s",
+  { id: "R2", title: "How do I get into the Kemi site?", trigger: "@kaiku · DM", when: "Yesterday", status: "answered", total: "4.1 s",
     calls: [
       ["resolve_entities", `"Kemi site"`, "90 ms", `<span class="chip">SEG-042</span>`],
       ["get_site_access", `"SEG-042", as_of=visit`, "140 ms", `<span class="pill ok">ASR-0024</span><span class="pill mute">ASR-0023 ended</span><span class="pill mute">ASR-0032 ended</span>`],
     ],
     answer: { do: "Code lock: get the code from site security (Heikki Lehtonen)", avoid: ["Asking Pekka for a key (superseded 3 Aug 2026)"], sources: ["ASR-0024"], dropped: null },
     outcome: null },
-  { id: "R3", title: "MTU on the new Oulu microwave hop?", trigger: "@silentctx · #noc-transport", when: "Yesterday", status: "gap", total: "3.2 s",
+  { id: "R3", title: "MTU on the new Oulu microwave hop?", trigger: "@kaiku · #noc-transport", when: "Yesterday", status: "gap", total: "3.2 s",
     calls: [
       ["resolve_entities", `"Oulu microwave hop"`, "100 ms", `<span class="chip">KMAX-4K</span>`],
       ["get_context", `"KMAX-4K", topic="mtu"`, "280 ms", `<span class="subtle">0 in scope</span>`],

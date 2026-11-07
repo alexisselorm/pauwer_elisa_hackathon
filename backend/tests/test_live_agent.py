@@ -14,13 +14,13 @@ import httpx
 import pytest
 from neo4j import AsyncDriver
 
-from silentctx.agents.ops_agent import AnswerStatus, OpsAgent, OpsAnswer
-from silentctx.config import Settings
-from silentctx.extraction.llm import LlmJudge
-from silentctx.main import create_app
-from silentctx.seed.profiles import Profile
-from silentctx.seed.service import SeedRequest, seed
-from silentctx.slack.actions import SimNetwork, fault_question
+from kaiku.agents.ops_agent import AnswerStatus, OpsAgent, OpsAnswer
+from kaiku.config import Settings
+from kaiku.extraction.llm import LlmJudge
+from kaiku.main import create_app
+from kaiku.seed.profiles import Profile
+from kaiku.seed.service import SeedRequest, seed
+from kaiku.slack.actions import SimNetwork, fault_question
 from tests.capture_helpers import MOCK_DATA
 from tests.test_integration_capture import CHANNEL, PASSWORD, Rig, driver, slack_events  # noqa: F401
 from tests.test_integration_neo4j import _serve, _sim_server, _SimClock, neo4j_url  # noqa: F401

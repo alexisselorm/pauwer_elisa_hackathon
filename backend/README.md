@@ -1,4 +1,4 @@
-# silentctx backend
+# kaiku backend
 
 FastAPI app that hosts the context layer and serves the MCP server at `/mcp`.
 Plans: [`docs/plans/001`](../docs/plans/001-backend-setup.md), [`002`](../docs/plans/002-slack-and-mcp.md), [`003`](../docs/plans/003-acceptance-and-eval.md).
@@ -17,14 +17,14 @@ repo root: see the root README. To run the API alone against a local Neo4j:
 
 ```bash
 docker run -d --name neo4j -p 7687:7687 -e NEO4J_AUTH=neo4j/silentctx-local-dev neo4j:2026.10.1-community
-uv run silentctx-api         # http://localhost:8000  (API_RELOAD=true for --reload)
+uv run kaiku-api         # http://localhost:8000  (API_RELOAD=true for --reload)
 ```
 
 | Entry point | What |
 |---|---|
-| `silentctx-api` | FastAPI: health probes and the MCP server at `/mcp` |
-| `silentctx-slackbot` | Bolt app in Socket Mode |
-| `silentctx-sim` | Network simulator for the live demo |
+| `kaiku-api` | FastAPI: health probes and the MCP server at `/mcp` |
+| `kaiku-slackbot` | Bolt app in Socket Mode |
+| `kaiku-sim` | Network simulator for the live demo |
 
 | Endpoint | What it says |
 |---|---|
@@ -43,7 +43,7 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 
 client = MultiServerMCPClient(
     {
-        "silentctx": {
+        "kaiku": {
             "transport": "streamable_http",
             "url": "http://localhost:8000/mcp",
             "headers": {"Authorization": "Bearer <token>"},
@@ -56,7 +56,7 @@ tools = await client.get_tools()
 ## MCP tools (plan 002 §4)
 
 `http://localhost:8000/mcp` (Streamable HTTP, `Authorization: Bearer <MCP_TOKENS[agent]>`),
-or `uv run silentctx mcp --stdio --agent-id <name>` for local clients (Claude Desktop).
+or `uv run kaiku mcp --stdio --agent-id <name>` for local clients (Claude Desktop).
 Every tool returns typed `structuredContent`; times are ISO-8601 UTC; `as_of` and `known_at`
 default to now.
 
@@ -93,7 +93,7 @@ is kept on its `Thread`. Every MCP tool call is kept as a `(:ToolCall)` node. Wi
 
 ## Ops agent
 
-`silentctx.agents.ops_agent.OpsAgent`: LangChain `create_agent` on `CHAT_MODEL`
+`kaiku.agents.ops_agent.OpsAgent`: LangChain `create_agent` on `CHAT_MODEL`
 (Featherless Kimi-K2), whose only tools are the MCP read tools + `open_knowledge_gap`,
 connected with its own token (`OPS_AGENT_ID`). Answers are a structured `OpsAnswer`; code
 then drops any step without a citation the tools actually returned, and any step whose
@@ -122,9 +122,9 @@ work channel.
 ## Seeding the graph
 
 ```bash
-uv run silentctx seed --network                         # network layers (demo profile)
-uv run silentctx seed --network --gold --profile full   # + gold answers, for the eval only
-uv run silentctx seed --wipe-gold                       # drop gold before scoring extraction
+uv run kaiku seed --network                         # network layers (demo profile)
+uv run kaiku seed --network --gold --profile full   # + gold answers, for the eval only
+uv run kaiku seed --wipe-gold                       # drop gold before scoring extraction
 ```
 
 Loads `DATA_DIR` (mock_data): devices, segments, sites, hardware models and generations,
@@ -138,8 +138,8 @@ The demo profile (`seed/profiles.py`) also defines what the historical backfill 
 every corpus source about the forwarding stall after an SFP swap (plan 001 §3.5).
 
 ```bash
-uv run silentctx backfill                                # Teams history (demo profile)
-uv run silentctx backfill --profile full --elisa-dir ../Elisa_SinceAI2026/ELISA_HIDDEN_KNOWLEDGE_EXAMPLE_2026
+uv run kaiku backfill                                # Teams history (demo profile)
+uv run kaiku backfill --profile full --elisa-dir ../Elisa_SinceAI2026/ELISA_HIDDEN_KNOWLEDGE_EXAMPLE_2026
 ```
 
 The backfill stores historical messages as events with their original times (Elisa's
@@ -158,11 +158,11 @@ uv run pytest -m live -s             # real models from .env: ST-01 latency, ST-
 ## Layout
 
 ```
-src/silentctx/
+src/kaiku/
   main.py config.py logging.py errors.py health.py state.py cli.py
   domain/       time rules R1-R10 (time.py), shared types (models.py)
   graph/        driver + readiness, schema.py, checks.py, cypher/vector.py, migrations/V*.cypher
-  seed/         mock_data loader, demo/full profiles (silentctx seed)
+  seed/         mock_data loader, demo/full profiles (kaiku seed)
   llm/          chat-model factory, Featherless embedder
   mcp/          MCP server (auth, tools)
   slack/        Bolt app (bot.py), fault thread and buttons (actions.py), capture + card (capture.py)

@@ -23,7 +23,7 @@ export function ScorecardPage() {
     return (
       <div className="page">
         <Empty title="No eval run yet">
-          <span className="mono">uv run silentctx eval</span> writes <span className="mono">eval/results/*.json</span>, shown here.
+          <span className="mono">uv run kaiku eval</span> writes <span className="mono">eval/results/*.json</span>, shown here.
         </Empty>
       </div>
     )

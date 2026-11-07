@@ -12,12 +12,12 @@ from typing import Any
 import pytest
 from neo4j import AsyncDriver
 
-from silentctx.config import Settings
-from silentctx.context.models import AssertionIn
-from silentctx.errors import WriteRejectedError
-from silentctx.graph import schema
-from silentctx.graph.driver import create_driver
-from silentctx.graph.repository import ContextRepository
+from kaiku.config import Settings
+from kaiku.context.models import AssertionIn
+from kaiku.errors import WriteRejectedError
+from kaiku.graph import schema
+from kaiku.graph.driver import create_driver
+from kaiku.graph.repository import ContextRepository
 from tests.test_integration_neo4j import PASSWORD, neo4j_url  # noqa: F401  # shared container
 
 pytestmark = pytest.mark.integration

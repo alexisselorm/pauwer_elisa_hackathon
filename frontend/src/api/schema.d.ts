@@ -186,7 +186,7 @@ export interface paths {
         };
         /**
          * Eval Report
-         * @description The latest `silentctx eval` report, or null if none has run.
+         * @description The latest `kaiku eval` report, or null if none has run.
          */
         get: operations["eval_report_api_ui_eval_get"];
         put?: never;

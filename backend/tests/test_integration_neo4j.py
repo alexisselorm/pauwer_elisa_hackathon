@@ -12,10 +12,10 @@ import pytest
 from fastapi.testclient import TestClient
 from neo4j import GraphDatabase
 
-from silentctx.config import Settings
-from silentctx.graph import schema
-from silentctx.graph.cypher import vector
-from silentctx.main import create_app
+from kaiku.config import Settings
+from kaiku.graph import schema
+from kaiku.graph.cypher import vector
+from kaiku.main import create_app
 
 NEO4J_IMAGE = "neo4j:2026.10.1-community"  # same image as docker-compose.yml
 PASSWORD = "integration-pw"
@@ -237,8 +237,8 @@ async def _snapshot(url: str) -> dict[str, Any]:
 async def test_seed_full_is_clean_idempotent_and_wipeable(
     neo4j_url: str, make_settings: Callable[..., Settings]
 ) -> None:
-    from silentctx.seed.profiles import Profile
-    from silentctx.seed.service import SeedRequest, seed
+    from kaiku.seed.profiles import Profile
+    from kaiku.seed.service import SeedRequest, seed
 
     settings = make_settings(neo4j_uri=neo4j_url, neo4j_password=PASSWORD, data_dir=MOCK_DATA)
     full = SeedRequest(network=True, gold=True, profile=Profile.FULL)
@@ -291,7 +291,7 @@ async def test_seed_full_is_clean_idempotent_and_wipeable(
 async def test_seed_prunes_rows_that_left_the_source(
     neo4j_url: str, make_settings: Callable[..., Settings]
 ) -> None:
-    from silentctx.seed.service import SeedRequest, seed
+    from kaiku.seed.service import SeedRequest, seed
 
     settings = make_settings(neo4j_uri=neo4j_url, neo4j_password=PASSWORD, data_dir=MOCK_DATA)
     _query(
@@ -362,8 +362,8 @@ class _Mcp:
 
 
 async def test_mcp_tools_end_to_end(neo4j_url: str, make_settings: Callable[..., Settings]) -> None:
-    from silentctx.seed.profiles import Profile
-    from silentctx.seed.service import SeedRequest, seed
+    from kaiku.seed.profiles import Profile
+    from kaiku.seed.service import SeedRequest, seed
     from tests.conftest import AGENT_TOKEN
 
     settings = make_settings(neo4j_uri=neo4j_url, neo4j_password=PASSWORD, data_dir=MOCK_DATA)
@@ -525,8 +525,8 @@ async def test_temporal_reads_r9_r10(
 ) -> None:
     """BE-1.6: Kemi before the lock change, the as-running model gating a model rule, and
     the site level of the scope."""
-    from silentctx.seed.profiles import Profile
-    from silentctx.seed.service import SeedRequest, seed
+    from kaiku.seed.profiles import Profile
+    from kaiku.seed.service import SeedRequest, seed
     from tests.conftest import AGENT_TOKEN
 
     settings = make_settings(neo4j_uri=neo4j_url, neo4j_password=PASSWORD, data_dir=MOCK_DATA)
@@ -598,11 +598,11 @@ async def test_search_filters_by_time_first_then_ranks(
 
     from neo4j import AsyncGraphDatabase
 
-    from silentctx.context.service import ContextService
-    from silentctx.graph.repository import ContextRepository
-    from silentctx.seed.profiles import Profile
-    from silentctx.seed.service import SeedRequest, seed
-    from silentctx.telemetry.store import TelemetryStore
+    from kaiku.context.service import ContextService
+    from kaiku.graph.repository import ContextRepository
+    from kaiku.seed.profiles import Profile
+    from kaiku.seed.service import SeedRequest, seed
+    from kaiku.telemetry.store import TelemetryStore
 
     settings = make_settings(neo4j_uri=neo4j_url, neo4j_password=PASSWORD, data_dir=MOCK_DATA)
     seeded = await seed(settings, SeedRequest(network=True, gold=True, profile=Profile.FULL))
@@ -658,9 +658,9 @@ async def test_search_filters_by_time_first_then_ranks(
 async def test_sim_events_reach_the_event_stream(neo4j_url: str, settings: Settings) -> None:
     """SIM-1: fault events land as (:Event:Alarm)-[:ON]->(:Device), so get_events sees them;
     publishing twice writes nothing new."""
-    from silentctx.graph.driver import create_driver
-    from silentctx.sim.app import publish
-    from silentctx.sim.network import Simulator
+    from kaiku.graph.driver import create_driver
+    from kaiku.sim.app import publish
+    from kaiku.sim.network import Simulator
 
     _query(neo4j_url, "MERGE (:Entity:Device {entity_id: 'TRN-017'})")
     sim = Simulator()
@@ -728,8 +728,8 @@ def _serve(app: Any) -> Iterator[str]:
 @contextlib.contextmanager
 def _sim_server(clock: _SimClock, settings: Settings) -> Iterator[str]:
     """The simulator as a real HTTP server (the api pulls from it over the network)."""
-    from silentctx.sim.app import create_app as create_sim_app
-    from silentctx.sim.network import Simulator
+    from kaiku.sim.app import create_app as create_sim_app
+    from kaiku.sim.network import Simulator
 
     with _serve(create_sim_app(Simulator(clock=clock), settings=settings)) as url:
         yield url
@@ -746,8 +746,8 @@ def test_live_demo_fault_to_network_confirmed_outcome(
 
     import httpx
 
-    from silentctx.seed.profiles import Profile
-    from silentctx.seed.service import SeedRequest, seed
+    from kaiku.seed.profiles import Profile
+    from kaiku.seed.service import SeedRequest, seed
     from tests.conftest import AGENT_TOKEN
 
     base = make_settings(neo4j_uri=neo4j_url, neo4j_password=PASSWORD, data_dir=MOCK_DATA)
@@ -838,10 +838,10 @@ def test_slack_run_bounce_button_reports_through_mcp(
 
     import httpx
 
-    from silentctx.agents.ops_agent import AnswerStatus, OpsAgent, OpsAnswer, Step
-    from silentctx.seed.profiles import Profile
-    from silentctx.seed.service import SeedRequest, seed
-    from silentctx.slack import actions as a
+    from kaiku.agents.ops_agent import AnswerStatus, OpsAgent, OpsAnswer, Step
+    from kaiku.seed.profiles import Profile
+    from kaiku.seed.service import SeedRequest, seed
+    from kaiku.slack import actions as a
 
     base = make_settings(neo4j_uri=neo4j_url, neo4j_password=PASSWORD, data_dir=MOCK_DATA)
     report = asyncio.run(seed(base, SeedRequest(network=True, gold=True, profile=Profile.FULL)))

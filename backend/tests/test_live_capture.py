@@ -14,11 +14,11 @@ import pytest
 from dotenv import dotenv_values
 from neo4j import AsyncDriver
 
-from silentctx.config import Settings
-from silentctx.context.models import Scope
-from silentctx.extraction.llm import LlmJudge
-from silentctx.ingest.store import MessageView, ThreadView
-from silentctx.seed.sources import MockData
+from kaiku.config import Settings
+from kaiku.context.models import Scope
+from kaiku.extraction.llm import LlmJudge
+from kaiku.ingest.store import MessageView, ThreadView
+from kaiku.seed.sources import MockData
 from tests.capture_helpers import MOCK_DATA, elisa_thread
 from tests.test_integration_capture import (  # noqa: F401
     MSG8,

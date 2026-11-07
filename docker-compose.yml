@@ -4,7 +4,7 @@
 
 x-backend: &backend
   build: ./backend
-  image: silentctx-backend:local
+  image: kaiku-backend:local
   init: true
   restart: unless-stopped
   env_file:
@@ -44,7 +44,7 @@ services:
 
   api:
     <<: *backend
-    command: ["silentctx-api"]
+    command: ["kaiku-api"]
     environment:
       <<: *backend-env
       SIM_URL: http://sim:8100  # live telemetry at "now" for check_conditions
@@ -67,7 +67,7 @@ services:
 
   slackbot:
     <<: *backend
-    command: ["silentctx-slackbot"]
+    command: ["kaiku-slackbot"]
     environment:
       <<: *backend-env
       MCP_URL: http://api:8000/mcp  # the ops agent uses MCP only, like any other agent
@@ -81,7 +81,7 @@ services:
       sim:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "test", "-f", "/tmp/silentctx-slackbot.ready"]
+      test: ["CMD", "test", "-f", "/tmp/kaiku-slackbot.ready"]
       interval: 10s
       timeout: 3s
       retries: 6
@@ -103,7 +103,7 @@ services:
   # The console: live knowledge graph, capture traces, agent runs (UI-1).
   web:
     build: ./frontend
-    image: silentctx-web:local
+    image: kaiku-web:local
     restart: unless-stopped
     depends_on:
       api:
@@ -113,7 +113,7 @@ services:
 
   sim:
     <<: *backend
-    command: ["silentctx-sim"]
+    command: ["kaiku-sim"]
     depends_on:
       neo4j:
         condition: service_healthy

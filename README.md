@@ -1,4 +1,4 @@
-# pauwer_elisa_hackathon — silentctx
+# pauwer_elisa_hackathon — kaiku
 
 Captures the operational knowledge experts share in Slack and email, binds it to the network
 entities it is about with a validity period, and serves it to any AI agent over MCP.
@@ -25,7 +25,7 @@ Needs Docker with Compose v2.24+.
    - `ANTHROPIC_API_KEY` and `FEATHERLESS_API_KEY` (without them `/readyz` reports `degraded`).
 2. `docker compose up --build`
 3. Load the network into the graph (idempotent, safe to repeat):
-   `docker compose exec api silentctx seed --network --profile demo`
+   `docker compose exec api kaiku seed --network --profile demo`
 
 | Service | URL | Healthy when |
 |---|---|---|
@@ -34,7 +34,7 @@ Needs Docker with Compose v2.24+.
 | `slackbot` | Socket Mode, no public URL | connected to Slack (without tokens it idles and says so in its log) |
 | `sim` | http://localhost:8100 | `/healthz` is 200 |
 | `web` | http://localhost:8080 | the console loads; the header says **Live** |
-| `phoenix` | http://localhost:6006 | traces appear under project `silentctx` |
+| `phoenix` | http://localhost:6006 | traces appear under project `kaiku` |
 
 Everything binds to 127.0.0.1. Neo4j's password defaults to `silentctx-local-dev`; set
 `NEO4J_PASSWORD` in your shell to change it (compose passes it to both Neo4j and the API).
@@ -72,7 +72,7 @@ its answer offers [Ask <expert>], which posts the question in `SLACK_GAP_CHANNEL
 slackbot polls it every `EMAIL_POLL_SECONDS`, stores it with its `Date` header as event time,
 and triages it at the next sweep. Email captures are posted to `#context-log`, never to work
 channels; a Slack card the email corroborates shows "+1 source (email)". The 145 `.msg` files
-in `mock_data/email_outlook/` come in with `silentctx backfill`.
+in `mock_data/email_outlook/` come in with `kaiku backfill`.
 
 **Reset:** `docker compose down -v` deletes the graph and the checkpoints.
 

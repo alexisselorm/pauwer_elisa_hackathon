@@ -6,9 +6,9 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 
-from silentctx.sim.app import create_app
-from silentctx.sim.network import Simulator
-from silentctx.telemetry.store import ConditionStatus, TelemetryStore
+from kaiku.sim.app import create_app
+from kaiku.sim.network import Simulator
+from kaiku.telemetry.store import ConditionStatus, TelemetryStore
 
 SYMPTOMS = ["oper_up", "rx_power_normal", "counters_zero"]
 

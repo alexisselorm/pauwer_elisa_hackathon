@@ -25,4 +25,4 @@ ENV PATH="/app/.venv/bin:$PATH" \
 WORKDIR /app
 USER app
 EXPOSE 8000
-CMD ["silentctx-api"]
+CMD ["kaiku-api"]

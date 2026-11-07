@@ -10,9 +10,9 @@ import pytest
 from fastapi import APIRouter
 from fastapi.testclient import TestClient
 
-from silentctx.config import Settings
-from silentctx.errors import ProblemError
-from silentctx.main import create_app
+from kaiku.config import Settings
+from kaiku.errors import ProblemError
+from kaiku.main import create_app
 from tests.conftest import AGENT_TOKEN, OTHER_TOKEN
 
 RID = "0f8fad5bd9cb469fa16570867728950e"  # a valid uuid4 hex
@@ -167,7 +167,7 @@ def test_mcp_initialize_with_token(client: TestClient) -> None:
     r = _rpc(client, INITIALIZE, AGENT_TOKEN)
     assert r.status_code == 200, r.text
     result = _sse_json(r)["result"]
-    assert result["serverInfo"]["name"] == "silentctx"
+    assert result["serverInfo"]["name"] == "kaiku"
 
 
 @pytest.mark.parametrize(

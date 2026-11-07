@@ -190,7 +190,7 @@ Every write carries `agent_id` (from the MCP token), an optional `on_behalf_of` 
 Repo layout:
 
 ```
-backend/src/silentctx/
+backend/src/kaiku/
   main.py config.py logging.py
   domain/        # pydantic models, time rules (R1–R10) as pure functions
   graph/         # driver, ContextRepository, cypher/, migrations/, checks.cypher

@@ -82,7 +82,7 @@ Valid from 14:22 today · source: Erkki (this thread) · telemetry agrees ✓
 
 ## 4. MCP server
 
-Streamable HTTP at `http://localhost:8000/mcp`, plus stdio (`silentctx mcp --stdio`). Every tool returns `structuredContent` (JSON) plus a short text summary. Times are ISO-8601 UTC. `as_of` defaults to now and `known_at` defaults to now.
+Streamable HTTP at `http://localhost:8000/mcp`, plus stdio (`kaiku mcp --stdio`). Every tool returns `structuredContent` (JSON) plus a short text summary. Times are ISO-8601 UTC. `as_of` defaults to now and `known_at` defaults to now.
 
 ### 4.1 Read tools
 
@@ -116,7 +116,7 @@ Streamable HTTP at `http://localhost:8000/mcp`, plus stdio (`silentctx mcp --std
 ### 4.4 Connecting Elisa's agents (README snippet)
 
 - **Remote MCP clients:** URL `http://<host>:8000/mcp`, header `Authorization: Bearer <token>`.
-- **Claude Desktop / Claude Code:** add the server to the MCP config. **LangGraph:** `MultiServerMCPClient({"silentctx": {"url": …, "transport": "streamable_http", "headers": …}})`.
+- **Claude Desktop / Claude Code:** add the server to the MCP config. **LangGraph:** `MultiServerMCPClient({"kaiku": {"url": …, "transport": "streamable_http", "headers": …}})`.
 
 ## 5. Workstreams
 
@@ -157,7 +157,7 @@ Replay script, sim fault and action buttons, saved Neo4j Browser queries, a run-
 |---|---|
 | Workspace admin approval or rate limits | Use our own free workspace. Rate limits don't matter at demo volume. Retries are idempotent. |
 | `chat:write.customize` personas look staged | Prefer two teammates typing live, and keep the script as backup |
-| The card feels intrusive | Usability budget (§2). Per-channel opt-in. `/silentctx quiet` mutes the cards but keeps capturing. |
+| The card feels intrusive | Usability budget (§2). Per-channel opt-in. `/kaiku quiet` mutes the cards but keeps capturing. |
 | MCP client compatibility | Test with MCP Inspector, Claude Desktop and `langchain-mcp-adapters` before the freeze |
 
 ## 8. Out of scope

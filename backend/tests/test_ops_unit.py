@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
-from silentctx.agents.ops_agent import (
+from kaiku.agents.ops_agent import (
     AnswerStatus,
     ConditionReport,
     OpsAnswer,
@@ -21,10 +21,10 @@ from silentctx.agents.ops_agent import (
     seen_assertion_ids,
     seen_records,
 )
-from silentctx.context.resolve import resolve
-from silentctx.seed.sources import MockData
-from silentctx.slack.format import SLACK_TEXT_LIMIT, format_answer
-from silentctx.telemetry.store import ConditionStatus, TelemetryStore
+from kaiku.context.resolve import resolve
+from kaiku.seed.sources import MockData
+from kaiku.slack.format import SLACK_TEXT_LIMIT, format_answer
+from kaiku.telemetry.store import ConditionStatus, TelemetryStore
 
 MOCK = Path(__file__).parents[2] / "mock_data"
 
@@ -287,7 +287,7 @@ def test_no_telemetry_is_unknown_never_met(telemetry: TelemetryStore) -> None:
 async def test_three_tool_errors_in_a_row_fail_the_run() -> None:
     from types import SimpleNamespace
 
-    from silentctx.agents.ops_agent import ToolErrorLimit, ToolErrorsExceeded
+    from kaiku.agents.ops_agent import ToolErrorLimit, ToolErrorsExceeded
 
     guard = ToolErrorLimit()
     request = SimpleNamespace(tool_call={"name": "get_context"})

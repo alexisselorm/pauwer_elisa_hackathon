@@ -8,8 +8,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from silentctx.context.models import Scope
-from silentctx.extraction.models import (
+from kaiku.context.models import Scope
+from kaiku.extraction.models import (
     Extraction,
     Mention,
     Quoted,
@@ -18,9 +18,9 @@ from silentctx.extraction.models import (
     Triage,
     TriageKind,
 )
-from silentctx.ingest.backfill import elisa_example
-from silentctx.ingest.store import MessageView, ThreadView
-from silentctx.seed.sources import MockData
+from kaiku.ingest.backfill import elisa_example
+from kaiku.ingest.store import MessageView, ThreadView
+from kaiku.seed.sources import MockData
 
 ROOT = Path(__file__).resolve().parents[2]
 MOCK_DATA = ROOT / "mock_data"

@@ -7,7 +7,7 @@ import pytest
 from pydantic import ValidationError
 from pydantic_settings import SettingsError
 
-from silentctx.config import Settings
+from kaiku.config import Settings
 
 REQUIRED = {
     "NEO4J_URI": "bolt://localhost:7687",

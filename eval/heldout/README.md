@@ -31,5 +31,5 @@ time patterns, so it tests whether capture, linking and validity generalise.
 | Not documented | HQ-10..12 |
 
 **Loading.** Replay `threads.jsonl` through the same connector path as live Slack/email (the eval harness
-posts them as Slack-shaped events with the given `ts`). Score with `silentctx eval --set heldout`
+posts them as Slack-shaped events with the given `ts`). Score with `kaiku eval --set heldout`
 (see `docs/plans/003-acceptance-and-eval.md`).

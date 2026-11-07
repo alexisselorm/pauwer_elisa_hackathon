@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from silentctx.context.models import AssertionView
-from silentctx.context.service import rank_semantic
-from silentctx.domain.models import AssertionStatus
+from kaiku.context.models import AssertionView
+from kaiku.context.service import rank_semantic
+from kaiku.domain.models import AssertionStatus
 
 T0 = datetime(2026, 1, 1, tzinfo=UTC)
 

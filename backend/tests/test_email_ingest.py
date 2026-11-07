@@ -10,13 +10,13 @@ from pathlib import Path
 
 import pytest
 
-from silentctx.ingest.backfill import ELISA_EMAIL_TWIN, backfill
-from silentctx.ingest.email import EmailDrop, eml_message, msg_files, msg_message
-from silentctx.ingest.msg_reader import PR_TRANSPORT_MESSAGE_HEADERS, read_msg, read_properties
-from silentctx.ingest.store import MessageIn
-from silentctx.ingest.threads import email_thread_id
-from silentctx.seed.profiles import Profile, demo_exclusions
-from silentctx.seed.sources import MockData
+from kaiku.ingest.backfill import ELISA_EMAIL_TWIN, backfill
+from kaiku.ingest.email import EmailDrop, eml_message, msg_files, msg_message
+from kaiku.ingest.msg_reader import PR_TRANSPORT_MESSAGE_HEADERS, read_msg, read_properties
+from kaiku.ingest.store import MessageIn
+from kaiku.ingest.threads import email_thread_id
+from kaiku.seed.profiles import Profile, demo_exclusions
+from kaiku.seed.sources import MockData
 
 MOCK = Path(__file__).parents[2] / "mock_data"
 ELISA = Path(__file__).parents[2] / "Elisa_SinceAI2026" / "ELISA_HIDDEN_KNOWLEDGE_EXAMPLE_2026"

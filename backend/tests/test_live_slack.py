@@ -15,8 +15,8 @@ from dotenv import dotenv_values
 from neo4j import AsyncGraphDatabase
 from slack_sdk.web.async_client import AsyncWebClient
 
-from silentctx.domain.time import slack_ts_to_datetime
-from silentctx.slack.replay import replay_elisa
+from kaiku.domain.time import slack_ts_to_datetime
+from kaiku.slack.replay import replay_elisa
 from tests.capture_helpers import ELISA_DIR, MOCK_DATA
 
 pytestmark = pytest.mark.live

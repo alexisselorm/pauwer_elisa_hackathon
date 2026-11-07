@@ -12,17 +12,17 @@ from typing import Any
 
 import pytest
 
-from silentctx.context.models import AssertionView, Binding, Citation, Scope
-from silentctx.domain.models import AssertionStatus
-from silentctx.extraction import gates, reconcile
-from silentctx.extraction.link import link, ports
-from silentctx.extraction.models import Mention, Relation, StatedTimeOut, TriageKind
-from silentctx.ingest import trigger
-from silentctx.ingest.backfill import elisa_example, teams_message
-from silentctx.ingest.slack_events import SlackIngest
-from silentctx.ingest.store import MessageIn, MessageView, ThreadView
-from silentctx.seed.sources import MockData
-from silentctx.slack import capture as cap
+from kaiku.context.models import AssertionView, Binding, Citation, Scope
+from kaiku.domain.models import AssertionStatus
+from kaiku.extraction import gates, reconcile
+from kaiku.extraction.link import link, ports
+from kaiku.extraction.models import Mention, Relation, StatedTimeOut, TriageKind
+from kaiku.ingest import trigger
+from kaiku.ingest.backfill import elisa_example, teams_message
+from kaiku.ingest.slack_events import SlackIngest
+from kaiku.ingest.store import MessageIn, MessageView, ThreadView
+from kaiku.seed.sources import MockData
+from kaiku.slack import capture as cap
 from tests.capture_helpers import (
     ELISA_DIR,
     ELISA_RULE,
@@ -606,7 +606,7 @@ def test_a_card_with_two_assertions_has_unique_action_ids() -> None:
 def test_st15_entity_linking_precision_and_recall_on_the_alias_table() -> None:
     """ST-15: P and R >= 0.9 on kind=entity aliases, scored with a file the linker never
     reads."""
-    from silentctx.eval.linking import score_aliases
+    from kaiku.eval.linking import score_aliases
 
     aliases = MOCK_DATA / "knowledge_graph" / "entity_aliases.csv"
     score = score_aliases(aliases, inventory(), datetime(2026, 11, 7, tzinfo=UTC))
@@ -658,7 +658,7 @@ async def test_the_model_resolves_a_reply_the_word_list_missed() -> None:
     """BE-2.4: the FAST_MODEL classifier, only for thread replies, never blocking."""
     import asyncio
 
-    from silentctx.slack.capture import CaptureHandlers
+    from kaiku.slack.capture import CaptureHandlers
 
     class Loop:
         kicks = 0
@@ -720,8 +720,8 @@ def test_v2_backstop_puts_a_rejected_suggestion_in_avoid() -> None:
 
 def test_llm_list_answers_are_unwrapped_instead_of_retried() -> None:
     """Live finding: Kimi returned the rules as a bare list in 2 of 3 runs (+15-30 s)."""
-    from silentctx.extraction.llm import _unwrap
-    from silentctx.extraction.models import Extraction, Triage
+    from kaiku.extraction.llm import _unwrap
+    from kaiku.extraction.models import Extraction, Triage
 
     rule = ELISA_RULE.model_dump()
     assert Extraction.model_validate(_unwrap(Extraction, [rule])).rules[0].topic == rule["topic"]
@@ -753,8 +753,8 @@ async def test_replay_personas_are_people_but_the_bots_own_posts_are_not() -> No
 def test_a_rejected_parse_falls_back_to_the_raw_answer() -> None:
     from langchain_core.messages import AIMessage
 
-    from silentctx.extraction.llm import _parsed, _unwrap
-    from silentctx.extraction.models import Extraction
+    from kaiku.extraction.llm import _parsed, _unwrap
+    from kaiku.extraction.models import Extraction
 
     rule = ELISA_RULE.model_dump(mode="json")
     raw = AIMessage(content="```json\n" + json.dumps([{"rules": [rule]}]) + "\n```")
@@ -826,7 +826,7 @@ def test_same_action_from_the_same_thread_is_the_rule_already_captured() -> None
 def test_a_node_the_simulator_does_not_run_adds_no_live_samples() -> None:
     """Live finding: TRN-042 isn't simulated, so the sim returns [] for it, and DuckDB
     rejected the empty insert, failing the whole capture."""
-    from silentctx.telemetry.store import TelemetryStore
+    from kaiku.telemetry.store import TelemetryStore
 
     store = TelemetryStore(None)
     store.add_live([], replace="TRN-042")

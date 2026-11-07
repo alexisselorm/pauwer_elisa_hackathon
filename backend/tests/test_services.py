@@ -9,10 +9,10 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from silentctx.agents.ops_agent import AnswerStatus, OpsAnswer, Step
-from silentctx.config import Settings
-from silentctx.sim.app import create_app as create_sim_app
-from silentctx.slack import bot
+from kaiku.agents.ops_agent import AnswerStatus, OpsAnswer, Step
+from kaiku.config import Settings
+from kaiku.sim.app import create_app as create_sim_app
+from kaiku.slack import bot
 
 
 def test_sim_health() -> None:
@@ -155,12 +155,12 @@ async def test_bots_and_edits_are_ignored(event: dict[str, Any]) -> None:
 
 
 def test_question_text_strips_mentions() -> None:
-    event = {"text": "<@U0BOT|silentctx>  what about   <@U123> TRN-017?"}
+    event = {"text": "<@U0BOT|kaiku>  what about   <@U123> TRN-017?"}
     assert bot.question_text(event) == "what about TRN-017?"
 
 
 def test_app_registers_events_and_buttons(make_settings: Callable[..., Settings]) -> None:
-    from silentctx.slack.actions import OpsActions
+    from kaiku.slack.actions import OpsActions
 
     answerer = _Answerer()
     actions = OpsActions(answerer, tools=None)  # type: ignore[arg-type]  # never called here

@@ -12,10 +12,10 @@ from typing import Any
 
 import pytest
 
-from silentctx.config import Settings
-from silentctx.extraction import llm
-from silentctx.extraction.llm import ExtractionError, LlmJudge, ProviderEmptyResponseError, Resolved
-from silentctx.llm.chat import ModelRole
+from kaiku.config import Settings
+from kaiku.extraction import llm
+from kaiku.extraction.llm import ExtractionError, LlmJudge, ProviderEmptyResponseError, Resolved
+from kaiku.llm.chat import ModelRole
 
 
 @pytest.fixture(autouse=True)
@@ -97,7 +97,7 @@ async def test_the_judge_sees_what_each_side_is_about(
     make_settings: Callable[..., Settings],
 ) -> None:
     """C3 (G-01): without scope the judge called a TNC-3X rule a contradiction of Gen1 ones."""
-    from silentctx.extraction.models import Quoted, RuleDraft
+    from kaiku.extraction.models import Quoted, RuleDraft
 
     seen: list[Any] = []
 

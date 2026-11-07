@@ -13,11 +13,11 @@ the demo only. Nothing in the console writes.
 | Graph | Entities, assertions coloured by status, sources and links (supersedes, corroborates, contradicts). An as-of slider, with an optional "known then". Clicking an assertion shows its scope, validity, conditions → action / avoid, quotes, confidence and history. | Linking: right entity, right time |
 | Captures | Per thread: the six pipeline steps with timings, the V1–V6 gates per rule, the messages with the extracted quotes highlighted, and what was stored | Correct capture, zero extra work |
 | Agent runs | Every MCP call (tool, arguments, latency, result summary), grouped per agent | Suitability for agentic operations |
-| Scorecard | The latest `silentctx eval` report | Correctness, with n |
+| Scorecard | The latest `kaiku eval` report | Correctness, with n |
 
 ## 2. Backend
 
-- `silentctx/ui/`: read-only router at `/api/ui/*` with pydantic response models. Its Cypher
+- `kaiku/ui/`: read-only router at `/api/ui/*` with pydantic response models. Its Cypher
   lives in `ui/queries.py`. Agents never use these endpoints.
 - `GET /api/ui/stream`: server-sent events (sse-starlette). The API diffs a small
   snapshot of the graph every `UI_POLL_SECONDS`. It uses ids, not `recorded_at`, which is

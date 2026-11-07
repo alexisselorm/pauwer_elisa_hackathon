@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from silentctx.config import Settings, get_settings
+from kaiku.config import Settings, get_settings
 
 AGENT_TOKEN = "test-token-ops-agent-0123456789"
 OTHER_TOKEN = "test-token-other-agent-987654321"

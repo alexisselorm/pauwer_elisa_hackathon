@@ -15,25 +15,25 @@ from typing import Any
 import pytest
 from neo4j import AsyncDriver
 
-from silentctx.config import Settings
-from silentctx.context.models import AssertionIn, Match, Scope
-from silentctx.domain.models import Platform
-from silentctx.domain.time import datetime_to_slack_ts
-from silentctx.extraction.graph import Extractor
-from silentctx.extraction.llm import ExtractionError
-from silentctx.extraction.models import Mention, RuleDraft, StatedTimeOut, TriageKind
-from silentctx.graph import schema
-from silentctx.graph.driver import create_driver
-from silentctx.graph.repository import ContextRepository
-from silentctx.ingest.backfill import backfill, elisa_example
-from silentctx.ingest.capture import CaptureLoop
-from silentctx.ingest.slack_events import SlackIngest
-from silentctx.ingest.store import CaptureStore, MessageIn
-from silentctx.seed.profiles import Profile
-from silentctx.seed.service import SeedRequest, seed
-from silentctx.seed.sources import MockData
-from silentctx.slack import capture as cap
-from silentctx.telemetry.store import TelemetryStore
+from kaiku.config import Settings
+from kaiku.context.models import AssertionIn, Match, Scope
+from kaiku.domain.models import Platform
+from kaiku.domain.time import datetime_to_slack_ts
+from kaiku.extraction.graph import Extractor
+from kaiku.extraction.llm import ExtractionError
+from kaiku.extraction.models import Mention, RuleDraft, StatedTimeOut, TriageKind
+from kaiku.graph import schema
+from kaiku.graph.driver import create_driver
+from kaiku.graph.repository import ContextRepository
+from kaiku.ingest.backfill import backfill, elisa_example
+from kaiku.ingest.capture import CaptureLoop
+from kaiku.ingest.slack_events import SlackIngest
+from kaiku.ingest.store import CaptureStore, MessageIn
+from kaiku.seed.profiles import Profile
+from kaiku.seed.service import SeedRequest, seed
+from kaiku.seed.sources import MockData
+from kaiku.slack import capture as cap
+from kaiku.telemetry.store import TelemetryStore
 from tests.capture_helpers import ELISA_DIR, ELISA_RULE, MOCK_DATA, FakeJudge, q
 from tests.test_integration_neo4j import PASSWORD, neo4j_url  # noqa: F401  # shared container
 

@@ -1,4 +1,4 @@
-# silentctx console
+# kaiku console
 
 A read-only web view of the context layer. People capture and ask in Slack, and agents use
 MCP. The console shows what happened: the live knowledge graph over time, how each thread

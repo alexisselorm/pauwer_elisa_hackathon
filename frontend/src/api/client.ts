@@ -18,7 +18,7 @@ export type ToolCallView = Schemas['ToolCallView']
 export type EvalReportView = Schemas['EvalReportView']
 export type Meta = Schemas['Meta']
 
-/** A `change` event on /api/ui/stream (backend: silentctx.ui.models.Change). SSE payloads are
+/** A `change` event on /api/ui/stream (backend: kaiku.ui.models.Change). SSE payloads are
  *  not in the OpenAPI schema, so this one is written by hand. */
 export type Change = {
   assertions: boolean

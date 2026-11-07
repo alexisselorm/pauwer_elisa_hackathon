@@ -11,15 +11,15 @@ import httpx
 import pytest
 from langchain_core.embeddings import DeterministicFakeEmbedding, Embeddings
 
-from silentctx.config import Settings
-from silentctx.llm.chat import (
+from kaiku.config import Settings
+from kaiku.llm.chat import (
     FORBIDDEN_KWARGS,
     ChatModelUnavailableError,
     ModelRole,
     chat_model_kwargs,
     get_chat_model,
 )
-from silentctx.llm.embeddings import (
+from kaiku.llm.embeddings import (
     EmbeddingDimensionError,
     EmbeddingUnavailableError,
     FeatherlessEmbedder,

@@ -1,8 +1,8 @@
-# Slack app manifest for silentctx (plan 002 §3.1).
+# Slack app manifest for kaiku (plan 002 §3.1).
 # Create the app: https://api.slack.com/apps -> Create New App -> From a manifest -> paste this.
 # Socket Mode: no public URL, so there are no request URLs below.
 display_information:
-  name: silentctx
+  name: kaiku
   description: Captures resolved ops threads as dated, citable knowledge.
   background_color: "#1f2933"
 features:
@@ -11,7 +11,7 @@ features:
     messages_tab_enabled: true # ops agent DMs
     messages_tab_read_only_enabled: false
   bot_user:
-    display_name: silentctx
+    display_name: kaiku
     always_online: true
   shortcuts:
     - name: Capture this as knowledge

@@ -9,17 +9,17 @@ from typing import Any
 import pytest
 from pydantic import SecretStr
 
-from silentctx.context.models import AssertionView, Binding, BindingIn, Scope, SourceIn
-from silentctx.domain.models import AssertionStatus
-from silentctx.extraction.gates import Grounded
-from silentctx.extraction.graph import CaptureResult, Item, Step
-from silentctx.extraction.link import Linked
-from silentctx.extraction.models import Mention, Quoted, RuleDraft
-from silentctx.extraction.reconcile import Decision
-from silentctx.mcp.server import ServiceHolder, create_mcp_server
-from silentctx.ui import gates
-from silentctx.ui.models import ToolCallView
-from silentctx.ui.router import _title, diff
+from kaiku.context.models import AssertionView, Binding, BindingIn, Scope, SourceIn
+from kaiku.domain.models import AssertionStatus
+from kaiku.extraction.gates import Grounded
+from kaiku.extraction.graph import CaptureResult, Item, Step
+from kaiku.extraction.link import Linked
+from kaiku.extraction.models import Mention, Quoted, RuleDraft
+from kaiku.extraction.reconcile import Decision
+from kaiku.mcp.server import ServiceHolder, create_mcp_server
+from kaiku.ui import gates
+from kaiku.ui.models import ToolCallView
+from kaiku.ui.router import _title, diff
 
 T = datetime(2025, 10, 14, 6, 22, 8, tzinfo=UTC)
 

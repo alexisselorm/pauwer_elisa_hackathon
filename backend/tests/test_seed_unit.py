@@ -7,10 +7,10 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from silentctx.seed.models import DeviceEventRow
-from silentctx.seed.profiles import Profile, demo_exclusions, thread_subject
-from silentctx.seed.service import SeedRequest
-from silentctx.seed.sources import MockData
+from kaiku.seed.models import DeviceEventRow
+from kaiku.seed.profiles import Profile, demo_exclusions, thread_subject
+from kaiku.seed.service import SeedRequest
+from kaiku.seed.sources import MockData
 
 MOCK = Path(__file__).parents[2] / "mock_data"
 ELISA_THREAD = "19:71fe3c060dcfcf4e0874a4bf@thread.v2"
