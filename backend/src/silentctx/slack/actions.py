@@ -106,6 +106,17 @@ def _value(body: dict[str, Any]) -> dict[str, Any]:
     return dict(json.loads(body["actions"][0]["value"]))
 
 
+def fault_question(ev: dict[str, Any]) -> str:
+    """What the proactive post asks the agent. Conditions are checked now: the alarm time
+    is before the stall shows in the counters."""
+    node, port = ev["ne_id"], ev["port"]
+    return (
+        f"Alarm on {node} port {port}: an optical module was inserted, the link came up and "
+        f"optical power is OK (alarm at {ev['event_time']}). Check the conditions on {node} "
+        f"port {port} as they are now and say what to do next."
+    )
+
+
 def answer_blocks(
     answer: OpsAnswer, *, fault: dict[str, Any] | None = None, question: str | None = None
 ) -> list[dict[str, Any]]:
@@ -254,11 +265,7 @@ class OpsActions:
             thread_ts=head["ts"],
             text=":hourglass_flowing_sand: Checking conditions and documented knowledge…",
         )
-        question = (
-            f"Alarm on {node} port {port}: an optical module was inserted, the link came up and "
-            f"optical power is OK (at {ev['event_time']}). Check the conditions on {node} port "
-            f"{port} and say what to do next."
-        )
+        question = fault_question(ev)
         try:
             answer = await self.answerer.ask(
                 question, request_id=f"sim:{ev['event_id']}", trigger_event_id=ev["event_id"]
