@@ -1,0 +1,830 @@
+{
+  "started_at": "2026-11-07T15:30:18.928827Z",
+  "finished_at": "2026-11-07T15:43:07.266707Z",
+  "models": {
+    "chat": "featherless:moonshotai/Kimi-K2-Instruct-0905",
+    "fast": "featherless:Qwen/Qwen3-4B-Instruct-2507",
+    "embedding": "Qwen/Qwen3-Embedding-8B"
+  },
+  "graph": "extracted-only (gold never loaded)",
+  "sets": [
+    {
+      "name": "T0 Elisa",
+      "items": [
+        {
+          "id": "ST-21",
+          "passed": true,
+          "checks": [
+            {
+              "name": "strictly_increasing",
+              "passed": true,
+              "detail": ""
+            },
+            {
+              "name": "message_8_time",
+              "passed": true,
+              "detail": "2025-10-14 06:22:08+00:00"
+            }
+          ],
+          "skipped": false,
+          "note": ""
+        },
+        {
+          "id": "ST-01",
+          "passed": true,
+          "checks": [
+            {
+              "name": "one_assertion",
+              "passed": true,
+              "detail": "['ASR-1AB0B5CF79'] If interface is UP but traffic counters remain zero on older units, disable and re-enable the interface to force forwarding state recovery."
+            }
+          ],
+          "skipped": false,
+          "note": ""
+        },
+        {
+          "id": "ST-10",
+          "passed": true,
+          "checks": [
+            {
+              "name": "observed_on",
+              "passed": true,
+              "detail": "['TRN-042']"
+            },
+            {
+              "name": "applies_to",
+              "passed": true,
+              "detail": "['Gen1', 'TNC-1X']"
+            },
+            {
+              "name": "activity",
+              "passed": true,
+              "detail": "['sfp_replacement']"
+            },
+            {
+              "name": "action",
+              "passed": true,
+              "detail": "bounce_interface"
+            },
+            {
+              "name": "avoid",
+              "passed": true,
+              "detail": "['reboot_node', 'replace_sfp']"
+            }
+          ],
+          "skipped": false,
+          "note": ""
+        },
+        {
+          "id": "ST-20",
+          "passed": true,
+          "checks": [
+            {
+              "name": "recorded_at",
+              "passed": true,
+              "detail": "2025-10-14 06:22:08+00:00"
+            },
+            {
+              "name": "valid_from",
+              "passed": true,
+              "detail": "2025-10-14 06:22:08+00:00"
+            },
+            {
+              "name": "valid_to",
+              "passed": true,
+              "detail": "None"
+            }
+          ],
+          "skipped": false,
+          "note": ""
+        },
+        {
+          "id": "ST-02",
+          "passed": true,
+          "checks": [
+            {
+              "name": "no_new_rule",
+              "passed": true,
+              "detail": "['ASR-B37D240D5E']"
+            },
+            {
+              "name": "corroborates",
+              "passed": true,
+              "detail": "['ASR-B37D240D5E']"
+            }
+          ],
+          "skipped": false,
+          "note": ""
+        },
+        {
+          "id": "ST-30",
+          "passed": true,
+          "checks": [
+            {
+              "name": "action",
+              "passed": true,
+              "detail": "disable port 1/1/2 on trn-017 wait briefly, then re-enable port 1/1/2"
+            },
+            {
+              "name": "avoid_sfp",
+              "passed": true,
+              "detail": "['Swap another SFP', 'Reboot the node (unless interface bounce fails)']"
+            },
+            {
+              "name": "avoid_reboot",
+              "passed": true,
+              "detail": "['Swap another SFP', 'Reboot the node (unless interface bounce fails)']"
+            },
+            {
+              "name": "citation",
+              "passed": true,
+              "detail": "['ASR-1AB0B5CF79', 'ASR-B37D240D5E']"
+            }
+          ],
+          "skipped": false,
+          "note": ""
+        }
+      ],
+      "field_accuracy": {}
+    },
+    {
+      "name": "T2 held-out capture",
+      "items": [
+        {
+          "id": "H-07",
+          "passed": false,
+          "checks": [
+            {
+              "name": "captured",
+              "passed": true,
+              "detail": "H-07a: ASR-0040ECF9A5"
+            },
+            {
+              "name": "link_observed_on",
+              "passed": true,
+              "detail": "H-07a: got ['ACC-007'], want ['ACC-007']"
+            },
+            {
+              "name": "link_applies_to",
+              "passed": true,
+              "detail": "H-07a: got ['ACC-007', 'KMAX-4K'], want ['KMAX-4K']"
+            },
+            {
+              "name": "valid_from",
+              "passed": false,
+              "detail": "H-07a: got 2026-09-30 21:00:00+00:00, want 2026-09-15T09:00:00Z"
+            },
+            {
+              "name": "valid_to",
+              "passed": false,
+              "detail": "H-07a: got None, want 2026-11-04T14:00:00Z"
+            },
+            {
+              "name": "status",
+              "passed": false,
+              "detail": "H-07a: got unverified, want superseded"
+            },
+            {
+              "name": "captured",
+              "passed": true,
+              "detail": "H-07b: ASR-0040ECF9A5"
+            },
+            {
+              "name": "link_observed_on",
+              "passed": true,
+              "detail": "H-07b: got ['ACC-007'], want ['ACC-007']"
+            },
+            {
+              "name": "link_applies_to",
+              "passed": true,
+              "detail": "H-07b: got ['ACC-007', 'KMAX-4K'], want ['KMAX-4K']"
+            },
+            {
+              "name": "valid_from",
+              "passed": false,
+              "detail": "H-07b: got 2026-09-30 21:00:00+00:00, want 2026-11-04T14:00:00Z"
+            },
+            {
+              "name": "valid_to",
+              "passed": true,
+              "detail": "H-07b: got None, want None"
+            },
+            {
+              "name": "status",
+              "passed": true,
+              "detail": "H-07b: got unverified, want believed_true"
+            },
+            {
+              "name": "supersedes",
+              "passed": false,
+              "detail": "H-07b>H-07a"
+            }
+          ],
+          "skipped": false,
+          "note": "The original advice was incorrect; the firmware update changed behavior, requiring config export before power-cycle."
+        },
+        {
+          "id": "H-01",
+          "passed": true,
+          "checks": [
+            {
+              "name": "no_duplicate",
+              "passed": true,
+              "detail": "[]"
+            }
+          ],
+          "skipped": false,
+          "note": "Symptom-action rule: Gen1 chassis with flat counters at -4.2 dBm/no alarms → shut/no shut port, avoid module replacement or chassis reload"
+        },
+        {
+          "id": "H-02",
+          "passed": false,
+          "checks": [
+            {
+              "name": "captured",
+              "passed": true,
+              "detail": "H-02a: ASR-E92F1D6907"
+            },
+            {
+              "name": "link_observed_on",
+              "passed": true,
+              "detail": "H-02a: got ['SEG-015', 'TRN-015'], want ['SEG-015']"
+            },
+            {
+              "name": "link_applies_to",
+              "passed": true,
+              "detail": "H-02a: got ['SEG-015', 'TRN-015'], want ['SEG-015', 'TRN-015']"
+            },
+            {
+              "name": "valid_from",
+              "passed": true,
+              "detail": "H-02a: got 2026-10-28 12:05:00+00:00, want 2026-10-28T12:05:00Z"
+            },
+            {
+              "name": "valid_to",
+              "passed": true,
+              "detail": "H-02a: got 2026-11-30 22:00:00+00:00, want 2026-11-30T22:00:00Z"
+            },
+            {
+              "name": "recorded_at",
+              "passed": true,
+              "detail": "H-02a: got 2026-10-28 12:05:00+00:00, want 2026-10-28T12:05:00Z"
+            },
+            {
+              "name": "status",
+              "passed": true,
+              "detail": "H-02a: got unverified, want believed_true"
+            },
+            {
+              "name": "captured",
+              "passed": true,
+              "detail": "H-02b: ASR-34DD06A9AC"
+            },
+            {
+              "name": "link_observed_on",
+              "passed": true,
+              "detail": "H-02b: got ['SEG-015', 'TRN-015'], want ['SEG-015']"
+            },
+            {
+              "name": "link_applies_to",
+              "passed": true,
+              "detail": "H-02b: got ['SEG-015', 'TRN-015'], want ['SEG-015', 'TRN-015']"
+            },
+            {
+              "name": "valid_from",
+              "passed": true,
+              "detail": "H-02b: got 2026-11-30 22:00:00+00:00, want 2026-11-30T22:00:00Z"
+            },
+            {
+              "name": "valid_to",
+              "passed": true,
+              "detail": "H-02b: got None, want None"
+            },
+            {
+              "name": "recorded_at",
+              "passed": true,
+              "detail": "H-02b: got 2026-10-28 12:06:40+00:00, want 2026-10-28T12:06:40Z"
+            },
+            {
+              "name": "status",
+              "passed": true,
+              "detail": "H-02b: got unverified, want believed_true"
+            },
+            {
+              "name": "supersedes",
+              "passed": false,
+              "detail": "H-02b>H-02a"
+            }
+          ],
+          "skipped": false,
+          "note": "Provides specific access instructions for a private road with a padlock, including key location and future code lock transition."
+        },
+        {
+          "id": "H-04",
+          "passed": true,
+          "checks": [
+            {
+              "name": "nothing_captured",
+              "passed": true,
+              "detail": "ignored: lunch coordination and holiday scheduling - no operational knowledge"
+            }
+          ],
+          "skipped": false,
+          "note": "lunch coordination and holiday scheduling - no operational knowledge"
+        },
+        {
+          "id": "H-05",
+          "passed": true,
+          "checks": [
+            {
+              "name": "nothing_captured",
+              "passed": true,
+              "detail": "ignored: gap candidate: unanswered question about CRC errors on port 1/1/4 at TRN-010 Lahti - no diagnostic rule or conclusion provided"
+            }
+          ],
+          "skipped": false,
+          "note": "gap candidate: unanswered question about CRC errors on port 1/1/4 at TRN-010 Lahti - no diagnostic rule or conclusion provided"
+        },
+        {
+          "id": "H-03",
+          "passed": false,
+          "checks": [
+            {
+              "name": "captured",
+              "passed": false,
+              "detail": "H-03a: no matching assertion"
+            }
+          ],
+          "skipped": false,
+          "note": "kept by triage (Provides critical site access information including alternative route and time impact due to road closure.), but nothing passed the gates: V1: no action"
+        },
+        {
+          "id": "H-06",
+          "passed": false,
+          "checks": [
+            {
+              "name": "captured",
+              "passed": true,
+              "detail": "H-06a: ASR-27B33BEE85"
+            },
+            {
+              "name": "link_observed_on",
+              "passed": true,
+              "detail": "H-06a: got ['TRN-019'], want ['TRN-019']"
+            },
+            {
+              "name": "link_applies_to",
+              "passed": true,
+              "detail": "H-06a: got ['TRN-019'], want ['TRN-019']"
+            },
+            {
+              "name": "valid_from",
+              "passed": true,
+              "detail": "H-06a: got 2026-11-03 08:10:00+00:00, want 2026-11-03T08:10:00Z"
+            },
+            {
+              "name": "valid_to",
+              "passed": true,
+              "detail": "H-06a: got None, want None"
+            },
+            {
+              "name": "status",
+              "passed": true,
+              "detail": "H-06a: got disputed, want disputed"
+            },
+            {
+              "name": "captured",
+              "passed": true,
+              "detail": "H-06b: ASR-27B33BEE85"
+            },
+            {
+              "name": "link_observed_on",
+              "passed": true,
+              "detail": "H-06b: got ['TRN-019'], want ['TRN-019']"
+            },
+            {
+              "name": "link_applies_to",
+              "passed": true,
+              "detail": "H-06b: got ['TRN-019'], want ['TRN-019']"
+            },
+            {
+              "name": "valid_from",
+              "passed": false,
+              "detail": "H-06b: got 2026-11-03 08:10:00+00:00, want 2026-11-03T08:25:00Z"
+            },
+            {
+              "name": "valid_to",
+              "passed": true,
+              "detail": "H-06b: got None, want None"
+            },
+            {
+              "name": "status",
+              "passed": true,
+              "detail": "H-06b: got disputed, want disputed"
+            },
+            {
+              "name": "contradicts",
+              "passed": false,
+              "detail": "H-06a<>H-06b"
+            },
+            {
+              "name": "contradicts",
+              "passed": false,
+              "detail": "H-06b<>H-06a"
+            }
+          ],
+          "skipped": false,
+          "note": "Provides a symptom-action rule about TRN-019 port bounce failure and the required workaround of reseating the line card."
+        },
+        {
+          "id": "H-08",
+          "passed": true,
+          "checks": [
+            {
+              "name": "captured",
+              "passed": true,
+              "detail": "H-08a: ASR-3DA4FB56CB"
+            },
+            {
+              "name": "link_observed_on",
+              "passed": true,
+              "detail": "H-08a: got ['TRN-017'], want ['TRN-017']"
+            },
+            {
+              "name": "link_applies_to",
+              "passed": true,
+              "detail": "H-08a: got ['TRN-017'], want ['TRN-017']"
+            },
+            {
+              "name": "valid_from",
+              "passed": true,
+              "detail": "H-08a: got 2026-11-08 22:00:00+00:00, want 2026-11-08T22:00:00Z"
+            },
+            {
+              "name": "valid_to",
+              "passed": true,
+              "detail": "H-08a: got None, want None"
+            },
+            {
+              "name": "recorded_at",
+              "passed": true,
+              "detail": "H-08a: got 2026-11-04 15:30:00+00:00, want 2026-11-04T15:30:00Z"
+            },
+            {
+              "name": "status",
+              "passed": true,
+              "detail": "H-08a: got unverified, want believed_true"
+            }
+          ],
+          "skipped": false,
+          "note": "Provides specific access requirement and solution for a site (Pori TRN-017) with a clear action (get badge from facilities desk)."
+        },
+        {
+          "id": "H-09",
+          "passed": false,
+          "checks": [
+            {
+              "name": "captured",
+              "passed": true,
+              "detail": "H-09a: ASR-16C69DA3FD"
+            },
+            {
+              "name": "link_observed_on",
+              "passed": true,
+              "detail": "H-09a: got ['TRN-010'], want ['TRN-010']"
+            },
+            {
+              "name": "link_applies_to",
+              "passed": false,
+              "detail": "H-09a: got ['Gen2', 'TNC-2X', 'TRN-010'], want ['TNC-2X']; widened to ['Gen2']"
+            },
+            {
+              "name": "valid_from",
+              "passed": true,
+              "detail": "H-09a: got 2026-11-05 11:02:00+00:00, want 2026-11-05T11:02:00Z"
+            },
+            {
+              "name": "valid_to",
+              "passed": true,
+              "detail": "H-09a: got None, want None"
+            },
+            {
+              "name": "recorded_at",
+              "passed": true,
+              "detail": "H-09a: got 2026-11-05 11:02:00+00:00, want 2026-11-05T11:02:00Z"
+            },
+            {
+              "name": "status",
+              "passed": false,
+              "detail": "H-09a: got disputed, want unverified"
+            }
+          ],
+          "skipped": false,
+          "note": "After an optics swap, if a link shows 'up, light OK, no traffic', perform a shut/no shut to restore traffic — applies to TNC-2X units as well as older Gen1."
+        }
+      ],
+      "field_accuracy": {
+        "captured": "8/9",
+        "contradicts": "0/2",
+        "link_applies_to": "7/8",
+        "link_observed_on": "8/8",
+        "no_duplicate": "1/1",
+        "nothing_captured": "2/2",
+        "recorded_at": "4/4",
+        "status": "6/8",
+        "supersedes": "0/2",
+        "valid_from": "5/8",
+        "valid_to": "7/8"
+      }
+    },
+    {
+      "name": "T2 held-out QA",
+      "items": [
+        {
+          "id": "HQ-01",
+          "passed": true,
+          "checks": [
+            {
+              "name": "answered",
+              "passed": true,
+              "detail": "got answered"
+            },
+            {
+              "name": "action",
+              "passed": true,
+              "detail": "shut/no shut port 1/1/2 on trn-017 to restore forwarding state"
+            },
+            {
+              "name": "avoid",
+              "passed": true,
+              "detail": "replace_sfp"
+            },
+            {
+              "name": "avoid",
+              "passed": true,
+              "detail": "reboot_node"
+            },
+            {
+              "name": "citation",
+              "passed": true,
+              "detail": "cited ['ASR-166A251CB5', 'ASR-1AB0B5CF79'], want any of ['ASR-166A251CB5', 'ASR-1AB0B5CF79', 'ASR-B37D240D5E']"
+            }
+          ],
+          "skipped": false,
+          "note": "answered: On Gen1 TNC-1X nodes like TRN-017, after an SFP swap with port UP, good RX power, and zero traffic, shut/no shut the port to recover the forwarding state. Do not reload the chassis or replac"
+        },
+        {
+          "id": "HQ-02",
+          "passed": true,
+          "checks": [
+            {
+              "name": "answered",
+              "passed": true,
+              "detail": "got answered"
+            },
+            {
+              "name": "contains",
+              "passed": true,
+              "detail": "padlock"
+            },
+            {
+              "name": "contains",
+              "passed": true,
+              "detail": "K-Market"
+            },
+            {
+              "name": "citation",
+              "passed": true,
+              "detail": "cited ['ASR-E92F1D6907'], want any of ['ASR-34DD06A9AC', 'ASR-E92F1D6907']"
+            }
+          ],
+          "skipped": false,
+          "note": "answered: To access Kajaani TRN-015 on 2026-11-20: The private road has a boom with a padlock. Get the key from the K-Market service desk in town—ask for the \"Elisa key\"."
+        },
+        {
+          "id": "HQ-03",
+          "passed": true,
+          "checks": [
+            {
+              "name": "answered",
+              "passed": true,
+              "detail": "got answered"
+            },
+            {
+              "name": "contains",
+              "passed": true,
+              "detail": "code lock"
+            },
+            {
+              "name": "contains",
+              "passed": true,
+              "detail": "Tiina Rantanen"
+            },
+            {
+              "name": "citation",
+              "passed": true,
+              "detail": "cited ['ASR-34DD06A9AC'], want any of ['ASR-34DD06A9AC', 'ASR-E92F1D6907']"
+            }
+          ],
+          "skipped": false,
+          "note": "answered: For TRN-015 Kajaani on 2026-12-03, the gate uses a code lock (switched from keys on 1 December). Get the code from site security contact Tiina Rantanen. No physical key is needed."
+        },
+        {
+          "id": "HQ-04",
+          "passed": false,
+          "checks": [
+            {
+              "name": "answered",
+              "passed": true,
+              "detail": "got partial"
+            },
+            {
+              "name": "contains",
+              "passed": false,
+              "detail": "Vuotso"
+            },
+            {
+              "name": "citation",
+              "passed": false,
+              "detail": "cited [], want any of []"
+            }
+          ],
+          "skipped": false,
+          "note": "partial: No specific access issues are documented for TRN-021 on 2026-11-10. The site has a private road (SEG-021) with a boom barrier, but no access knowledge (locks, keys, gates, or access register)"
+        },
+        {
+          "id": "HQ-05",
+          "passed": true,
+          "checks": [
+            {
+              "name": "answered",
+              "passed": true,
+              "detail": "got partial"
+            },
+            {
+              "name": "not_contains",
+              "passed": true,
+              "detail": "Vuotso"
+            },
+            {
+              "name": "not_contains",
+              "passed": true,
+              "detail": "closed"
+            }
+          ],
+          "skipped": false,
+          "note": "partial: No access issues documented for TRN-021 on 2026-11-25. The site has a private road with a boom barrier on SEG-021, but no specific access restrictions, key requirements, or gate codes are rec"
+        },
+        {
+          "id": "HQ-06",
+          "passed": true,
+          "checks": [
+            {
+              "name": "dispute_shown",
+              "passed": true,
+              "detail": "got disputed"
+            },
+            {
+              "name": "citation",
+              "passed": true,
+              "detail": "cited ['ASR-166A251CB5', 'ASR-1AB0B5CF79', 'ASR-27B33BEE85', 'ASR-5A09418B8B', 'ASR-B37D240D5E'], want any of ['ASR-27B33BEE85', 'ASR-5A09418B8B']"
+            }
+          ],
+          "skipped": false,
+          "note": "disputed: For TRN-019 zero-traffic after optics swap: try bounce (shut/no shut) first. If that fails, reseat the line card may be needed, but there's conflicting guidance on this specific node."
+        },
+        {
+          "id": "HQ-07",
+          "passed": true,
+          "checks": [
+            {
+              "name": "answered",
+              "passed": true,
+              "detail": "got answered"
+            },
+            {
+              "name": "contains",
+              "passed": true,
+              "detail": "export"
+            },
+            {
+              "name": "not_recommended",
+              "passed": true,
+              "detail": "just power-cycle"
+            },
+            {
+              "name": "citation",
+              "passed": true,
+              "detail": "cited ['ASR-0040ECF9A5'], want any of ['ASR-0040ECF9A5']"
+            }
+          ],
+          "skipped": false,
+          "note": "answered: Do not power-cycle ACC-007 directly. Since the October firmware, a power-cycle wipes the config on KMAX-4K devices. Export the config first, then restart."
+        },
+        {
+          "id": "HQ-08",
+          "passed": true,
+          "checks": [
+            {
+              "name": "answered",
+              "passed": true,
+              "detail": "got answered"
+            },
+            {
+              "name": "contains",
+              "passed": true,
+              "detail": "badge"
+            },
+            {
+              "name": "citation",
+              "passed": true,
+              "detail": "cited ['ASR-3DA4FB56CB'], want any of ['ASR-3DA4FB56CB']"
+            }
+          ],
+          "skipped": false,
+          "note": "answered: To enter the Pori transport room (TRN-017) on 2026-11-12, you need an access badge from the facilities desk. The old keys no longer work as of Monday 2026-11-09."
+        },
+        {
+          "id": "HQ-09",
+          "passed": true,
+          "checks": [
+            {
+              "name": "not_recommended",
+              "passed": true,
+              "detail": "badge required"
+            }
+          ],
+          "skipped": false,
+          "note": "not_documented: No access knowledge is recorded for the Pori transport room (TRN-017). I've opened a knowledge gap and routed it to Erkki Expert."
+        },
+        {
+          "id": "HQ-10",
+          "passed": true,
+          "checks": [
+            {
+              "name": "not_documented",
+              "passed": true,
+              "detail": "got not_documented"
+            },
+            {
+              "name": "false_confident",
+              "passed": true,
+              "detail": "steps given"
+            }
+          ],
+          "skipped": false,
+          "note": "not_documented: The torque specification for TNC-1X SFP cage screws is not documented in the knowledge base. A knowledge gap has been opened and routed to Erkki Expert."
+        },
+        {
+          "id": "HQ-11",
+          "passed": true,
+          "checks": [
+            {
+              "name": "not_documented",
+              "passed": true,
+              "detail": "got not_documented"
+            },
+            {
+              "name": "false_confident",
+              "passed": true,
+              "detail": "steps given"
+            }
+          ],
+          "skipped": false,
+          "note": "not_documented: There is no documented firmware release that fixes the TNC-2X forwarding stall. The knowledge base only describes the symptom (interface UP with good RX power but zero counters after S"
+        },
+        {
+          "id": "HQ-12",
+          "passed": true,
+          "checks": [
+            {
+              "name": "not_documented",
+              "passed": true,
+              "detail": "got not_documented"
+            },
+            {
+              "name": "false_confident",
+              "passed": true,
+              "detail": "steps given"
+            }
+          ],
+          "skipped": false,
+          "note": "not_documented: Not documented. The knowledge base states the Elisa key for Kajaani (TRN-015) is at the K-Market service desk in town, but does not specify who holds it out-of-hours. A knowledge gap h"
+        }
+      ],
+      "field_accuracy": {
+        "action": "1/1",
+        "answered": "7/7",
+        "avoid": "2/2",
+        "citation": "6/7",
+        "contains": "6/7",
+        "dispute_shown": "1/1",
+        "false_confident": "3/3",
+        "not_contains": "2/2",
+        "not_documented": "3/3",
+        "not_recommended": "2/2"
+      }
+    }
+  ],
+  "caveat": "T0 is Elisa's own example. T2 is hand-written and held out, n = 9 threads / 12 questions; one run, so no variance is reported."
+}

@@ -153,7 +153,12 @@ def field_accuracy(items: Iterable[ItemResult]) -> dict[str, str]:
 
 
 def scoped(view: AssertionView, scope: str) -> set[str]:
-    return {b.entity_id for b in view.bindings if b.scope == scope and not b.candidate}
+    """Bound entity ids; topics are stored as `TOPIC:<name>` and scored by name."""
+    return {
+        b.entity_id.removeprefix("TOPIC:")
+        for b in view.bindings
+        if b.scope == scope and not b.candidate
+    }
 
 
 def status_at(view: AssertionView, t: datetime) -> str:
@@ -164,6 +169,16 @@ def status_at(view: AssertionView, t: datetime) -> str:
     if view.status in ("superseded", "expired"):
         return "believed_true"
     return str(view.status)
+
+
+# Trust is not validity: a fresh capture nobody has clicked stays `unverified` (ST-07),
+# and the held-out key writes `believed_true` for "current". The status check compares
+# validity, so both read as current. Decided 2026-11-07, after the first run.
+CURRENT = frozenset({"believed_true", "unverified"})
+
+
+def same_status(got: str, want: str) -> bool:
+    return got == want or (got in CURRENT and want in CURRENT)
 
 
 def match(expected: ExpectedAssertion, views: Sequence[AssertionView]) -> AssertionView | None:
@@ -220,7 +235,7 @@ def score_assertion(
         checks.append(
             Check(
                 name="status",
-                passed=got == exp.status_at_snapshot,
+                passed=same_status(got, exp.status_at_snapshot),
                 detail=f"got {got}, want {exp.status_at_snapshot}",
             )
         )

@@ -63,6 +63,7 @@ from kaiku.telemetry.store import TelemetryStore
 
 log = get_logger(__name__)
 NEO4J_IMAGE = "neo4j:2026.10.1-community"  # same as docker-compose.yml
+NEO4J_START_S = 600  # testcontainers polls once a second
 SNAPSHOT = datetime(2026, 11, 7, tzinfo=UTC)  # eval/heldout: "status at snapshot"
 ELISA_MSG8 = datetime(2025, 10, 14, 6, 22, 8, tzinfo=UTC)  # R8: 09:22 EEST, seconds synthetic
 ST30_QUESTION = "TRN-017 port 1/1/2: up, optics fine, zero traffic after an SFP swap. What next?"
@@ -89,10 +90,13 @@ def _neo4j(uri: str | None, password: str | None) -> Iterator[tuple[str, str]]:
         yield uri, password or ""
         return
     from testcontainers.community.neo4j import Neo4jContainer  # dev dependency
+    from testcontainers.core.config import testcontainers_config
 
+    # Neo4j 2026.x can take well over the default 120 s to start (WSL2, cold JVM).
+    testcontainers_config.max_tries = max(testcontainers_config.max_tries, NEO4J_START_S)
     container = Neo4jContainer(NEO4J_IMAGE, password="eval-only-pw")  # noqa: S106  # throwaway container
-    container.start()
     try:
+        container.start()
         yield container.get_connection_url(), "eval-only-pw"
     finally:
         container.stop()
