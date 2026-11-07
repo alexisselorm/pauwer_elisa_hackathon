@@ -246,6 +246,9 @@ async def run(settings: Settings) -> None:
         every_s=settings.capture_sweep_seconds,
     )
     ingest = SlackIngest(store, channels=settings.slack_capture_channels)
+    if settings.slack_gap_channel:  # the expert's reply to [Ask] is captured there
+        ingest.watch(settings.slack_gap_channel)
+    actions.gaps = cap.GapAskRecorder(repo, ingest)
     capture = cap.CaptureHandlers(ingest, loop, judge.resolves)
     app = build_app(settings, agent, actions, capture, cards)
     identity = await app.client.auth_test()

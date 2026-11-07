@@ -4,7 +4,8 @@
   agent's advice in its thread and outcome buttons [Run bounce (simulated)]
   [Done manually ✓] [Didn't work ✗]. Each click reports the outcome through MCP.
 - Not documented: [Ask] [Don't ask] under an answer that opened a knowledge gap. Ask posts
-  the question to the expert the gap was routed to.
+  the question to the expert the gap was routed to. The expert's reply in that thread is
+  captured like any thread and answers the gap; the asker's message then shows the answer.
 
 The watcher triggers on OPTICAL_POWER_OK, the last of a fault's point events: module in,
 link up, optics fine, so from here on a stall is silent unless someone looks at counters.
@@ -15,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
 
@@ -57,6 +59,35 @@ class Answerer(Protocol):
 
 class ToolCaller(Protocol):
     async def call_tool(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]: ...
+
+
+@dataclass(frozen=True)
+class AskThread:
+    """Where a knowledge gap was asked in Slack."""
+
+    channel: str
+    ts: str
+    answered: bool = False
+
+
+class GapAsks(Protocol):
+    """Records [Ask] in the context layer, so the expert's reply in the ask thread is
+    captured as the gap's answer (`slack/capture.py`, `GapAskRecorder`)."""
+
+    async def ask_thread(self, gap_id: str, *, asker_message: str) -> AskThread | None:
+        """The thread the gap was already asked in, if any; `asker_message` waits for it."""
+        ...
+
+    async def asked(
+        self,
+        gap_id: str,
+        *,
+        channel: str,
+        ts: str,
+        question: str,
+        asker: str,
+        asker_message: str,
+    ) -> None: ...
 
 
 class Network(Protocol):
@@ -186,8 +217,10 @@ class OpsActions:
         capture_channels: Sequence[str] = (),
         settle: timedelta = timedelta(seconds=40),
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+        gaps: GapAsks | None = None,
     ) -> None:
         self.answerer, self.tools, self.network = answerer, tools, network
+        self.gaps = gaps
         self.alarm_channel, self.gap_channel = alarm_channel, gap_channel
         self.capture_channels = list(capture_channels)
         self.settle, self.clock = settle, clock
@@ -342,8 +375,25 @@ class OpsActions:
         channel, ts = body["channel"]["id"], body["message"]["ts"]
         blocks = body["message"].get("blocks", [])
         user = body["user"]["id"]
+        waiting = f"{channel}:{ts}"  # this message shows the answer when it comes
+        known = None
+        if action_id == GAP_ASK and self.gaps is not None:
+            try:
+                known = await self.gaps.ask_thread(v["gap_id"], asker_message=waiting)
+            except Exception:
+                log.exception("gap_lookup_failed", gap_id=v["gap_id"])
         if action_id == GAP_DONT_ASK:
             note = f"Not asked (<@{user}>). Knowledge gap {v['gap_id']} stays open."
+        elif known is not None:
+            # Somebody already asked this question: one thread, one expert reply, no repost.
+            link = await client.chat_getPermalink(channel=known.channel, message_ts=known.ts)
+            if known.answered:
+                note = f"Already answered: see the <{link['permalink']}|thread>."
+            else:
+                note = (
+                    f"Already asked (<{link['permalink']}|thread>), for <@{user}> too. "
+                    "The answer will show up here."
+                )
         else:
             expert = await self._slack_user(client, v.get("routed_to"))
             target = self.gap_channel or channel
@@ -358,9 +408,23 @@ class OpsActions:
                     f"(knowledge gap {v['gap_id']})."
                 ),
             )
+            later = ""
+            if self.gaps is not None:
+                try:
+                    await self.gaps.asked(
+                        v["gap_id"],
+                        channel=target,
+                        ts=posted["ts"],
+                        question=v["question"],
+                        asker=user,
+                        asker_message=waiting,
+                    )
+                    later = " The answer will show up here."
+                except Exception:  # asked all the same; the reply is still captured
+                    log.exception("gap_ask_not_recorded", gap_id=v["gap_id"])
             link = await client.chat_getPermalink(channel=target, message_ts=posted["ts"])
             asked = who or f"in <#{target}>"
-            note = f"Asked {asked} (<{link['permalink']}|thread>) for <@{user}>."
+            note = f"Asked {asked} (<{link['permalink']}|thread>) for <@{user}>.{later}"
         await client.chat_update(
             channel=channel, ts=ts, text=note, blocks=replace_actions(blocks, GAP_BLOCK, note)
         )

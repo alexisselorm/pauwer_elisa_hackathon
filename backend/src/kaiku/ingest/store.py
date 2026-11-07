@@ -143,6 +143,19 @@ class CaptureStore:
         )
         return bool(rows)
 
+    async def resolve_if_gap_reply(self, message_event_id: str) -> bool:
+        """A reply in the thread where a knowledge gap was asked is the expert's answer:
+        its thread is read now, with no resolution word or ✅ needed."""
+        rows = await self._q(
+            "MATCH (m:Message {event_id: $id})-[:IN_THREAD]->(t:Thread) "
+            "WHERE t.slack_thread_ts IS NOT NULL AND m.platform_seq <> t.slack_thread_ts "
+            "AND EXISTS { MATCH (:KnowledgeGap {ask_channel: t.slack_channel, "
+            "  ask_ts: t.slack_thread_ts}) } "
+            "SET t.resolved = true RETURN t.thread_id AS id",
+            id=message_event_id,
+        )
+        return bool(rows)
+
     async def due_threads(self, now: datetime, idle: timedelta, limit: int = 50) -> list[str]:
         """Threads with news since their last triage that are resolved or idle. A thread with
         no new message is never returned, so a sweep costs no LLM call (ST-09)."""

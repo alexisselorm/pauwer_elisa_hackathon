@@ -303,6 +303,9 @@ class AssertionIn(BaseModel):
     # V6 source authority (channel rank, higher wins). In a contradiction only the side
     # with lower or equal authority becomes disputed. None counts as 1 (expert chat).
     authority: int | None = Field(default=None, ge=0)
+    # The knowledge gap this answers (the expert replied in the gap's ask thread): the same
+    # transaction links it ANSWERED_BY and closes it.
+    answers_gap: str | None = None
 
     @model_validator(mode="after")
     def _not_a_validity_status(self) -> AssertionIn:

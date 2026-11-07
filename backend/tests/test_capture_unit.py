@@ -374,6 +374,9 @@ class _Store:
         self.resolved.append((event_id, forced))
         return event_id in self.events
 
+    async def resolve_if_gap_reply(self, event_id: str) -> bool:
+        return False  # no knowledge gap was asked in these threads
+
 
 def _ingest(**kw: Any) -> tuple[SlackIngest, _Store]:
     store = _Store()

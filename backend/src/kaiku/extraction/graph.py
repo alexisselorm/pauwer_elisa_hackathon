@@ -359,7 +359,13 @@ class Extractor:
             if i != state["cursor"] or item.dropped or g is None or linked is None or d is None:
                 items.append(item)
                 continue
+            # A thread opened to ask an expert about a knowledge gap: its rules answer it.
+            gap_id = None
+            if thread.slack_channel and thread.slack_thread_ts:
+                gap_id = await self.repo.gap_asked_in(thread.slack_channel, thread.slack_thread_ts)
             if d.skip_as:
+                if gap_id:  # the answer was already on record
+                    await self.repo.answer_gap(gap_id, d.skip_as)
                 items.append(item.model_copy(update={"assertion_id": d.skip_as}))
                 continue
             draft = g.draft
@@ -392,6 +398,7 @@ class Extractor:
                 corroborates=d.corroborates,
                 contradicts=d.contradicts,
                 authority=reconcile.channel_authority(thread.platform),
+                answers_gap=gap_id,
             )
             try:
                 if d.correct:

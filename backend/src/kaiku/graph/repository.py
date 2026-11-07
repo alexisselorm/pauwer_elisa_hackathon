@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import uuid
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from datetime import datetime
@@ -1170,15 +1171,35 @@ class ContextRepository:
         trigger_event_id: str | None = None,
     ) -> tuple[dict[str, Any], bool]:
         gap_id = new_id("GAP")
+        key = question_key(question)
 
         async def work(tx: AsyncManagedTransaction) -> dict[str, Any]:
+            # The same question while its gap is unanswered is that gap, not a second one:
+            # whoever asks again waits for the same expert reply.
+            same = await _single(
+                tx,
+                "MATCH (g:KnowledgeGap {question_key: $key}) WHERE g.status <> 'answered' "
+                "WITH g ORDER BY g.asked_at LIMIT 1 "
+                "RETURN g { .gap_id, .question, .routed_to, "
+                "  entity_ids: [(g)-[:ABOUT]->(e:Entity) | e.entity_id] } AS g",
+                key=key,
+            )
+            if same is not None:
+                return {
+                    "gap_id": same["gap_id"],
+                    "question": same["question"],
+                    "entity_ids": sorted(same["entity_ids"]),
+                    "routed_to": same["routed_to"],
+                }
             await tx.run(
-                "CREATE (g:KnowledgeGap {gap_id: $id, question: $q, context: $ctx, "
-                "  status: 'open', asked_at: $now, asked_by: $agent, routed_to: $to}) "
+                "CREATE (g:KnowledgeGap {gap_id: $id, question: $q, question_key: $key, "
+                "  context: $ctx, status: 'open', asked_at: $now, asked_by: $agent, "
+                "  routed_to: $to}) "
                 "WITH g UNWIND $ids AS eid MATCH (e:Entity {entity_id: eid}) "
                 "CREATE (g)-[:ABOUT]->(e)",
                 id=gap_id,
                 q=question,
+                key=key,
                 ctx=context,
                 now=now,
                 agent=agent_id,
@@ -1201,6 +1222,79 @@ class ContextRepository:
             on_behalf_of=on_behalf_of,
             trigger_event_id=trigger_event_id,
         )
+
+    # --- A gap asked in Slack: the expert's reply in the ask thread answers it -------------
+
+    async def gap(self, gap_id: str) -> dict[str, Any] | None:
+        rows = await self._read(
+            "MATCH (g:KnowledgeGap {gap_id: $id}) "
+            "RETURN g { .gap_id, .question, .status, .routed_to, .ask_channel, .ask_ts, "
+            "  .answered_at, asker_messages: coalesce(g.asker_messages, []), "
+            "  answered_by: [(g)-[:ANSWERED_BY]->(a:ContextAssertion) | a.assertion_id] } AS g",
+            id=gap_id,
+        )
+        return py(rows[0]["g"]) if rows else None
+
+    async def gap_asked(
+        self,
+        gap_id: str,
+        *,
+        asker_message: str,
+        ask_channel: str | None = None,
+        ask_ts: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Where the gap was asked in Slack (`ask_channel`, `ask_ts`: the thread whose reply
+        answers it; the first ask stays) and the message of each person waiting for the
+        answer (`channel:ts`), updated in place once it is answered."""
+
+        async def work(tx: AsyncManagedTransaction) -> None:
+            await tx.run(
+                "MATCH (g:KnowledgeGap {gap_id: $id}) "
+                "SET g.ask_channel = coalesce(g.ask_channel, $channel), "
+                "  g.ask_ts = coalesce(g.ask_ts, $ts), "
+                "  g.asker_messages = CASE WHEN $msg IN coalesce(g.asker_messages, []) "
+                "    THEN g.asker_messages ELSE coalesce(g.asker_messages, []) + $msg END",
+                id=gap_id,
+                channel=ask_channel,
+                ts=ask_ts,
+                msg=asker_message,
+            )
+
+        await self._tx(work)
+        return await self.gap(gap_id)
+
+    async def gap_asked_in(self, channel: str, thread_ts: str) -> str | None:
+        """The gap this Slack thread was opened to ask, if any."""
+        rows = await self._read(
+            "MATCH (g:KnowledgeGap {ask_channel: $c, ask_ts: $ts}) RETURN g.gap_id AS id "
+            "ORDER BY g.asked_at LIMIT 1",
+            c=channel,
+            ts=thread_ts,
+        )
+        return rows[0]["id"] if rows else None
+
+    async def answer_gap(self, gap_id: str, assertion_id: str) -> None:
+        """For an answer that matches knowledge already on record (nothing new is written)."""
+
+        async def work(tx: AsyncManagedTransaction) -> None:
+            await _answer_gap(tx, gap_id, assertion_id)
+
+        await self._tx(work)
+
+    async def gaps_answered_by(self, assertion_ids: Sequence[str]) -> list[dict[str, Any]]:
+        """The gaps these assertions answer, with every live answer, for the askers."""
+        rows = await self._read(
+            "MATCH (g:KnowledgeGap)-[:ANSWERED_BY]->(x:ContextAssertion) "
+            "WHERE x.assertion_id IN $ids "
+            "WITH DISTINCT g "
+            "RETURN g { .gap_id, .question, .ask_channel, .ask_ts, "
+            "  asker_messages: coalesce(g.asker_messages, []), "
+            "  answers: [(g)-[:ANSWERED_BY]->(a:ContextAssertion) WHERE a.retracted_at IS NULL "
+            "    | a { .assertion_id, .statement, .asserted_by, .recorded_at }] } AS g "
+            "ORDER BY g.gap_id",
+            ids=list(assertion_ids),
+        )
+        return [py(r["g"]) for r in rows]
 
     async def propose(
         self,
@@ -1442,6 +1536,8 @@ async def _create(tx: AsyncManagedTransaction, item: AssertionIn) -> AssertionOu
         key=key,
     )
     if existing is not None:
+        if item.answers_gap:
+            await _answer_gap(tx, item.answers_gap, existing)
         return await _out(tx, existing, replayed=True)
 
     entity_ids = sorted({b.entity_id for b in item.bindings})
@@ -1534,6 +1630,8 @@ async def _create(tx: AsyncManagedTransaction, item: AssertionIn) -> AssertionOu
         contradicts=item.contradicts,
         corroborates=item.corroborates,
     )
+    if item.answers_gap:
+        await _answer_gap(tx, item.answers_gap, assertion_id)
     return AssertionOut(
         assertion_id=assertion_id,
         status=state.status,
@@ -1542,6 +1640,23 @@ async def _create(tx: AsyncManagedTransaction, item: AssertionIn) -> AssertionOu
         recorded_at=state.recorded_at,
         idempotency_key=key,
     )
+
+
+async def _answer_gap(tx: AsyncManagedTransaction, gap_id: str, assertion_id: str) -> None:
+    """The gap is answered by this assertion, as of when it was recorded (the expert's
+    reply). More than one rule can answer a gap; the first answer closes it."""
+    await tx.run(
+        "MATCH (g:KnowledgeGap {gap_id: $gap}), (a:ContextAssertion {assertion_id: $id}) "
+        "MERGE (g)-[:ANSWERED_BY]->(a) "
+        "SET g.status = 'answered', g.answered_at = coalesce(g.answered_at, a.recorded_at)",
+        gap=gap_id,
+        id=assertion_id,
+    )
+
+
+def question_key(question: str) -> str:
+    """The same question however it is cased, spaced or punctuated."""
+    return " ".join(re.findall(r"\w+", question.casefold()))
 
 
 # V5: the temporal invariants (R2-R7, verify_temporal), checked on the graph as the

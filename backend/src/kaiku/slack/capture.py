@@ -30,7 +30,7 @@ from kaiku.ingest.capture import CaptureLoop
 from kaiku.ingest.slack_events import SlackIngest
 from kaiku.ingest.store import CaptureStore, MessageIn, ThreadView
 from kaiku.logging import get_logger
-from kaiku.slack.actions import find_channel
+from kaiku.slack.actions import AskThread, find_channel
 from kaiku.slack.format import actions, button, context
 
 log = get_logger(__name__)
@@ -353,6 +353,48 @@ class CaptureCards:
             for other in await self.store.threads_with_assertions(corroborated):
                 if other != thread.thread_id:
                     await self.refresh(other)
+        if result.assertion_ids:
+            await self.tell_askers(result.assertion_ids)
+
+    async def tell_askers(self, assertion_ids: list[str]) -> None:
+        """Each gap these assertions answer: the message of everyone who was waiting for it
+        (the agent's "not documented" reply in their thread) becomes the answer, edited in
+        place."""
+        if self.client is None:
+            return
+        for gap in await self.repo.gaps_answered_by(assertion_ids):
+            answers = gap["answers"]
+            if not answers or not gap["asker_messages"]:
+                continue
+            first = min(answers, key=lambda a: a["recorded_at"])
+            who = _who(first.get("asserted_by"))
+            text = f"Answered by {who}: " + " ".join(a["statement"] for a in answers)
+            where = gap_id = gap["gap_id"]
+            if gap.get("ask_channel") and gap.get("ask_ts"):
+                try:
+                    link = await self.client.chat_getPermalink(
+                        channel=gap["ask_channel"], message_ts=gap["ask_ts"]
+                    )
+                    where = f"<{link['permalink']}|{gap_id}>"
+                except Exception:
+                    log.warning("gap_permalink_failed", gap_id=gap_id, exc_info=True)
+            blocks = [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f":white_check_mark: *Answered by {who}:* "
+                        + "\n".join(a["statement"] for a in answers),
+                    },
+                },
+                context(f"Knowledge gap {where} closed · you asked: _{gap['question']}_"),
+            ]
+            for message in gap["asker_messages"]:
+                channel, _, ts = message.partition(":")
+                try:
+                    await self.client.chat_update(channel=channel, ts=ts, text=text, blocks=blocks)
+                except Exception:  # one asker's message gone must not stop the others
+                    log.warning("gap_asker_update_failed", gap_id=gap_id, exc_info=True)
 
     async def refresh(self, thread_id: str) -> None:
         """Post the card once, or edit it in place."""
@@ -549,6 +591,42 @@ class CaptureCards:
             raise FixError(block, f"Not saved: {exc.detail or exc.title}") from exc
 
 
+class GapAskRecorder:
+    """[Ask] on a knowledge gap, in the graph. The gap remembers its ask post (`ask_channel`,
+    `ask_ts`), so a reply in that thread answers it; the relayed question becomes the
+    thread's first message, so the expert's reply reads as the answer to it; and the ask
+    channel is captured even when SLACK_CAPTURE_CHANNELS leaves it out."""
+
+    def __init__(self, repo: ContextRepository, ingest: SlackIngest) -> None:
+        self.repo, self.ingest = repo, ingest
+
+    async def ask_thread(self, gap_id: str, *, asker_message: str) -> AskThread | None:
+        gap = await self.repo.gap(gap_id)
+        if gap is None or not gap.get("ask_ts"):
+            return None
+        await self.repo.gap_asked(gap_id, asker_message=asker_message)
+        return AskThread(
+            channel=gap["ask_channel"], ts=gap["ask_ts"], answered=gap["status"] == "answered"
+        )
+
+    async def asked(
+        self,
+        gap_id: str,
+        *,
+        channel: str,
+        ts: str,
+        question: str,
+        asker: str,
+        asker_message: str,
+    ) -> None:
+        await self.repo.gap_asked(
+            gap_id, asker_message=asker_message, ask_channel=channel, ask_ts=ts
+        )
+        self.ingest.watch(channel)
+        await self.ingest.record_question(channel, ts, question, asker)
+        log.info("gap_asked", gap_id=gap_id, channel=channel, ts=ts)
+
+
 class CaptureHandlers:
     """Message, reaction and shortcut events -> ingestion (BE-2.1) and the loop (BE-2.4).
 
@@ -571,6 +649,8 @@ class CaptureHandlers:
             return
         if msg.resolution:
             self.loop.kick()
+        elif await self.ingest.store.resolve_if_gap_reply(msg.event_id):
+            self.loop.kick()  # the expert answered a knowledge gap: no ✅ needed
         elif (
             self.resolves is not None
             and msg.text

@@ -168,6 +168,33 @@ class SlackIngest:
         at = slack_ts_to_datetime(event.get("event_ts") or ts)
         return await self.store.mark_resolved(slack_event_id(channel, ts), at)
 
+    def watch(self, channel: str) -> None:
+        """Capture this channel too, even when SLACK_CAPTURE_CHANNELS narrows the rest (the
+        channel a knowledge gap was asked in: its replies are the answers)."""
+        if self.channels:
+            self.channels.add(channel)
+
+    async def record_question(self, channel: str, ts: str, question: str, asker: str) -> str:
+        """The bot's [Ask] post relays a person's question; the bot's own posts are never
+        captured, so the question is stored as that person's message at the post's ts. The
+        thread then reads question -> expert reply. It is not triaged on its own: a question
+        holds no knowledge, so nothing is due until the reply. Returns the thread id."""
+        msg = self._message(
+            channel,
+            {"ts": ts, "user": asker, "text": question},
+            event_id=slack_event_id(channel, ts),
+            at=ts,
+        ).model_copy(update={"resolution": False})
+        await self._store([msg])
+        await self.store.set_triage(
+            msg.thread_id,
+            status="pending",
+            kind="none",
+            reason="a knowledge gap was asked here; waiting for the expert's reply",
+            seen_up_to=msg.event_time,
+        )
+        return msg.thread_id
+
     async def capture_shortcut(self, channel: str, message: Mapping[str, Any]) -> bool:
         """ "Capture this as knowledge": store the message if it was missed, then force the
         thread through triage."""
