@@ -133,6 +133,15 @@ def card_blocks(
             meta.append(":warning: telemetry disagrees")
         for kind, n in sorted(extra_sources.get(v.assertion_id, Counter()).items()):
             meta.append(f"+{n} source ({kind})")
+        # A saved ✏️ Fix is a source of the fixed version: say who fixed it and when.
+        fixes = [c for c in v.citations if ":fix:" in (c.source_ref or "") and c.recorded_at]
+        if fixes:
+            last = max(fixes, key=lambda c: c.recorded_at or v.recorded_at)
+            at = last.recorded_at or v.recorded_at
+            meta.append(
+                f":pencil2: fixed by {_who(last.author)} "
+                f"<!date^{int(at.timestamp())}^{{time}}|{at:%H:%M} UTC>"
+            )
         meta.append(_STATUS.get(v.status, str(v.status)))
         blocks.append(context(" · ".join(meta)))
 

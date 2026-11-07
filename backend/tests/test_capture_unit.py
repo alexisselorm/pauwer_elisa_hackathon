@@ -731,3 +731,17 @@ def test_a_node_the_simulator_does_not_run_adds_no_live_samples() -> None:
     store = TelemetryStore(None)
     store.add_live([], replace="TRN-042")
     assert store.ports("TRN-042") == []
+
+
+def test_card_says_who_fixed_it() -> None:
+    """A saved ✏️ Fix left the card looking unchanged; it now says who fixed it."""
+    fix = Citation(
+        source_type="slack",
+        source_ref="card:ASR-X:fix:V1",
+        author="U0ALEXIS",
+        recorded_at=MSG8 + timedelta(minutes=5),
+    )
+    v = _view(citations=[*_view().citations, fix])
+    rendered = json.dumps(cap.card_blocks([v], THREAD, {})[1])
+    assert "fixed by <@U0ALEXIS>" in rendered
+    assert "<@U0ERKKI> (this thread)" in rendered  # the source stays the expert
