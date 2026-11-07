@@ -61,7 +61,7 @@ async def test_live_slack_one_card_within_60s_of_message_9() -> None:
     replies = (await client.conversations_replies(channel=channel, ts=root))["messages"]
     assert len(_bot_posts(replies, bot_id)) == 1  # ≤1 bot message in the thread
 
-    pw = ENV.get("NEO4J_PASSWORD") or "silentctx-local-dev"
+    pw = ENV.get("NEO4J_PASSWORD") or "kaiku-local-dev"
     async with AsyncGraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", pw)) as d:
         records, _, _ = await d.execute_query(
             "MATCH (t:Thread {thread_id: $tid}) UNWIND t.assertion_ids AS aid "

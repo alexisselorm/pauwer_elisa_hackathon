@@ -16,7 +16,7 @@ The whole stack (Neo4j, api, slackbot, sim) runs with `docker compose up --build
 repo root: see the root README. To run the API alone against a local Neo4j:
 
 ```bash
-docker run -d --name neo4j -p 7687:7687 -e NEO4J_AUTH=neo4j/silentctx-local-dev neo4j:2026.10.1-community
+docker run -d --name neo4j -p 7687:7687 -e NEO4J_AUTH=neo4j/kaiku-local-dev neo4j:2026.10.1-community
 uv run kaiku-api         # http://localhost:8000  (API_RELOAD=true for --reload)
 ```
 

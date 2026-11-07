@@ -27,7 +27,7 @@ x-backend: &backend
     # Inside compose these always win over backend/.env.
     NEO4J_URI: bolt://neo4j:7687
     NEO4J_USER: neo4j
-    NEO4J_PASSWORD: ${NEO4J_PASSWORD:-silentctx-local-dev}
+    NEO4J_PASSWORD: ${NEO4J_PASSWORD:-kaiku-local-dev}
     DATA_DIR: /data/mock_data
     ELISA_DIR: /data/elisa  # `kaiku replay` and `kaiku backfill --elisa-dir` default to it
     STATE_DIR: /state
@@ -41,7 +41,7 @@ services:
     image: neo4j:2026.10.1-community
     restart: unless-stopped
     environment:
-      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-silentctx-local-dev}
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-kaiku-local-dev}
       NEO4J_server_memory_heap_max__size: 1G
       NEO4J_server_memory_pagecache_size: 512M
     ports:

@@ -37,8 +37,10 @@ Needs Docker with Compose v2.24+.
 | `web` | http://localhost:8080 | the console loads; the header says **Live** |
 | `phoenix` | http://localhost:6006 | traces appear under project `kaiku` |
 
-Everything binds to 127.0.0.1. Neo4j's password defaults to `silentctx-local-dev`; set
+Everything binds to 127.0.0.1. Neo4j's password defaults to `kaiku-local-dev`; set
 `NEO4J_PASSWORD` in your shell to change it (compose passes it to both Neo4j and the API).
+An existing `neo4j-data` volume keeps the password it was created with (the old default was
+`silentctx-local-dev`): `docker compose down -v` resets it.
 
 **Connect MCP Inspector:** `npx @modelcontextprotocol/inspector`, transport *Streamable HTTP*,
 URL `http://localhost:8000/mcp`, header `Authorization: Bearer <your inspector token>`.
