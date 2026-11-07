@@ -346,6 +346,7 @@ class Extractor:
                 action=g.draft.action.value if g.draft.action else None,
                 avoid=[a.value for a in g.draft.avoid],
                 elsewhere=elsewhere,
+                authority=reconcile.channel_authority(thread.platform),
             )
             items.append(item.model_copy(update={"decision": decision}))
         return {"items": items}

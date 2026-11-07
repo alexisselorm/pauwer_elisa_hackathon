@@ -138,13 +138,20 @@ The demo profile (`seed/profiles.py`) also defines what the historical backfill 
 every corpus source about the forwarding stall after an SFP swap (plan 001 §3.5).
 
 ```bash
-uv run kaiku backfill                                # Teams history (demo profile)
+uv run kaiku backfill                                # Teams, email, documents (demo profile)
 uv run kaiku backfill --profile full --elisa-dir ../Elisa_SinceAI2026/ELISA_HIDDEN_KNOWLEDGE_EXAMPLE_2026
 ```
 
 The backfill stores historical messages as events with their original times (Elisa's
 example is dated 2025-10-14 Europe/Helsinki, R8). The slackbot's capture loop then triages
 them. A re-run is a no-op.
+
+Documents come in with both profiles, one event per document: the expert PDF notes
+(`documents/expert_notes/`, at their CreationDate), the Confluence pages
+(`documents/confluence/`, at their last edit) and the ITSM KB articles
+(`itsm/knowledge_articles.jsonl`, at their publication date). Wiki and KB pages are tagged
+`authority: low`: when one contradicts expert chat or email, the page is the side that is
+disputed, and it never supersedes the expert, however recent its date.
 
 ## Checks
 

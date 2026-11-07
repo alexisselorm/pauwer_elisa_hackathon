@@ -36,6 +36,9 @@ class MessageIn(BaseModel):
     deletes: str | None = None  # so is a delete
     permalink: str | None = None
     resolution: bool = False  # a resolution signal (trigger.py)
+    # "low" for KB and wiki pages, which are often stale: reconcile ranks them under chat
+    # and email (extraction/reconcile.py). None: the platform's usual authority.
+    authority: str | None = None
     # Where the context card goes, for Slack threads.
     slack_channel: str | None = None
     slack_thread_ts: str | None = None
@@ -74,7 +77,7 @@ WITH r WHERE old IS NULL
 CREATE (m:Event:Message {event_id: r.event_id, event_time: r.event_time, ingested_at: $now,
   platform: r.platform, channel: r.channel, thread_id: r.thread_id,
   platform_seq: r.platform_seq, author: r.author, author_role: r.author_role, text: r.text,
-  edit_of: r.edit_of, deletes: r.deletes, permalink: r.permalink})
+  edit_of: r.edit_of, deletes: r.deletes, permalink: r.permalink, authority: r.authority})
 MERGE (t:Thread {thread_id: r.thread_id})
   ON CREATE SET t.channel = r.channel, t.platform = r.platform, t.status = 'pending',
     t.slack_channel = r.slack_channel, t.slack_thread_ts = r.slack_thread_ts

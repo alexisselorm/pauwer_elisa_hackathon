@@ -109,9 +109,9 @@ def backfill(
         typer.Option(help="Elisa's example folder (teams_chat.json, email.txt); full only."),
     ] = None,
 ) -> None:
-    """Load historical Teams messages, the Outlook .msg export (and Elisa's example) as
-    events with their original times. The capture loop in the slackbot then triages them.
-    Idempotent."""
+    """Load historical Teams messages, the Outlook .msg export, the expert PDF notes,
+    Confluence pages and ITSM KB articles (and Elisa's example) as events with their
+    original times. The capture loop in the slackbot then triages them. Idempotent."""
     from kaiku.graph.driver import create_driver
     from kaiku.ingest.backfill import backfill as run_backfill
     from kaiku.ingest.store import CaptureStore

@@ -39,6 +39,12 @@ def channel_authority(platform: str | None) -> int:
     return 0 if (platform or "").casefold() in _LOW_AUTHORITY else 1
 
 
+def _authority(candidate: Mapping[str, Any]) -> int:
+    """A stored assertion's authority; none recorded counts as expert chat (1)."""
+    value = candidate.get("authority")
+    return 1 if value is None else int(value)
+
+
 def role_rank(role: str | None) -> int:
     for pattern, rank in _ROLE_RANK:
         if role and pattern.search(role):
@@ -100,12 +106,17 @@ def decide(
     action: str | None = None,
     avoid: Sequence[str] = (),
     elsewhere: Collection[str] = (),
+    authority: int = 1,
 ) -> Decision:
     """`elsewhere`: candidates about other hardware than the new one (`disjoint`). A rule for
     TNC-3X that says "replace the SFP" doesn't contradict a Gen1 rule that says "don't", and
     a change on one model doesn't supersede knowledge about another (found live, G-01).
     The judge, which sees both scopes, may still call them contradictory (ST-14: "it is not
-    only the old units" contests the Gen1 scope)."""
+    only the old units" contests the Gen1 scope).
+
+    `authority`: the new draft's `channel_authority`. A KB or wiki page never supersedes
+    what an expert said in chat or email, however recent its date: it only contradicts, and
+    is the side that becomes disputed."""
     by_id = {c["assertion_id"]: c for c in candidates}
     d = Decision()
     superseded: list[Mapping[str, Any]] = []
@@ -153,6 +164,7 @@ def decide(
             r.relation is RelationKind.SUPERSEDES
             and valid_from > c["valid_from"]
             and not (same_thread and valid_from - c["valid_from"] < SAME_CONVERSATION)
+            and authority >= _authority(c)
         ):
             superseded.append(c)
         else:  # contradicts, a correction from elsewhere, or a "supersedes" that starts earlier

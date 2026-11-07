@@ -26,6 +26,7 @@ dependencies = [
     "openai>=3.46.0",
     "openinference-instrumentation-langchain>=0.1.82",
     "pydantic-settings>=2.16.2",
+    "pypdf>=6.21.1,<7",
     "rapidfuzz>=3.14.6",
     "slack-bolt==1.30.0",
     "sse-starlette>=3.7.0",

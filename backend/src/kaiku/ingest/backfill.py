@@ -1,7 +1,8 @@
 """Historical backfill (BE-2.1, BE-2.2): Teams JSONL and the Outlook `.msg` export from
-mock_data, and Elisa's example, with their original times (R1, R8). The demo profile skips
-what plan 001 §3.5 keeps out of the demo, so the live Slack capture is the first time the
-TRN-042 knowledge enters the system.
+mock_data, the expert PDF notes, Confluence pages and ITSM KB articles, and Elisa's
+example, with their original times (R1, R8). The demo profile skips what plan 001 §3.5
+keeps out of the demo, so the live Slack capture is the first time the TRN-042 knowledge
+enters the system.
 
 Re-running is a no-op: event ids are stable and the store is idempotent (ST-62).
 """
@@ -18,8 +19,11 @@ from pydantic import BaseModel
 from kaiku.domain.models import Platform
 from kaiku.domain.time import elisa_backfill_time
 from kaiku.ingest import trigger
+from kaiku.ingest.confluence_html import read_pages
 from kaiku.ingest.email import from_msg, msg_files
+from kaiku.ingest.itsm_kb import read_articles
 from kaiku.ingest.msg_reader import MsgError, read_msg
+from kaiku.ingest.pdf_notes import read_pdfs
 from kaiku.ingest.store import CaptureStore, MessageIn
 from kaiku.ingest.threads import teams_thread_id
 from kaiku.seed.profiles import Profile, demo_exclusions
@@ -39,6 +43,13 @@ class BackfillReport(BaseModel):
     emails_skipped_demo: int = 0
     emails_unreadable: int = 0
     elisa_read: int = 0
+    pdfs_read: int = 0
+    pdfs_unreadable: int = 0
+    confluence_read: int = 0
+    confluence_unreadable: int = 0
+    kb_read: int = 0
+    kb_skipped_unpublished: int = 0
+    kb_unreadable: int = 0
     new_events: int = 0
 
 
@@ -136,5 +147,15 @@ async def backfill(
         elisa = elisa_example(elisa_dir)
         report.elisa_read = len(elisa)
         messages += elisa
+    # Documents stay in both profiles (§3.5): the expert's PDF notes corroborate, the stale
+    # wiki pages and KB articles (low authority) contradict.
+    pdfs, bad_pdfs = read_pdfs(data.root)
+    pages, bad_pages = read_pages(data.root)
+    articles, unpublished, bad_articles = read_articles(data.root)
+    report.pdfs_read, report.pdfs_unreadable = len(pdfs), len(bad_pdfs)
+    report.confluence_read, report.confluence_unreadable = len(pages), len(bad_pages)
+    report.kb_read, report.kb_unreadable = len(articles), len(bad_articles)
+    report.kb_skipped_unpublished = unpublished
+    messages += pdfs + pages + articles
     report.new_events = await store.store(messages, now or datetime.now(UTC))
     return report

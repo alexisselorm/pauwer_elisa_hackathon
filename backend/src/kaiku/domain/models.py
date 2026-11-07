@@ -37,3 +37,6 @@ class Platform(StrEnum):
     DEVICE_EVENT = "device_event"
     OUTCOME = "outcome"
     DOCUMENT = "document"
+    PDF = "pdf"  # an expert's notes: the PDF CreationDate
+    CONFLUENCE = "confluence"  # a wiki page: when it was last edited
+    ITSM = "itsm"  # a ticketing KB article: when it was published
