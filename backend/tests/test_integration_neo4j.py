@@ -489,6 +489,61 @@ async def test_mcp_tools_end_to_end(neo4j_url: str, make_settings: Callable[...,
         assert "ASR-0001" in resource["contents"][0]["text"]
 
 
+async def test_temporal_reads_r9_r10(
+    neo4j_url: str, make_settings: Callable[..., Settings]
+) -> None:
+    """BE-1.6: Kemi before the lock change, the as-running model gating a model rule, and
+    the site level of the scope."""
+    from silentctx.seed.profiles import Profile
+    from silentctx.seed.service import SeedRequest, seed
+    from tests.conftest import AGENT_TOKEN
+
+    settings = make_settings(neo4j_uri=neo4j_url, neo4j_password=PASSWORD, data_dir=MOCK_DATA)
+    seeded = await seed(settings, SeedRequest(network=True, gold=True, profile=Profile.FULL))
+    assert seeded.violations == 0
+    # A TNC-1X by the books that runs TNC-2X hardware now, and stands at the Kemi site.
+    _query(
+        neo4j_url,
+        "MATCH (m:HwModel {entity_id: 'TNC-1X'}) MATCH (site:Site {entity_id: 'FI-KEM-DC4'}) "
+        "CREATE (d:Entity:Device {entity_id: 'IT-SWAP', entity_type: 'device', "
+        "  valid_from: datetime('2020-01-01T00:00:00Z')}) "
+        "CREATE (d)-[:IS_MODEL {valid_from: datetime('2020-01-01T00:00:00Z')}]->(m) "
+        "CREATE (d)-[:AT_SITE {valid_from: datetime('2020-01-01T00:00:00Z')}]->(site) "
+        "CREATE (:RunningSnapshot {snapshot_id: 'IT-SWAP-1', hw_model: 'TNC-2X', "
+        "  valid_from: datetime('2026-01-01T00:00:00Z')})-[:SNAPSHOT_OF]->(d)",
+    )
+    try:
+        with TestClient(create_app(settings)) as client:
+            assert _readyz(client, until_code=200)["code"] == 200
+            mcp = _Mcp(client, AGENT_TOKEN)
+
+            # Kemi before the change (2026-08-02): Pekka's padlock.
+            july = mcp.call(
+                "get_site_access", entity_or_site="TRN-042", as_of="2026-07-01T06:00:00Z"
+            )["structuredContent"]
+            # ASR-0032 is the older ITSM KB line, also "ask Pekka" until the change.
+            assert {a["assertion_id"] for a in july["assertions"]} == {"ASR-0023", "ASR-0032"}
+            assert july["access_register"][0]["lock"] == "padlock"
+            assert july["access_register"][0]["holder"].startswith("Pekka")
+
+            # R9: the TNC-1X rule reaches it by model while it ran TNC-1X, not after.
+            def ids(as_of: str) -> list[str]:
+                ctx = mcp.call("get_context", entity_id="IT-SWAP", as_of=as_of)
+                return [a["assertion_id"] for a in ctx["structuredContent"]["assertions"]]
+
+            assert "ASR-0001" in ids("2025-12-01T00:00:00Z")  # no snapshot: as-built model
+            assert "ASR-0001" not in ids("2026-03-01T00:00:00Z")
+
+            ctx = mcp.call("get_context", entity_id="IT-SWAP")["structuredContent"]
+            assert {"IT-SWAP", "TNC-1X", "Gen1", "FI-KEM-DC4"} <= set(ctx["scope_entities"])
+    finally:
+        _query(
+            neo4j_url,
+            "MATCH (n) WHERE n.entity_id = 'IT-SWAP' OR n.snapshot_id = 'IT-SWAP-1' "
+            "DETACH DELETE n",
+        )
+
+
 async def test_sim_events_reach_the_event_stream(neo4j_url: str, settings: Settings) -> None:
     """SIM-1: fault events land as (:Event:Alarm)-[:ON]->(:Device), so get_events sees them;
     publishing twice writes nothing new."""

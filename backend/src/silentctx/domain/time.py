@@ -428,13 +428,19 @@ def known_at(state: TemporalState, known: datetime) -> bool:
     return state.recorded_at <= k and (state.retracted_at is None or state.retracted_at > k)
 
 
-def qualifiers_match(required: Mapping[str, str], snapshot: Mapping[str, str]) -> bool:
+def qualifiers_match(
+    required: Mapping[str, str | Sequence[str]], snapshot: Mapping[str, str]
+) -> bool:
     """Every qualifier the assertion requires (model, generation, firmware) equals the
-    as-running snapshot's value (case-insensitive). No requirements -> matches."""
-    return all(
-        key in snapshot and snapshot[key].casefold() == value.casefold()
-        for key, value in required.items()
-    )
+    as-running snapshot's value, or one of them for a list (case-insensitive). No
+    requirements -> matches."""
+    for key, value in required.items():
+        allowed = {value} if isinstance(value, str) else set(value)
+        if key not in snapshot or snapshot[key].casefold() not in {
+            str(v).casefold() for v in allowed
+        }:
+            return False
+    return True
 
 
 def in_scope_at(

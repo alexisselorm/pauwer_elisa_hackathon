@@ -48,6 +48,7 @@ END_OF_TIME: LiteralString = "datetime('9999-12-31T00:00:00Z')"
 MATCH_WEIGHT = {
     Match.DIRECT: 1.0,
     Match.MODEL: 0.9,
+    Match.SITE: 0.85,
     Match.SEGMENT: 0.8,
     Match.SAME_MODEL_DEVICE: 0.5,
 }
@@ -292,17 +293,21 @@ class ContextRepository:
         )
 
     async def scope(self, entity_id: str, t: datetime) -> dict[str, Match]:
-        """The entity, its model and generation, and the segments connecting it, at t."""
+        """The entity, its model and generation, its site, and the segments connecting it,
+        at t (R9: node -> HwModel -> Generation -> Site -> Segment)."""
         rows = await self._read(
             "MATCH (e:Entity {entity_id: $id}) "
             "OPTIONAL MATCH (e)-[im:IS_MODEL]->(m:HwModel) "
             "  WHERE im.valid_from <= $t AND $t < coalesce(im.valid_to, " + END_OF_TIME + ") "
             "OPTIONAL MATCH (m)-[:OF_GENERATION]->(g:Generation) "
             "OPTIONAL MATCH (e)-[:OF_GENERATION]->(own:Generation) "
+            "OPTIONAL MATCH (e)-[at:AT_SITE]->(site:Site) "
+            "  WHERE at.valid_from <= $t AND $t < coalesce(at.valid_to, " + END_OF_TIME + ") "
             "OPTIONAL MATCH (s:Segment)-[c:CONNECTS]->(e) "
             "  WHERE c.valid_from <= $t AND $t < coalesce(c.valid_to, " + END_OF_TIME + ") "
             "RETURN e.entity_id AS e, m.entity_id AS m, "
             "coalesce(g.entity_id, own.entity_id) AS g, "
+            "collect(DISTINCT site.entity_id) AS sites, "
             "collect(DISTINCT s.entity_id) AS segments",
             id=entity_id,
             t=t,
@@ -314,6 +319,8 @@ class ContextRepository:
         for key in ("m", "g"):
             if r[key]:
                 scope.setdefault(r[key], Match.MODEL)
+        for site in r["sites"]:
+            scope.setdefault(site, Match.SITE)
         for seg in r["segments"]:
             scope.setdefault(seg, Match.SEGMENT)
         return scope
@@ -1167,7 +1174,13 @@ def _json_default(value: Any) -> Any:
     raise TypeError(f"not JSON serialisable: {type(value).__name__}")
 
 
-_RANK = {Match.DIRECT: 0, Match.MODEL: 1, Match.SEGMENT: 2, Match.SAME_MODEL_DEVICE: 3}
+_RANK = {
+    Match.DIRECT: 0,
+    Match.MODEL: 1,
+    Match.SITE: 2,
+    Match.SEGMENT: 3,
+    Match.SAME_MODEL_DEVICE: 4,
+}
 _MATCH_BY_RANK = {v: k for k, v in _RANK.items()}
 
 

@@ -34,7 +34,7 @@ from silentctx.context.models import (
 )
 from silentctx.context.resolve import resolve
 from silentctx.domain.models import AssertionStatus
-from silentctx.domain.time import ensure_utc
+from silentctx.domain.time import ensure_utc, qualifiers_match
 from silentctx.graph.repository import SCOPE_BY_ENTITY_TYPE, ContextRepository, NotFoundError
 from silentctx.llm.embeddings import Embedder, embed_query_or_none
 from silentctx.logging import get_logger
@@ -54,6 +54,28 @@ _STOPWORDS = frozenset(
 
 class ContextError(ValueError):
     """A request the context layer refuses (unknown id, governance rule, bad window)."""
+
+
+# Assertion qualifier -> as-running snapshot key it constrains (R9).
+_QUALIFIER_KEYS = {
+    "applies_to_models": "hw_model",
+    "applies_to_generation": "generation",
+    "applies_to_firmware": "firmware",
+}
+
+
+def _required(qualifiers: Mapping[str, Any]) -> dict[str, Any]:
+    return {key: qualifiers[q] for q, key in _QUALIFIER_KEYS.items() if qualifiers.get(q)}
+
+
+def _running_snapshot(entity: EntityView) -> dict[str, str]:
+    """What the device is at as_of: the as-running model wins over the as-built one."""
+    values = {
+        "hw_model": entity.running_hw_model or entity.model,
+        "generation": entity.generation,
+        "firmware": entity.firmware,
+    }
+    return {k: v for k, v in values.items() if v}
 
 
 def _now() -> datetime:
@@ -108,6 +130,9 @@ class ContextService:
         scope = await self.repo.scope(entity_id, t)
         same_model = entity.model if entity.entity_type == "device" else None
         items = await self.repo.context(scope, t, k, same_model_of=same_model)
+        if entity.entity_type == "device":
+            snapshot = _running_snapshot(entity)
+            items = [a for a in items if qualifiers_match(_required(a.qualifiers), snapshot)]
         if topic:
             items = [a for a in items if a.topic and topic.casefold() in a.topic.casefold()]
         if symptoms:
@@ -466,6 +491,7 @@ def match_label(match: Match | None) -> str:
         {
             Match.DIRECT: "about this entity",
             Match.MODEL: "about its hardware model",
+            Match.SITE: "about its site",
             Match.SEGMENT: "about its site/road",
             Match.SAME_MODEL_DEVICE: "seen on another device of the same model",
         }.get(match, "related")

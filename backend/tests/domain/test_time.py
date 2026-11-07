@@ -452,6 +452,8 @@ def test_r9_qualifiers_must_match_the_as_running_snapshot() -> None:
     )
     assert not in_scope_at(s, t, [TRN_042], required_qualifiers=GEN1, snapshot={})
     assert qualifiers_match({}, {})
+    assert qualifiers_match({"generation": ["Gen1", "Gen2"]}, {"generation": "gen2"})
+    assert not qualifiers_match({"generation": ["Gen1", "Gen2"]}, {"generation": "Gen3"})
 
 
 def test_r9_retracted_versions_are_never_in_scope_without_known_at() -> None:
