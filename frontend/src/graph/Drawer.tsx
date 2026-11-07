@@ -92,7 +92,9 @@ function AssertionPanel({ node, t, k, now, data, onSelect }: { node: GraphNode; 
     node.origin === 'gold' ? 'Seeded history' : node.origin === 'agent_proposal' ? 'Proposed by an agent' : `Captured from ${platform === 'email' ? 'email' : 'Slack'}`
   const support = a?.support_n ?? 0
   const refute = a?.refute_n ?? 0
-  const conf = (1 + support) / (2 + support + refute)
+  // Served as the graph scores it: a number in [0, 1], or a label where only one was stored.
+  const conf = typeof a?.confidence === 'number' ? a.confidence : null
+  const confLabel = typeof a?.confidence === 'string' ? pretty(a.confidence) : null
   const scopeEntity = a?.bindings.find((b) => b.scope !== 'activity')?.entity_id
 
   return (
@@ -179,8 +181,8 @@ function AssertionPanel({ node, t, k, now, data, onSelect }: { node: GraphNode; 
 
           <Section title="Confidence">
             <div className="conf">
-              <div className="meter"><i style={{ width: `${conf * 100}%` }} /></div>
-              <b>{conf.toFixed(2)}</b>
+              <div className="meter"><i style={{ width: `${(conf ?? 0) * 100}%` }} /></div>
+              <b>{conf !== null ? conf.toFixed(2) : confLabel ?? '—'}</b>
             </div>
             <div className="subtle small" style={{ marginTop: 4 }}>
               {support} network-confirmed · {refute} refuted{a.review_due ? ' · review due' : ''}
