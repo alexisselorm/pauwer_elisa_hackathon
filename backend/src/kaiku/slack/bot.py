@@ -238,6 +238,7 @@ async def run(settings: Settings) -> None:
     judge = LlmJudge(settings)
     extractor = Extractor(repo, judge, TelemetryStore(settings.data_dir, settings.sim_url), embed)
     cards = cap.CaptureCards(store, repo, log_channel=settings.slack_context_log_channel)
+    actions.on_evidence = cards.refresh_assertion  # an outcome shows on the capture card
     loop = CaptureLoop(
         store,
         extractor,

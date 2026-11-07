@@ -95,6 +95,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         embed_job = asyncio.create_task(
             _embed_forever(graph, embeddings, holder.service), name="embed-assertions"
         )
+        # Outcomes the network couldn't judge when they were reported (plan 001 §6.2).
+        verify_job = asyncio.create_task(
+            holder.service.verifier.run_forever(graph.ready), name="verify-outcomes"
+        )
         try:
             settings.state_dir.mkdir(parents=True, exist_ok=True)
             async with AsyncSqliteSaver.from_conn_string(str(settings.checkpoint_db)) as saver:
@@ -112,7 +116,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     yield
         finally:
             holder.service = None
-            for task in (embed_job, probe, bootstrap):
+            for task in (verify_job, embed_job, probe, bootstrap):
                 task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await task

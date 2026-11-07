@@ -32,6 +32,7 @@ from kaiku.ingest.store import CaptureStore, MessageIn, ThreadView
 from kaiku.logging import get_logger
 from kaiku.slack.actions import AskThread, find_channel
 from kaiku.slack.format import actions, button, context
+from kaiku.validation.outcomes import evidence_line
 
 log = get_logger(__name__)
 
@@ -153,6 +154,8 @@ def card_blocks(
             meta.append(":warning: telemetry disagrees")
         for kind, n in sorted(extra_sources.get(v.assertion_id, Counter()).items()):
             meta.append(f"+{n} source ({kind})")
+        if evidence := evidence_line(v):  # outcomes, and the network's verdict on them
+            meta.append(evidence)
         # A saved ✏️ Fix is a source of the fixed version: say who fixed it and when.
         fixes = [c for c in v.citations if ":fix:" in (c.source_ref or "") and c.recorded_at]
         if fixes:
@@ -429,6 +432,11 @@ class CaptureCards:
                     blocks=blocks,
                 )
                 await self.store.set_card(thread_id, posted["ts"])
+
+    async def refresh_assertion(self, assertion_id: str) -> None:
+        """Update the cards of the threads an assertion came from (new outcome evidence)."""
+        for thread_id in await self.store.threads_with_assertions([assertion_id]):
+            await self.refresh(thread_id)
 
     async def _card_in_slack(self, channel: str, thread_ts: str) -> str | None:
         """The card this bot already posted in the thread, when the graph lost its ts

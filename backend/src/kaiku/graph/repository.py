@@ -109,7 +109,9 @@ _ASSERTION_FIELDS: LiteralString = """
   head([(a)-[:SUPERSEDES]->(x:ContextAssertion) WHERE x.retracted_at IS NULL | x.assertion_id]
     + [(a)-[:SUPERSEDES]->(x:ContextAssertion) | x.assertion_id]) AS supersedes,
   [(a)-[:DERIVED_FROM]->(ev:Event) | ev { .event_id, .event_time, .platform, .author,
-      .channel, .permalink, .text }] AS sources
+      .channel, .permalink, .text }] AS sources,
+  [(x:Entity)<-[:ON]-(:Outcome)-[s:SUPPORTS]->(a) WHERE s.verified = true
+      AND NOT coalesce(s.overridden, false) | x.entity_id] AS confirmed_on
 """
 
 # V3: a candidate binding (ambiguous, or not alive at valid_from) does not put an assertion
@@ -218,6 +220,7 @@ def assertion_view(
             "corroborates": sorted(set(record.get("corroborates") or [])),
             "superseded_by": superseded_by,
             "supersedes": record.get("supersedes"),
+            "network_confirmed_on": sorted(set(record.get("confirmed_on") or [])),
             "match": match,
         }
     )
@@ -619,7 +622,8 @@ class ContextRepository:
             "  collect(DISTINCT CASE WHEN ev IS NULL THEN null ELSE {event_id: ev.event_id, "
             "  relation: type(r), event_time: ev.event_time, result: ev.result, "
             "  entity_id: x.entity_id, agent_id: ev.agent_id, "
-            "  conditions_met: r.conditions_met} END) AS evidence "
+            "  conditions_met: r.conditions_met, verified: coalesce(r.verified, false), "
+            "  overridden: coalesce(r.overridden, false)} END) AS evidence "
             "OPTIONAL MATCH (f:Flag)-[:FLAGS]->(a) "
             "RETURN versions, contradicts, corroborates, evidence, "
             "collect(f { .flag_id, .reason, .agent_id, .flagged_at }) AS flags",
@@ -1113,13 +1117,16 @@ class ContextRepository:
         review = bool(assertion_id and result == "not_resolved" and conditions_met is not False)
 
         async def work(tx: AsyncManagedTransaction) -> dict[str, Any]:
+            # With an assertion, the outcome waits for the network to verify it (§6.2).
             await tx.run(
                 "MATCH (d:Entity {entity_id: $entity}) "
                 "CREATE (o:Event:Outcome {event_id: $id, event_time: $observed, "
                 "  ingested_at: $now, platform: 'mcp', action: $action, result: $result, "
                 "  port: $port, evidence_ref: $ref, agent_id: $agent, "
-                "  on_behalf_of: $behalf, conditions_met: $met}) "
+                "  on_behalf_of: $behalf, conditions_met: $met, assertion_id: $aid, "
+                "  verification: CASE WHEN $aid IS NULL THEN null ELSE 'pending' END}) "
                 "CREATE (o)-[:ON]->(d)",
+                aid=assertion_id,
                 entity=entity_id,
                 id=event_id,
                 observed=observed_at,
@@ -1157,6 +1164,103 @@ class ContextRepository:
             on_behalf_of=on_behalf_of,
             trigger_event_id=trigger_event_id,
         )
+
+    # --- Outcome verification (plan 001 §6.2) ----------------------------------------------
+
+    async def outcome_to_verify(self, outcome_id: str) -> dict[str, Any] | None:
+        """What the verifier needs: when and where the action ran, the assertion whose
+        advice was followed (with its qualifiers), and how far verification got."""
+        rows = await self._read(
+            "MATCH (o:Outcome {event_id: $id}) "
+            "OPTIONAL MATCH (a:ContextAssertion {assertion_id: o.assertion_id}) "
+            "RETURN o.event_id AS event_id, o.event_time AS t_action, "
+            "head([(o)-[:ON]->(e:Entity) | e.entity_id]) AS entity_id, o.port AS port, "
+            "o.assertion_id AS assertion_id, o.conditions_met AS conditions_met, "
+            "o.verification AS verification, a.qualifiers_json AS qualifiers_json",
+            id=outcome_id,
+        )
+        return py(rows[0]) if rows else None
+
+    async def outcomes_to_verify(self, limit: int = 100) -> list[str]:
+        """Outcomes still waiting for the network's verdict, oldest first."""
+        rows = await self._read(
+            "MATCH (o:Outcome {verification: 'pending'}) RETURN o.event_id AS id "
+            "ORDER BY o.event_time LIMIT $limit",
+            limit=limit,
+        )
+        return [r["id"] for r in rows]
+
+    async def outcome_state(self, outcome_id: str) -> dict[str, Any]:
+        """An Outcome's verification and the evidence it counts, with its assertion's
+        counters, status and confidence as they are now."""
+        rows = await self._read(_OUTCOME_STATE, id=outcome_id)
+        if not rows:
+            raise NotFoundError(f"unknown outcome {outcome_id!r}")
+        return _outcome_row(rows[0])
+
+    async def verify_outcome(
+        self,
+        outcome_id: str,
+        *,
+        verdict: Literal["resolved", "not_resolved", "unknown", "pending"],
+        detail: str,
+        checked_at: datetime,
+        conditions_met: bool | None = None,
+    ) -> dict[str, Any]:
+        """The network's verdict on an Outcome, in one transaction with the V5 checks.
+        A final verdict (anything but pending) is written once; later calls change nothing.
+
+        resolved: SUPPORTS, the entity joins `observed_on`, and an unverified assertion
+          becomes believed_true. The network confirmed it; nobody has to click.
+        resolved, conditions not met: no network evidence (the advice didn't apply).
+        not_resolved, conditions met: REFUTES and review_due.
+        not_resolved, conditions not met: not counted (the rule didn't apply).
+        not_resolved, conditions unknown: not counted, but review_due.
+        unknown: the reported result stands. pending: checked again later.
+
+        Evidence the reported result already counted is marked verified when the network
+        agrees, and overridden (kept on record, no longer counted) when it disagrees.
+        `conditions_met` fills in only what the outcome didn't record when reported."""
+
+        async def work(tx: AsyncManagedTransaction) -> dict[str, Any]:
+            o = await _single(
+                tx,
+                "MATCH (o:Outcome {event_id: $id}) RETURN o { .verification, .assertion_id, "
+                "  .conditions_met, entity_id: head([(o)-[:ON]->(e:Entity) | e.entity_id]) } AS o",
+                id=outcome_id,
+            )
+            if o is None:
+                raise WriteRejectedError(f"unknown outcome {outcome_id!r}")
+            if o.get("verification") in ("resolved", "not_resolved", "unknown"):
+                return _outcome_row(await (await tx.run(_OUTCOME_STATE, id=outcome_id)).single())
+            met = o["conditions_met"] if o.get("conditions_met") is not None else conditions_met
+            await tx.run(
+                "MATCH (o:Outcome {event_id: $id}) SET o.verification = $verdict, "
+                "  o.verification_detail = $detail, o.verified_at = $at, o.conditions_met = $met",
+                id=outcome_id,
+                verdict=verdict,
+                detail=detail,
+                at=checked_at,
+                met=met,
+            )
+            aid = o.get("assertion_id")
+            # Traffic flowing after an action whose conditions didn't hold before it says
+            # nothing about the advice: the network neither confirms nor refutes it.
+            applies = not (verdict == "resolved" and met is False)
+            if aid and applies and verdict in ("resolved", "not_resolved"):
+                relation: str | None = "SUPPORTS" if verdict == "resolved" else None
+                if verdict == "not_resolved" and met is True:
+                    relation = "REFUTES"
+                review = verdict == "not_resolved" and met is not False
+                await _network_evidence(tx, outcome_id, aid, relation, met, review, checked_at)
+                if verdict == "resolved" and o.get("entity_id"):
+                    await tx.run(
+                        _CONFIRMED_BY_NETWORK, aid=aid, entity=o["entity_id"], id=outcome_id
+                    )
+                await _check_v5(tx, [aid])
+            return _outcome_row(await (await tx.run(_OUTCOME_STATE, id=outcome_id)).single())
+
+        return await self._tx(work)
 
     async def open_gap(
         self,
@@ -1698,6 +1802,13 @@ async def _check_v5(tx: AsyncManagedTransaction, ids: Sequence[str]) -> None:
         raise WriteRejectedError("temporal check failed (V5): " + "; ".join(problems))
 
 
+# Confidence (plan 001 §6.2): the mean of Beta(1 + support_n, 1 + refute_n). Set whenever
+# the evidence counters change; `beta_confidence` in validation.outcomes is the same formula.
+_BETA_MEAN: LiteralString = (
+    "(1.0 + coalesce(a.support_n, 0)) / (2.0 + coalesce(a.support_n, 0) + coalesce(a.refute_n, 0))"
+)
+
+
 async def _evidence(
     tx: AsyncManagedTransaction,
     outcome_id: str,
@@ -1721,6 +1832,8 @@ async def _evidence(
             "  SET a.refute_n = coalesce(a.refute_n, 0) + 1) "
             "FOREACH (_ IN CASE WHEN $review THEN [1] ELSE [] END | "
             "  SET a.review_due = true) "
+            "FOREACH (_ IN CASE WHEN $rel IS NULL THEN [] ELSE [1] END | "
+            "  SET a.confidence = " + _BETA_MEAN + ") "
             "RETURN coalesce(a.support_n, 0) AS support_n, "
             "coalesce(a.refute_n, 0) AS refute_n, coalesce(a.review_due, false) AS review",
             id=outcome_id,
@@ -1733,3 +1846,109 @@ async def _evidence(
     if row is None:
         raise NotFoundError(f"unknown outcome {outcome_id!r} or assertion {assertion_id!r}")
     return dict(row)
+
+
+# --- Outcome verification helpers (plan 001 §6.2) --------------------------------------------
+
+_OUTCOME_STATE: LiteralString = """
+MATCH (o:Outcome {event_id: $id})
+OPTIONAL MATCH (a:ContextAssertion {assertion_id: o.assertion_id})
+RETURN o.event_id AS event_id, o.verification AS verification,
+  o.verification_detail AS verification_detail, o.conditions_met AS conditions_met,
+  CASE WHEN a IS NULL THEN null ELSE head([(o)-[r:SUPPORTS|REFUTES]->(a)
+    WHERE NOT coalesce(r.overridden, false) | type(r)]) END AS evidence,
+  a.support_n AS support_n, a.refute_n AS refute_n, a.review_due AS review_due,
+  a.status AS status, a.confidence AS confidence
+"""
+
+# The network confirmed the advice on this entity: it joins observed_on (unless already
+# bound), and unverified knowledge is now believed true. A retraction stays a retraction.
+# An entity that didn't exist yet when the knowledge started to hold is not bound to it
+# (V3, R9: a bound entity exists at valid_from); the SUPPORTS edge still names it.
+_CONFIRMED_BY_NETWORK: LiteralString = """
+MATCH (a:ContextAssertion {assertion_id: $aid}), (e:Entity {entity_id: $entity})
+WHERE a.retracted_at IS NULL
+SET a.status = CASE WHEN a.status = 'unverified' THEN 'believed_true' ELSE a.status END
+FOREACH (_ IN CASE WHEN EXISTS { (a)-[:ABOUT]->(e) }
+    OR a.valid_from < coalesce(e.valid_from, a.valid_from)
+    OR a.valid_from >= coalesce(e.valid_to, datetime('9999-12-31T00:00:00Z'))
+  THEN [] ELSE [1] END |
+  CREATE (a)-[:ABOUT {scope: 'observed_on', resolution_confidence: 1.0, candidate: false,
+    outcome_id: $id}]->(e))
+"""
+
+# Evidence relation -> the counter it adds to.
+_COUNTED: tuple[tuple[LiteralString, LiteralString], ...] = (
+    ("SUPPORTS", "support_n"),
+    ("REFUTES", "refute_n"),
+)
+_OVERRIDE: dict[str, LiteralString] = {
+    rel: "MATCH (o:Outcome {event_id: $id})-[r:" + rel + "]->(a:ContextAssertion "
+    "{assertion_id: $aid}) WHERE NOT coalesce(r.overridden, false) "
+    "SET r.overridden = true, r.overridden_at = $at, "
+    "a." + n + " = coalesce(a." + n + ", 1) - 1"
+    for rel, n in _COUNTED
+}
+_VERIFIED: dict[str, LiteralString] = {
+    rel: "MATCH (o:Outcome {event_id: $id})-[r:" + rel + "]->(a:ContextAssertion "
+    "{assertion_id: $aid}) WHERE NOT coalesce(r.overridden, false) SET r.verified = true"
+    for rel, _ in _COUNTED
+}
+_ADD_VERIFIED: dict[str, LiteralString] = {
+    rel: "MATCH (o:Outcome {event_id: $id}), (a:ContextAssertion {assertion_id: $aid}) "
+    "CREATE (o)-[:" + rel + " {conditions_met: $met, verified: true}]->(a) "
+    "SET a." + n + " = coalesce(a." + n + ", 0) + 1"
+    for rel, n in _COUNTED
+}
+
+
+async def _network_evidence(
+    tx: AsyncManagedTransaction,
+    outcome_id: str,
+    assertion_id: str,
+    relation: str | None,
+    conditions_met: bool | None,
+    review: bool,
+    at: datetime,
+) -> None:
+    """The network's evidence from one outcome replaces whatever the reported result
+    counted: the same relation is marked verified, a different one is overridden."""
+    rows = await (
+        await tx.run(
+            "MATCH (o:Outcome {event_id: $id})-[r:SUPPORTS|REFUTES]->"
+            "(:ContextAssertion {assertion_id: $aid}) WHERE NOT coalesce(r.overridden, false) "
+            "RETURN DISTINCT type(r) AS rel",
+            id=outcome_id,
+            aid=assertion_id,
+        )
+    ).data()
+    counted = {r["rel"] for r in rows}
+    for rel in sorted(counted - {relation}):
+        await tx.run(_OVERRIDE[rel], id=outcome_id, aid=assertion_id, at=at)
+    if relation is not None and relation in counted:
+        await tx.run(_VERIFIED[relation], id=outcome_id, aid=assertion_id)
+    elif relation is not None:
+        await tx.run(_ADD_VERIFIED[relation], id=outcome_id, aid=assertion_id, met=conditions_met)
+    await tx.run(
+        "MATCH (a:ContextAssertion {assertion_id: $aid}) "
+        "SET a.review_due = CASE WHEN $review THEN true ELSE a.review_due END, "
+        "  a.confidence = " + _BETA_MEAN,
+        aid=assertion_id,
+        review=review,
+    )
+
+
+def _outcome_row(record: Any) -> dict[str, Any]:
+    row = py(dict(record)) if record is not None else {}
+    confidence = row.get("confidence")
+    return {
+        "verification": row.get("verification"),
+        "verification_detail": row.get("verification_detail"),
+        "conditions_met": row.get("conditions_met"),
+        "evidence": row.get("evidence"),
+        "support_n": int(row.get("support_n") or 0),
+        "refute_n": int(row.get("refute_n") or 0),
+        "review_due": bool(row.get("review_due")),
+        "status": row.get("status"),
+        "confidence": float(confidence) if isinstance(confidence, int | float) else None,
+    }

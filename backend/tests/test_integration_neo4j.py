@@ -477,6 +477,10 @@ async def test_mcp_tools_end_to_end(neo4j_url: str, make_settings: Callable[...,
         again = mcp.call("report_outcome", **args)["structuredContent"]
         assert first["evidence"] == "SUPPORTS"
         assert first["conditions_met"] is True
+        # The 06:30-06:45 interval (wholly after 06:21:30) has traffic back: the network
+        # confirms it at once, from history.
+        assert first["verification"] == "resolved"
+        assert first["confidence"] is not None
         assert again["replayed"] is True
         assert again["event_id"] == first["event_id"]
         assert again["support_n"] == first["support_n"]
@@ -858,6 +862,24 @@ def test_live_demo_fault_to_network_confirmed_outcome(
             )
             history = mcp.call("get_history", assertion_id="ASR-0001")["structuredContent"]
             assert outcome["event_id"] in [e["event_id"] for e in history["evidence"]]
+            # Reported straight after the bounce, the network couldn't tell yet; asking
+            # again (same key) re-checks it, and the counters have recovered by now.
+            assert outcome["verification"] in ("pending", "resolved")
+            again = mcp.call(
+                "report_outcome",
+                entity_id="TRN-017",
+                port="1/1/2",
+                action="bounce_interface",
+                result="resolved",
+                assertion_id="ASR-0001",
+                observed_at=bounced_at.isoformat(),
+                idempotency_key="it-live-outcome",
+            )["structuredContent"]
+            assert (again["replayed"], again["verification"]) == (True, "resolved")
+            assert again["support_n"] == outcome["support_n"]  # counted once
+            ctx = mcp.call("get_context", entity_id="TRN-017")["structuredContent"]
+            [rule] = [x for x in ctx["assertions"] if x["assertion_id"] == "ASR-0001"]
+            assert "TRN-017" in rule["network_confirmed_on"]
 
 
 def test_slack_run_bounce_button_reports_through_mcp(
@@ -938,6 +960,15 @@ def test_slack_run_bounce_button_reports_through_mcp(
         neo4j_url,
         "MATCH (o:Outcome {on_behalf_of: 'U5'})-[r:SUPPORTS]->(:ContextAssertion "
         "{assertion_id: 'ASR-0001'}) RETURN o.result AS result, o.agent_id AS agent, "
-        "r.conditions_met AS met",
+        "r.conditions_met AS met, o.verification AS verification, r.verified AS verified",
     )
-    assert rows == [{"result": "resolved", "agent": "ops-agent", "met": True}]
+    # The api's verifier read the simulator's live counters itself: network-confirmed.
+    assert rows == [
+        {
+            "result": "resolved",
+            "agent": "ops-agent",
+            "met": True,
+            "verification": "resolved",
+            "verified": True,
+        }
+    ]

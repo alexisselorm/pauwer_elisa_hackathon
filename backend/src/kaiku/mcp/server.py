@@ -50,6 +50,7 @@ from kaiku.context.models import (
 from kaiku.context.service import ContextError, ContextService
 from kaiku.domain.models import AssertionStatus
 from kaiku.logging import get_logger
+from kaiku.validation.outcomes import evidence_line
 
 SERVER_NAME = "kaiku"
 INSTRUCTIONS = (
@@ -268,7 +269,11 @@ def summarize(r: BaseModel) -> str:
                 f"contradiction(s), {len(r.evidence)} evidence, {len(r.flags)} flag(s)"
             )
         case OutcomeRecorded():
-            return f"outcome {r.event_id}{replay}: evidence {r.evidence or 'not counted'}"
+            net = f"; network {r.verification}" if r.verification else ""
+            conf = f", confidence {r.confidence:.2f}" if r.confidence is not None else ""
+            return (
+                f"outcome {r.event_id}{replay}: evidence {r.evidence or 'not counted'}{net}{conf}"
+            )
         case GapOpened():
             return f"gap {r.gap_id}{replay} routed to {r.routed_to or 'the channel'}"
         case ProposalCreated():
@@ -433,7 +438,9 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         trigger_event_id: TriggerEventId = None,
     ) -> Annotated[CallToolResult, OutcomeRecorded]:
         """Record what happened after an action. Becomes evidence for the assertion:
-        resolved supports it; not_resolved refutes it only if its conditions were met."""
+        resolved supports it; not_resolved refutes it only if its conditions were met. The
+        network then verifies it from the port's telemetry in the next 30 minutes
+        (`verification`); a confirmed success makes unverified knowledge believed_true."""
         return await _call(
             lambda: holder.get().report_outcome(
                 agent_id=_agent(holder),
@@ -561,6 +568,8 @@ def context_markdown(result: ContextResult) -> str:
             lines.append(f"- Avoid: {', '.join(map(str, q['avoid']))}")
         until = a.valid_to.isoformat() if a.valid_to else "still believed true"
         lines.append(f"- Valid: {a.valid_from.isoformat()} → {until}")
+        if line := evidence_line(a):
+            lines.append(f"- Evidence: {line}")
         for c in a.citations:
             lines.append(f"- Source: {c.source_type} {c.source_ref} ({c.author or 'unknown'})")
         lines.append("")

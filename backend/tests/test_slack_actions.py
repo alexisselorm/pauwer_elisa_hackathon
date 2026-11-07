@@ -99,7 +99,9 @@ class Tools:
         self.calls.append((name, arguments))
         if self.fail:
             raise RuntimeError("report_outcome failed: unknown entity")
-        return {"support_n": 1, "refute_n": 0}
+        # The api's outcome verifier judges the counters itself (plan 001 §6.2).
+        verdict = {"resolved": "resolved"}.get(arguments["result"], "pending")
+        return {"support_n": 1, "refute_n": 0, "verification": verdict}
 
 
 class Network:
@@ -232,6 +234,18 @@ async def test_run_bounce_reports_a_network_confirmed_outcome_through_mcp() -> N
     assert "network-confirmed on TRN-017 1/1/2 · support 1" in final["text"]
     assert _action_ids(final["blocks"]) == []  # buttons gone, the note stays
     assert "Silent stall" in final["blocks"][0]["text"]["text"]  # the advice stays
+
+
+async def test_a_recorded_outcome_refreshes_the_capture_card() -> None:
+    refreshed: list[str] = []
+
+    async def refresh(assertion_id: str) -> None:
+        refreshed.append(assertion_id)
+
+    ops = _ops(tools=Tools(), network=Network(flowing=True))
+    ops.on_evidence = refresh
+    await ops.on_outcome(_ack, _click(await _advice_message(ops), a.RUN_BOUNCE), Client())  # type: ignore[arg-type]
+    assert refreshed == ["ASR-0001"]
 
 
 async def test_counters_still_zero_after_the_bounce_is_not_resolved() -> None:

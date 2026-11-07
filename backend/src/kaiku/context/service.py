@@ -45,6 +45,8 @@ from kaiku.graph.repository import (
 from kaiku.llm.embeddings import Embedder, embed_query_or_none
 from kaiku.logging import get_logger
 from kaiku.telemetry.store import ConditionStatus, TelemetryStore
+from kaiku.validation.outcomes import OutcomeVerifier
+from kaiku.validation.outcomes import conditions_met as outcome_conditions_met
 
 log = get_logger(__name__)
 MAX_EVENTS = 200
@@ -119,6 +121,7 @@ class ContextService:
         self.embedder = embedder
         self.aliases = dict(aliases or {})
         self.clock = clock
+        self.verifier = OutcomeVerifier(repo, telemetry, clock=clock)
 
     def _t(self, value: datetime | None) -> datetime:
         return ensure_utc(value) if value is not None else self.clock()
@@ -373,11 +376,7 @@ class ContextService:
                 raise ContextError(f"unknown assertion {assertion_id!r}")
             # Were the rule's conditions true just before the action? (plan 001 §6.2)
             check = await self.check_conditions(assertion_id, entity_id, port, observed)
-            statuses = {c.status for c in check.conditions}
-            if check.conditions and statuses == {ConditionStatus.MET}:
-                conditions_met = True
-            elif ConditionStatus.NOT_MET in statuses:
-                conditions_met = False
+            conditions_met = outcome_conditions_met(check.conditions)
         out, replayed = await self.repo.record_outcome(
             agent_id=agent_id,
             idempotency_key=idempotency_key,
@@ -393,6 +392,17 @@ class ContextService:
             on_behalf_of=on_behalf_of,
             trigger_event_id=trigger_event_id,
         )
+        if assertion_id:
+            # The outcome event triggers the verifier at once; a verdict it can't reach yet
+            # stays pending for the verifier's sweep. Its failure never loses the outcome.
+            try:
+                out |= await self.verifier.verify(out["event_id"])
+            except Exception as exc:  # noqa: BLE001
+                log.warning(
+                    "outcome_verify_failed",
+                    outcome_id=out["event_id"],
+                    error=f"{type(exc).__name__}: {exc}",
+                )
         return OutcomeRecorded.model_validate({**out, "replayed": replayed})
 
     async def open_knowledge_gap(

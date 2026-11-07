@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from collections.abc import Callable, Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
@@ -224,6 +224,8 @@ class OpsActions:
         self.alarm_channel, self.gap_channel = alarm_channel, gap_channel
         self.capture_channels = list(capture_channels)
         self.settle, self.clock = settle, clock
+        # Called with the assertion id once an outcome is recorded (refreshes its card).
+        self.on_evidence: Callable[[str], Awaitable[None]] | None = None
         self._target: str | None = None
         self._watch_ok = True
         self._seen: set[str] | None = None
@@ -365,6 +367,11 @@ class OpsActions:
             await show(f":warning: Couldn't record the outcome ({type(exc).__name__}).")
             return
         await show(_outcome_note(action_id, result, where, user, out))
+        if self.on_evidence is not None:
+            try:
+                await self.on_evidence(v["assertion_id"])
+            except Exception:  # the outcome is recorded; a stale card is only cosmetic
+                log.warning("card_refresh_failed", assertion_id=v["assertion_id"], exc_info=True)
 
     # --- Not documented: ask the expert ---------------------------------------------------
 
@@ -454,13 +461,28 @@ class OpsActions:
 
 
 def _outcome_note(action_id: str, result: str, where: str, user: str, out: dict[str, Any]) -> str:
+    """What the click did. "network-confirmed" only when the outcome verifier saw the
+    counters recover in telemetry, not on the strength of the report itself."""
     counts = f"support {out.get('support_n', 0)} · refute {out.get('refute_n', 0)}"
+    if out.get("confidence") is not None:
+        counts += f" · confidence {float(out['confidence']):.2f}"
+    verdict = out.get("verification")
+    if verdict == "resolved":
+        who = "Traffic is back" if action_id == RUN_BOUNCE else f"Done by <@{user}>"
+        return f":white_check_mark: {who}: network-confirmed on {where} · {counts}"
+    if verdict == "not_resolved":
+        by = "" if action_id == RUN_BOUNCE else f" (<@{user}>)"
+        return (
+            f":x: Counters on {where} stayed at zero after the action{by}: "
+            f"network-checked · {counts}"
+        )
+    later = " The network check is still running." if verdict == "pending" else ""
     if action_id == RUN_BOUNCE:
         if result == "resolved":
-            return f":white_check_mark: Traffic is back: network-confirmed on {where} · {counts}"
+            return f":white_check_mark: Traffic is back on {where} · {counts}.{later}"
         if result == "not_resolved":
-            return f":x: Bounced {where}, counters still at zero. Recorded · {counts}"
+            return f":x: Bounced {where}, counters still at zero. Recorded · {counts}.{later}"
         return f":grey_question: Bounced {where}; no telemetry to confirm it. Recorded as unknown."
     if result == "resolved":
-        return f":white_check_mark: Done manually by <@{user}> on {where} · {counts}"
-    return f":x: <@{user}>: didn't work on {where}. Recorded · {counts}"
+        return f":white_check_mark: Done manually by <@{user}> on {where} · {counts}.{later}"
+    return f":x: <@{user}>: didn't work on {where}. Recorded · {counts}.{later}"

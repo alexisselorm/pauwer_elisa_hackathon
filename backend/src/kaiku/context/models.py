@@ -107,7 +107,10 @@ class AssertionView(BaseModel):
     topic: str | None = None
     status: AssertionStatus
     origin: str | None = None
-    confidence: str | float | None = None
+    confidence: str | float | None = Field(
+        default=None,
+        description="once there is evidence: the mean of Beta(1 + support_n, 1 + refute_n)",
+    )
     valid_from: UtcDatetime
     valid_to: UtcDatetime | None = None
     recorded_at: UtcDatetime
@@ -122,6 +125,10 @@ class AssertionView(BaseModel):
     corroborates: list[str] = []
     superseded_by: str | None = None
     supersedes: str | None = None
+    network_confirmed_on: list[str] = Field(
+        default=[],
+        description="entities where telemetry confirmed that following this advice worked",
+    )
     match: Match | None = None
     score: float | None = None
 
@@ -201,6 +208,10 @@ class EvidenceView(BaseModel):
     entity_id: str | None = None
     agent_id: str | None = None
     conditions_met: bool | None = None
+    verified: bool = Field(default=False, description="the network's telemetry agreed")
+    overridden: bool = Field(
+        default=False, description="the network disagreed with the reported result: not counted"
+    )
 
 
 class FlagView(BaseModel):
@@ -228,6 +239,15 @@ class OutcomeResult(StrEnum):
     UNKNOWN = "unknown"
 
 
+class OutcomeVerification(StrEnum):
+    """The network's verdict on an action (plan 001 §6.2)."""
+
+    PENDING = "pending"  # the 30-minute window is still open and nothing has recovered yet
+    RESOLVED = "resolved"  # the counters recovered
+    NOT_RESOLVED = "not_resolved"  # the counters stayed at zero for the whole window
+    UNKNOWN = "unknown"  # no telemetry to judge by; the reported result stands
+
+
 class OutcomeRecorded(BaseModel):
     event_id: str
     assertion_id: str | None
@@ -236,6 +256,20 @@ class OutcomeRecorded(BaseModel):
     support_n: int | None = None
     refute_n: int | None = None
     review_due: bool | None = None
+    verification: OutcomeVerification | None = Field(
+        default=None,
+        description=(
+            "the network's verdict from telemetry in the 30 minutes after the action; "
+            "pending until it has one"
+        ),
+    )
+    verification_detail: str | None = None
+    status: AssertionStatus | None = Field(
+        default=None, description="the assertion's status after this outcome"
+    )
+    confidence: float | None = Field(
+        default=None, description="the mean of Beta(1 + support_n, 1 + refute_n)"
+    )
     replayed: bool = Field(default=False, description="true if this idempotency key was seen")
 
 

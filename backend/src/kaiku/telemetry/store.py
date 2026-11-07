@@ -37,6 +37,9 @@ TRAFFIC_ZERO_WINDOW = timedelta(minutes=60)
 RX_NORMAL_DBM = (-10.0, 0.0)
 # How far back a refresh asks the simulator; it keeps about a day.
 LIVE_LOOKBACK = timedelta(days=2)
+# The simulator's fine series: how far back it serves, and the step asked for.
+LIVE_SERIES_MAX = timedelta(minutes=120)
+LIVE_SERIES_STEP_S = 5
 
 
 class ConditionStatus(StrEnum):
@@ -64,7 +67,17 @@ class Sample(BaseModel):
     oper_status: str
 
 
+class LivePoint(BaseModel):
+    """One point of the simulator's fine series: the port's state at that instant."""
+
+    ts: UtcDatetime
+    oper_status: str
+    in_octets_mbps: float
+    rx_power_dbm: float
+
+
 _SAMPLES: TypeAdapter[list[Sample]] = TypeAdapter(list[Sample])
+_POINTS: TypeAdapter[list[LivePoint]] = TypeAdapter(list[LivePoint])
 
 # Symptom names used in assertion qualifiers -> how to evaluate them.
 KNOWN_SYMPTOMS = ("oper_up", "rx_power_normal", "counters_zero")
@@ -153,6 +166,40 @@ class TelemetryStore:
             )
             return
         self.add_live(samples, replace=ne_id)
+
+    async def live_points(self, ne_id: str, port: str, since: datetime) -> list[LivePoint]:
+        """The simulator's fine series for one port from `since` on (a point every few
+        seconds, up to two hours back). A PM sample shows an interval only once it has
+        ended; this shows a recovery within seconds. Empty without a simulator, for a node
+        or port it doesn't run, or while it is away."""
+        if self._live_url is None:
+            return []
+        since = ensure_utc(since)
+        # A little more than asked: the simulator's clock may run ahead of ours.
+        back = min(datetime.now(UTC) - since + timedelta(minutes=5), LIVE_SERIES_MAX)
+        if back <= timedelta(0):
+            return []
+        try:
+            async with (
+                aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as http,
+                http.get(
+                    f"{self._live_url}/sim/live",
+                    params={
+                        "node": ne_id,
+                        "port": port,
+                        "minutes": f"{back.total_seconds() / 60:.3f}",
+                        "step_s": str(LIVE_SERIES_STEP_S),
+                    },
+                ) as resp,
+            ):
+                if resp.status == 404:  # a node or port the simulator doesn't run
+                    return []
+                resp.raise_for_status()
+                points = _POINTS.validate_python(await resp.json())
+        except (aiohttp.ClientError, TimeoutError, ValueError) as exc:
+            log.warning("sim_live_unavailable", ne_id=ne_id, error=f"{type(exc).__name__}: {exc}")
+            return []
+        return [p for p in points if p.ts >= since]
 
     def window(self, ne_id: str, port: str, start: datetime, end: datetime) -> list[Sample]:
         """Samples whose interval starts in [start, end)."""

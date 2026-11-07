@@ -445,6 +445,7 @@
                 }
               ],
               "default": null,
+              "description": "once there is evidence: the mean of Beta(1 + support_n, 1 + refute_n)",
               "title": "Confidence"
             },
             "contradicts": {
@@ -473,6 +474,15 @@
                 }
               ],
               "default": null
+            },
+            "network_confirmed_on": {
+              "default": [],
+              "description": "entities where telemetry confirmed that following this advice worked",
+              "items": {
+                "type": "string"
+              },
+              "title": "Network Confirmed On",
+              "type": "array"
             },
             "origin": {
               "anyOf": [
@@ -1279,6 +1289,7 @@
                 }
               ],
               "default": null,
+              "description": "once there is evidence: the mean of Beta(1 + support_n, 1 + refute_n)",
               "title": "Confidence"
             },
             "contradicts": {
@@ -1307,6 +1318,15 @@
                 }
               ],
               "default": null
+            },
+            "network_confirmed_on": {
+              "default": [],
+              "description": "entities where telemetry confirmed that following this advice worked",
+              "items": {
+                "type": "string"
+              },
+              "title": "Network Confirmed On",
+              "type": "array"
             },
             "origin": {
               "anyOf": [
@@ -1580,6 +1600,12 @@
               "title": "Event Time",
               "type": "string"
             },
+            "overridden": {
+              "default": false,
+              "description": "the network disagreed with the reported result: not counted",
+              "title": "Overridden",
+              "type": "boolean"
+            },
             "relation": {
               "title": "Relation",
               "type": "string"
@@ -1595,6 +1621,12 @@
               ],
               "default": null,
               "title": "Result"
+            },
+            "verified": {
+              "default": false,
+              "description": "the network's telemetry agreed",
+              "title": "Verified",
+              "type": "boolean"
             }
           },
           "required": [
@@ -1897,6 +1929,7 @@
                 }
               ],
               "default": null,
+              "description": "once there is evidence: the mean of Beta(1 + support_n, 1 + refute_n)",
               "title": "Confidence"
             },
             "contradicts": {
@@ -1925,6 +1958,15 @@
                 }
               ],
               "default": null
+            },
+            "network_confirmed_on": {
+              "default": [],
+              "description": "entities where telemetry confirmed that following this advice worked",
+              "items": {
+                "type": "string"
+              },
+              "title": "Network Confirmed On",
+              "type": "array"
             },
             "origin": {
               "anyOf": [
@@ -2662,7 +2704,7 @@
     }
   },
   {
-    "description": "Record what happened after an action. Becomes evidence for the assertion:\n        resolved supports it; not_resolved refutes it only if its conditions were met.",
+    "description": "Record what happened after an action. Becomes evidence for the assertion:\n        resolved supports it; not_resolved refutes it only if its conditions were met. The\n        network then verifies it from the port's telemetry in the next 30 minutes\n        (`verification`); a confirmed success makes unverified knowledge believed_true.",
     "inputSchema": {
       "$defs": {
         "OutcomeResult": {
@@ -2785,6 +2827,30 @@
     },
     "name": "report_outcome",
     "outputSchema": {
+      "$defs": {
+        "AssertionStatus": {
+          "enum": [
+            "unverified",
+            "believed_true",
+            "disputed",
+            "superseded",
+            "expired"
+          ],
+          "title": "AssertionStatus",
+          "type": "string"
+        },
+        "OutcomeVerification": {
+          "description": "The network's verdict on an action (plan 001 \u00a76.2).",
+          "enum": [
+            "pending",
+            "resolved",
+            "not_resolved",
+            "unknown"
+          ],
+          "title": "OutcomeVerification",
+          "type": "string"
+        }
+      },
       "properties": {
         "assertion_id": {
           "anyOf": [
@@ -2807,6 +2873,19 @@
             }
           ],
           "title": "Conditions Met"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the mean of Beta(1 + support_n, 1 + refute_n)",
+          "title": "Confidence"
         },
         "event_id": {
           "title": "Event Id",
@@ -2854,6 +2933,18 @@
           "default": null,
           "title": "Review Due"
         },
+        "status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AssertionStatus"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the assertion's status after this outcome"
+        },
         "support_n": {
           "anyOf": [
             {
@@ -2865,6 +2956,30 @@
           ],
           "default": null,
           "title": "Support N"
+        },
+        "verification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutcomeVerification"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the network's verdict from telemetry in the 30 minutes after the action; pending until it has one"
+        },
+        "verification_detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Verification Detail"
         }
       },
       "required": [
@@ -3080,6 +3195,7 @@
                 }
               ],
               "default": null,
+              "description": "once there is evidence: the mean of Beta(1 + support_n, 1 + refute_n)",
               "title": "Confidence"
             },
             "contradicts": {
@@ -3108,6 +3224,15 @@
                 }
               ],
               "default": null
+            },
+            "network_confirmed_on": {
+              "default": [],
+              "description": "entities where telemetry confirmed that following this advice worked",
+              "items": {
+                "type": "string"
+              },
+              "title": "Network Confirmed On",
+              "type": "array"
             },
             "origin": {
               "anyOf": [
