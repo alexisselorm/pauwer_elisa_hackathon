@@ -575,6 +575,86 @@ async def test_temporal_reads_r9_r10(
         )
 
 
+class _FixedEmbedder:
+    """Returns a preset query vector, so ranking is decided by the vectors we store."""
+
+    dim = 1024
+
+    def __init__(self) -> None:
+        self.query: list[float] = _unit(0)
+
+    async def embed_documents(self, texts: Any) -> list[list[float]]:
+        return [self.query for _ in texts]
+
+    async def embed_query(self, text: str) -> list[float]:
+        return self.query
+
+
+async def test_search_filters_by_time_first_then_ranks(
+    neo4j_url: str, make_settings: Callable[..., Settings]
+) -> None:
+    """ST-70/71/72 (plan 004 R12) on the gold graph."""
+    from datetime import UTC, datetime
+
+    from neo4j import AsyncGraphDatabase
+
+    from silentctx.context.service import ContextService
+    from silentctx.graph.repository import ContextRepository
+    from silentctx.seed.profiles import Profile
+    from silentctx.seed.service import SeedRequest, seed
+    from silentctx.telemetry.store import TelemetryStore
+
+    settings = make_settings(neo4j_uri=neo4j_url, neo4j_password=PASSWORD, data_dir=MOCK_DATA)
+    seeded = await seed(settings, SeedRequest(network=True, gold=True, profile=Profile.FULL))
+    assert seeded.violations == 0
+
+    access, fwd, other = _unit(0), _unit(10), _unit(20)
+    special = {
+        "ASR-0024": access,  # code lock: the closest wording, valid only from 2026-08-03
+        "ASR-0023": _unit(0, mix=(1, 0.5)),  # padlock: superseded today, valid on 2026-07-01
+        "ASR-0020": fwd,  # disputed counter-report, closest wording
+        "ASR-0001": _unit(10, mix=(11, 0.3)),  # Erkki's rule, believed_true, high
+    }
+    async with AsyncGraphDatabase.driver(neo4j_url, auth=("neo4j", PASSWORD)) as driver:
+        repo = ContextRepository(driver, "neo4j")
+        ids = [
+            r["id"]
+            for r in await repo._read("MATCH (a:ContextAssertion) RETURN a.assertion_id AS id")
+        ]
+        await repo.set_embeddings([{"id": i, "vector": special.get(i, other)} for i in ids])
+        embedder = _FixedEmbedder()
+        svc = ContextService(
+            repo,
+            TelemetryStore(MOCK_DATA),
+            embedder=embedder,
+            clock=lambda: datetime(2026, 11, 1, tzinfo=UTC),
+        )
+        try:
+            # ST-70: the padlock is what was valid; it isn't lost to an index top-k that
+            # only knows today's status.
+            past = await svc.search_context(
+                "Kemi gate access", as_of=datetime(2026, 7, 1, tzinfo=UTC)
+            )
+            got = [a.assertion_id for a in past.assertions]
+            assert got[0] == "ASR-0023"
+            assert past.assertions[0].superseded_by == "ASR-0024"  # ST-73: never alone (R11)
+            assert "ASR-0024" not in got
+
+            # ST-71: today it is the code lock, and the padlock isn't presented as current.
+            now = await svc.search_context("Kemi gate access")
+            got = [a.assertion_id for a in now.assertions]
+            assert got[0] == "ASR-0024"
+            assert "ASR-0023" not in got
+
+            # ST-72: the disputed report has the closer wording but ranks below the rule.
+            embedder.query = fwd
+            res = await svc.search_context("traffic zero after SFP swap, what to do")
+            got = [a.assertion_id for a in res.assertions]
+            assert got.index("ASR-0001") < got.index("ASR-0020")
+        finally:
+            await driver.execute_query("MATCH (a:ContextAssertion) REMOVE a.embedding")
+
+
 async def test_sim_events_reach_the_event_stream(neo4j_url: str, settings: Settings) -> None:
     """SIM-1: fault events land as (:Event:Alarm)-[:ON]->(:Device), so get_events sees them;
     publishing twice writes nothing new."""

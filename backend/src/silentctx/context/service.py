@@ -35,7 +35,13 @@ from silentctx.context.models import (
 from silentctx.context.resolve import resolve
 from silentctx.domain.models import AssertionStatus
 from silentctx.domain.time import ensure_utc, qualifiers_match
-from silentctx.graph.repository import SCOPE_BY_ENTITY_TYPE, ContextRepository, NotFoundError
+from silentctx.graph.cypher.vector import MAX_K
+from silentctx.graph.repository import (
+    SCOPE_BY_ENTITY_TYPE,
+    ContextRepository,
+    NotFoundError,
+    score,
+)
 from silentctx.llm.embeddings import Embedder, embed_query_or_none
 from silentctx.logging import get_logger
 from silentctx.telemetry.store import ConditionStatus, TelemetryStore
@@ -50,6 +56,22 @@ _STOPWORDS = frozenset(
         "will", "with", "you",
     }
 )  # fmt: skip
+
+
+def rank_semantic(
+    candidates: Sequence[AssertionView], cosine: Mapping[str, float]
+) -> list[AssertionView]:
+    """R12: score = max(0, cosine) * the structural score (match * status * confidence), so
+    a disputed or review_due assertion never ranks level with a believed one just because
+    its wording is closer. Neo4j's cosine is already in [0, 1]; the clamp guards any other
+    source. Candidates without an embedding have no cosine and are left out, as before;
+    they are still reachable through get_context."""
+    ranked = [
+        a.model_copy(update={"score": round(max(0.0, cosine[a.assertion_id]) * score(a), 3)})
+        for a in candidates
+        if a.assertion_id in cosine
+    ]
+    return sorted(ranked, key=lambda a: (-(a.score or 0.0), a.assertion_id))
 
 
 class ContextError(ValueError):
@@ -174,17 +196,18 @@ class ContextService:
             scoped = (await self.get_context(entity_id, as_of=t)).assertions
         vec = await embed_query_or_none(self.embedder, query)
         if vec is not None:
+            # R12 (plan 004): validity at t first, then rank. Ranking an index top-k and
+            # filtering afterwards can miss what was valid at a past `as_of`.
             if scoped is not None:
-                hits = await self.repo.rank_assertions([a.assertion_id for a in scoped], vec, limit)
-                by_id = {a.assertion_id: a for a in scoped}
-                found = [by_id[h.id].model_copy(update={"score": round(h.score, 3)}) for h in hits]
+                candidates = scoped
             else:
-                hits = await self.repo.search_assertions(vec, min(limit * 3, 100))
-                views = await self.repo.assertions([h.id for h in hits], t, k)
-                scores = {h.id: h.score for h in hits}
-                found = [
-                    v.model_copy(update={"score": round(scores[v.assertion_id], 3)}) for v in views
-                ][:limit]
+                candidates = await self.repo.assertions(
+                    await self.repo.valid_assertion_ids(t, k), t, k
+                )
+            hits = await self.repo.rank_assertions(
+                [a.assertion_id for a in candidates], vec, max(1, min(len(candidates), MAX_K))
+            )
+            found = rank_semantic(candidates, {h.id: h.score for h in hits})[:limit]
             return SearchResult(query=query, as_of=t, mode="semantic", assertions=found)
         terms = [w for w in re.findall(r"[\w-]+", query.casefold()) if w not in _STOPWORDS]
         if scoped is not None:

@@ -56,8 +56,11 @@ STATUS_WEIGHT = {
     AssertionStatus.BELIEVED_TRUE: 1.0,
     AssertionStatus.UNVERIFIED: 0.8,
     AssertionStatus.DISPUTED: 0.7,
-    AssertionStatus.SUPERSEDED: 0.3,
-    AssertionStatus.EXPIRED: 0.3,
+    # Everything ranked has already passed the validity filter at t (R9, R12 plan 004), so
+    # "superseded" / "expired" only say what happened *after* t. At a past as_of that
+    # assertion is the one in force; a penalty would push the right answer down.
+    AssertionStatus.SUPERSEDED: 1.0,
+    AssertionStatus.EXPIRED: 1.0,
 }
 CONFIDENCE_WEIGHT = {"high": 1.0, "medium": 0.85, "low": 0.6}
 SCOPE_BY_ENTITY_TYPE = {
@@ -421,6 +424,17 @@ class ContextRepository:
             )
         by_id = {r["a"]["assertion_id"]: assertion_view(r, None, k) for r in rows}
         return [by_id[i] for i in ids if i in by_id]
+
+    async def valid_assertion_ids(self, t: datetime, k: datetime) -> list[str]:
+        """Every assertion in force at t and on record at k (R9/R10), whatever its status
+        today: the candidate set that semantic search ranks (R12, plan 004)."""
+        rows = await self._read(
+            "MATCH (a:ContextAssertion) WHERE " + _VALID + " AND " + _KNOWN + " "
+            "RETURN a.assertion_id AS id ORDER BY id",
+            t=t,
+            k=k,
+        )
+        return [str(r["id"]) for r in rows]
 
     async def keyword_search(
         self, terms: Sequence[str], t: datetime, k: datetime, limit: int
