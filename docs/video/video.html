@@ -1,0 +1,667 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>kaiku recap</title>
+<style>
+:root{
+  --bg:#0a0f1d; --panel:#111a2e; --panel2:#16213a; --line:#26324d; --ink:#e8edf7; --muted:#8e9ab5; --dim:#5d6a86;
+  --cyan:#4cc9f0; --green:#3ddc97; --amber:#f6b44b; --red:#ff6b6b; --violet:#a78bfa; --blue:#5b8cff; --orange:#ff9f5a; --pink:#f472b6;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg);color:var(--ink);font-family:"DejaVu Sans",sans-serif}
+.mono{font-family:"DejaVu Sans Mono",monospace}
+#bg{position:absolute;inset:0;background:radial-gradient(1200px 700px at 80% -10%,#15234a 0%,transparent 60%),radial-gradient(900px 600px at -10% 110%,#13203d 0%,transparent 60%)}
+#hdr{position:absolute;left:60px;right:60px;top:28px;height:40px;display:flex;align-items:center;gap:18px;font-size:19px;color:var(--muted)}
+#hdr .brand{color:var(--cyan);font-weight:bold;letter-spacing:.5px}
+#hdr .chap{color:var(--ink)}
+#hdr .num{margin-left:auto;font-family:"DejaVu Sans Mono";font-size:17px;color:var(--dim)}
+#prog{position:absolute;left:60px;right:60px;top:74px;height:3px;background:#1b2540;border-radius:2px}
+#prog i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--violet));border-radius:2px;width:0}
+#capbar{position:absolute;left:120px;right:120px;bottom:34px;height:104px;display:flex;align-items:center;justify-content:center}
+.cap{position:absolute;left:0;right:0;text-align:center;font-size:29px;line-height:1.42;color:#f3f6fc;text-shadow:0 2px 8px #000a}
+.cap b{color:var(--cyan);font-weight:normal}
+.scene{position:absolute;inset:0;display:none}
+.h1{position:absolute;left:80px;top:104px;font-size:44px;font-weight:bold;letter-spacing:-.5px}
+.h1 small{display:block;font-size:22px;font-weight:normal;color:var(--muted);margin-top:8px;letter-spacing:0}
+.box{position:absolute;background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:14px 18px}
+.box h3{font-size:22px;margin-bottom:6px}
+.box p{font-size:16px;color:var(--muted);line-height:1.4}
+.tag{display:inline-block;font-size:13px;font-weight:bold;padding:3px 9px;border-radius:20px;letter-spacing:.6px;vertical-align:middle}
+.tag.built{background:#3ddc9722;color:var(--green);border:1px solid #3ddc9766}
+.tag.next{background:#f6b44b22;color:var(--amber);border:1px solid #f6b44b66}
+.chip{display:inline-block;padding:6px 14px;border-radius:30px;background:var(--panel2);border:1px solid var(--line);font-size:18px;color:var(--ink);margin:5px}
+.k{color:var(--cyan)} .g{color:var(--green)} .a{color:var(--amber)} .r{color:var(--red)} .v{color:var(--violet)} .o{color:var(--orange)} .b{color:var(--blue)} .m{color:var(--muted)}
+svg{position:absolute;left:0;top:0;overflow:visible}
+svg *{transform-box:fill-box;transform-origin:center}
+.edge{fill:none;stroke:#3a4a6e;stroke-width:3}
+.edge.g{stroke:var(--green)} .edge.a{stroke:var(--amber);stroke-dasharray:9 7}
+.pk{fill:var(--cyan);filter:drop-shadow(0 0 8px var(--cyan))}
+.bubble{position:absolute;max-width:600px;padding:12px 18px;border-radius:16px;font-size:19px;line-height:1.4}
+.bubble .who{font-size:14px;color:var(--muted);margin-bottom:4px}
+.bubble.fe{background:#1b2a4a;border:1px solid #2d4170}
+.bubble.ex{background:#25203f;border:1px solid #47397a}
+.code{position:absolute;background:#0d1426;border:1px solid var(--line);border-radius:12px;padding:16px 20px;font-family:"DejaVu Sans Mono";font-size:16px;line-height:1.55;color:#cdd6ea;white-space:pre}
+table.t{border-collapse:collapse;font-size:17px}
+table.t td,table.t th{padding:7px 12px;border-bottom:1px solid var(--line);text-align:left}
+table.t th{color:var(--muted);font-weight:normal;font-size:15px}
+.lane{position:absolute;top:150px;bottom:180px;width:2px;background:#24304b}
+.lanehd{position:absolute;top:120px;width:250px;margin-left:-125px;text-align:center;font-size:18px;font-weight:bold}
+.msg{position:absolute;height:44px;font-size:16px}
+.msg .ln{position:absolute;top:30px;height:2px;background:var(--cyan)}
+.msg .lbl{position:absolute;top:2px;white-space:nowrap;font-family:"DejaVu Sans Mono";font-size:16px}
+.slack{position:absolute;background:#1a1d21;border:1px solid #33373d;border-radius:12px;padding:18px 22px;font-size:17px;line-height:1.5;color:#d1d2d3;font-family:"DejaVu Sans"}
+.slack .nm{font-weight:bold;color:#fff}
+.slack .ts{color:#8a8d91;font-size:14px;margin-left:8px}
+.slack i{color:#a8abb0}
+.slack b{color:#fff}
+.ok{color:var(--green)} .bad{color:var(--red)} .unk{color:var(--amber)}
+.row{position:absolute;height:40px}
+</style></head>
+<body>
+<div id="bg"></div>
+<div id="hdr"><span class="brand">kaiku</span><span>·</span><span class="chap" id="chap"></span><span class="num" id="num"></span></div>
+<div id="prog"><i id="progi"></i></div>
+
+<!-- ============================ S0 TITLE ============================ -->
+<section class="scene" data-dur="8" data-chap="Recap">
+  <div style="position:absolute;left:160px;top:250px;font-size:24px;color:var(--muted)" data-t="0.2">Elisa × Since AI Hackathon 2026 · technical recap</div>
+  <div style="position:absolute;left:156px;top:300px;font-size:120px;font-weight:bold;letter-spacing:-3px" data-t="0.5" data-fx="left">silent<span class="k">ctx</span></div>
+  <div style="position:absolute;left:160px;top:460px;width:1500px;font-size:34px;line-height:1.4" data-t="1.3">Capture silent expert knowledge, bind it to the network <span class="k">in time</span>,<br>and serve it to AI agents over <span class="v">MCP</span>.</div>
+  <div style="position:absolute;left:150px;top:610px;width:1600px" data-t="2.2">
+    <span class="chip">Neo4j graph</span><span class="chip">FastAPI</span><span class="chip">MCP server</span><span class="chip">LangChain agent</span><span class="chip">Slack (Bolt)</span><span class="chip">DuckDB telemetry</span><span class="chip">Featherless LLMs</span><span class="chip">docker compose</span>
+  </div>
+  <div style="position:absolute;left:160px;top:720px;font-size:20px;color:var(--dim)" class="mono" data-t="3">repo state: 7 Nov 2026 · main @ 9e90573 · examples below are real outputs from the running stack</div>
+  <div class="cap" data-t="0">A recap of what we have built so far, and how it answers Elisa's challenge.</div>
+</section>
+
+<!-- ============================ S1 PROBLEM ============================ -->
+<section class="scene" data-dur="20" data-chap="The problem: silent metadata">
+  <div class="h1" data-t="0">Elisa's problem: knowledge that never reaches a system<small>From the challenge brief and Elisa's example Teams chat (times are local, EEST)</small></div>
+  <div class="bubble fe" style="left:90px;top:250px" data-t="0.8"><div class="who">Veikko · field engineer · 09:14</div>Changed the SFP on transmission node TRN-042. Link is up and alarms cleared, but traffic is still not coming back.</div>
+  <div class="bubble ex" style="left:250px;top:375px" data-t="2.0"><div class="who">Erkki · network expert · 09:18</div>Don't trust the green link status on those.</div>
+  <div class="bubble fe" style="left:90px;top:463px" data-t="3.0"><div class="who">Veikko · 09:18</div>So another SFP?</div>
+  <div class="bubble ex" style="left:250px;top:551px" data-t="4.0"><div class="who">Erkki · 09:22</div>Disable the interface, wait a little, then enable it again. Don't reboot the whole unit unless that fails.</div>
+  <div class="bubble fe" style="left:90px;top:676px" data-t="5.2"><div class="who">Veikko · 09:25 → 09:26</div>Traffic is back 👍 &nbsp;Is this documented somewhere?</div>
+  <div class="bubble ex" style="left:250px;top:764px" data-t="6.2"><div class="who">Erkki · 09:27</div>Not that I know of. We've just learned it over the years.</div>
+
+  <div class="box" style="left:1000px;top:250px;width:820px;height:240px" data-t="7.5">
+    <h3>The pattern only the expert knows</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;margin-top:16px;font-size:21px">
+      <div><span class="ok">●</span> interface <b>UP</b></div><div><span class="ok">●</span> optical levels <b>normal</b></div>
+      <div><span class="ok">●</span> alarms <b>cleared</b></div><div><span class="bad">●</span> traffic counters <b>zero</b></div>
+    </div>
+    <div style="margin-top:22px;font-size:21px;line-height:1.5">on an <span class="k">older (Gen1) unit</span> after an <span class="k">SFP swap</span> ⇒ forwarding-state stall<br>→ <b class="g">bounce the interface</b> · <span class="r">don't replace the SFP or reboot</span></div>
+  </div>
+  <div class="box" style="left:1000px;top:515px;width:820px;height:130px" data-t="10.5">
+    <h3>Second example: the locked barrier</h3>
+    <p style="font-size:18px">AI found the faulty device in Northern Finland, but the engineer was stopped by a locked gate on a private road. Where the key was existed only in an email.</p>
+  </div>
+  <div style="position:absolute;left:1000px;top:675px;width:820px;font-size:22px;line-height:1.45;color:var(--amber)" data-t="13">Guiding question: “How could we collect silent metadata without creating additional work for our specialists?”</div>
+  <div class="cap" data-t="0">Elisa's problem is <b>silent metadata</b>: operational knowledge that lives in chats, emails and memory, never in a system.</div>
+  <div class="cap" data-t="7.5">After an SFP swap on <b>TRN-042</b> the link is UP and clean, yet no traffic. Only the expert knows: bounce the port, don't swap hardware.</div>
+  <div class="cap" data-t="13.5">When that context is missing, the autonomous workflow stops and a human has to step in.</div>
+</section>
+
+<!-- ============================ S2 ARCHITECTURE ============================ -->
+<section class="scene" data-dur="25" data-chap="Architecture" id="arch">
+  <div class="h1" style="top:96px;font-size:36px" data-t="0">How the pieces fit together</div>
+  <div style="position:absolute;right:70px;top:108px;font-size:17px" data-t="0.3"><span class="tag built">BUILT</span> <span class="m">working today</span> &nbsp;&nbsp; <span class="tag next">NEXT</span> <span class="m">designed, not built yet</span></div>
+  <svg width="1920" height="1080">
+    <path id="e1" class="edge a" d="M330 205 C375 205 375 245 420 245" data-t="1.2" data-fx="fade"/>
+    <path id="e2" class="edge a" d="M330 300 C375 300 375 275 420 275" data-t="1.2" data-fx="fade"/>
+    <path id="e3" class="edge a" d="M330 405 C375 405 375 310 420 310" data-t="1.2" data-fx="fade"/>
+    <path id="e4" class="edge g" d="M330 510 C375 510 375 505 420 505" data-t="1.6" data-fx="draw"/>
+    <path id="e5" class="edge g" d="M330 645 C580 645 580 650 830 650" data-t="1.6" data-fx="draw"/>
+    <path id="e6" class="edge a" d="M740 275 C785 275 785 275 830 275" data-t="2.4" data-fx="fade"/>
+    <path id="e7" class="edge g" d="M740 505 C785 505 785 470 830 470" data-t="2.4" data-fx="draw"/>
+    <path id="e8" class="edge g" d="M1160 290 C1205 290 1205 285 1250 285" data-t="3.4" data-fx="draw"/>
+    <path id="e9" class="edge g" d="M1160 650 C1215 650 1205 330 1250 330" data-t="3.4" data-fx="draw"/>
+    <path id="e10" class="edge g" d="M1385 350 L1385 420" data-t="4.2" data-fx="draw"/>
+    <path id="e11" class="edge g" d="M1520 470 C1570 470 1560 220 1610 220" data-t="5" data-fx="draw"/>
+    <path id="e12" class="edge g" d="M1750 290 L1750 340" data-t="5.6" data-fx="draw"/>
+    <path id="e13" class="edge g" d="M1520 545 C1570 545 1560 640 1610 640" data-t="6" data-fx="draw"/>
+    <circle class="pk" r="8" data-along="e4" data-t="7.5" data-d="1"/>
+    <circle class="pk" r="8" data-along="e7" data-t="8.4" data-d="1"/>
+    <circle class="pk" r="8" data-along="e5" data-t="8" data-d="1.4"/>
+    <circle class="pk" r="9" data-along="e12" data-t="15.0" data-d=".8" data-rev="1"/>
+    <circle class="pk" r="9" data-along="e11" data-t="15.8" data-d="1" data-rev="1"/>
+    <circle class="pk" r="9" data-along="e10" data-t="16.8" data-d=".7" data-rev="1"/>
+    <circle class="pk" r="9" data-along="e8" data-t="17.5" data-d=".7" data-rev="1"/>
+    <circle class="pk" r="9" data-along="e9" data-t="17.5" data-d=".9" data-rev="1"/>
+    <circle class="pk" r="9" data-along="e8" data-t="18.5" data-d=".7"/>
+    <circle class="pk" r="9" data-along="e10" data-t="19.2" data-d=".7"/>
+    <circle class="pk" r="9" data-along="e11" data-t="19.9" data-d="1"/>
+    <circle class="pk" r="9" data-along="e12" data-t="20.9" data-d=".8"/>
+    <circle class="pk" r="9" data-along="e13" data-t="21.4" data-d="1" data-rev="1"/>
+  </svg>
+  <!-- sources -->
+  <div style="position:absolute;left:40px;top:150px;font-size:15px;color:var(--dim);letter-spacing:1px" data-t="0.4">WHERE KNOWLEDGE LIVES</div>
+  <div class="box" style="left:40px;top:175px;width:290px;height:62px;padding:10px 16px" data-t="0.4"><h3 style="font-size:19px">Slack channels</h3></div>
+  <div class="box" style="left:40px;top:270px;width:290px;height:62px;padding:10px 16px" data-t="0.5"><h3 style="font-size:19px">Email (.msg / .eml)</h3></div>
+  <div class="box" style="left:40px;top:365px;width:290px;height:80px;padding:10px 16px" data-t="0.6"><h3 style="font-size:19px">Documents</h3><p style="font-size:14px">PDF notes · Confluence · ITSM KB</p></div>
+  <div class="box" style="left:40px;top:470px;width:290px;height:80px;padding:10px 16px" data-t="0.7"><h3 style="font-size:19px">Network records</h3><p style="font-size:14px">as-built · as-running · alarms · events</p></div>
+  <div class="box" style="left:40px;top:605px;width:290px;height:80px;padding:10px 16px" data-t="0.8"><h3 style="font-size:19px">Telemetry</h3><p style="font-size:14px">15-min interface counters</p></div>
+  <!-- ingest -->
+  <div class="box" style="left:420px;top:195px;width:320px;height:160px;border-style:dashed;border-color:#f6b44b88" data-t="1.4"><h3>Capture + extraction <span class="tag next">NEXT</span></h3><p>LangGraph · LLM extraction<br>validation gates V1–V6<br>one optional Slack card</p></div>
+  <div class="box" style="left:420px;top:440px;width:320px;height:135px;border-color:#3ddc9788" data-t="1.8"><h3>Seed loader <span class="tag built">BUILT</span></h3><p class="mono" style="font-size:14px">kaiku seed --network</p><p>pydantic-validated · idempotent MERGE · temporal checks</p></div>
+  <!-- store -->
+  <div class="box" style="left:830px;top:150px;width:330px;height:400px;border-color:#5b8cff88" data-t="2.6">
+    <h3>Neo4j context graph</h3><p style="margin-bottom:10px">time-aware layers, every node &amp; edge with validity</p>
+    <div style="display:flex;flex-direction:column;gap:9px;font-size:16px">
+      <div style="padding:9px 12px;border-radius:8px;background:#5b8cff22;border:1px solid #5b8cff55">Entities · devices, models, segments</div>
+      <div style="padding:9px 12px;border-radius:8px;background:#ff9f5a22;border:1px solid #ff9f5a55">Events · alarms, device events, outcomes</div>
+      <div style="padding:9px 12px;border-radius:8px;background:#a78bfa22;border:1px solid #a78bfa55">Context assertions + bindings</div>
+      <div style="padding:9px 12px;border-radius:8px;background:#4cc9f022;border:1px solid #4cc9f055">Vector index · 1024-d · Qwen3-Embedding</div>
+    </div>
+  </div>
+  <div class="box" style="left:830px;top:600px;width:330px;height:100px;border-color:#3ddc9788" data-t="2.8"><h3>DuckDB telemetry</h3><p>history + live samples, one view</p></div>
+  <!-- service -->
+  <div class="box" style="left:1250px;top:220px;width:270px;height:130px;border-color:#3ddc9788" data-t="3.6"><h3>ContextService</h3><p>as-of / known-at · scope · ranking · governed writes</p></div>
+  <div class="box" style="left:1250px;top:420px;width:270px;height:175px;border-color:#a78bfa" data-t="4.4"><h3>MCP server <span class="mono k" style="font-size:16px">/mcp</span></h3><p>Streamable HTTP · 12 tools + ping · prompt <span class="mono">ops_triage</span> · resource · one bearer token per agent</p></div>
+  <!-- right -->
+  <div class="box" style="left:1610px;top:150px;width:280px;height:140px;border-color:#3ddc9788" data-t="5.2"><h3>Ops agent</h3><p>LangChain create_agent · Kimi-K2 on Featherless · MCP tools only</p></div>
+  <div class="box" style="left:1610px;top:340px;width:280px;height:130px;border-color:#3ddc9788" data-t="5.8"><h3>Slack bot</h3><p>Bolt, Socket Mode · @mention or DM → answer in thread</p></div>
+  <div class="box" style="left:1610px;top:575px;width:280px;height:130px" data-t="6.2"><h3>Any MCP client</h3><p>Claude Desktop (stdio), MCP Inspector, Elisa's own agents</p></div>
+  <div style="position:absolute;left:40px;top:742px;font-size:17px;color:var(--muted)" data-t="6.6"><span class="mono">docker compose up</span> →
+    <span class="chip" style="font-size:15px">neo4j :7474/7687</span><span class="chip" style="font-size:15px">api :8000 (+ /mcp)</span><span class="chip" style="font-size:15px">slackbot (Socket Mode)</span><span class="chip" style="font-size:15px">sim :8100 (shell only)</span></div>
+  <div class="cap" data-t="0">kaiku is a <b>context layer</b> between the places experts talk and the agents that run the network.</div>
+  <div class="cap" data-t="7">Network data is loaded into a time-aware <b>Neo4j</b> graph; telemetry sits in <b>DuckDB</b>. One ContextService implements every query.</div>
+  <div class="cap" data-t="14.5">Everything goes through one <b>MCP server</b>. Our own Slack agent uses MCP only, exactly like any external agent would.</div>
+</section>
+
+<!-- ============================ S3 DATA ============================ -->
+<section class="scene" data-dur="15" data-chap="The data">
+  <div class="h1" data-t="0">A synthetic corpus built around Elisa's case<small>Generated by our team with <span class="mono">mock_data/generate.py</span> · deterministic seed 20261107 · no real data</small></div>
+  <div style="position:absolute;left:80px;top:260px;width:1760px;display:grid;grid-template-columns:repeat(4,1fr);gap:22px">
+    <div class="box" style="position:relative;height:190px" data-t="0.6"><div style="font-size:54px;font-weight:bold" class="b">166</div><h3>network entities</h3><p>76 devices · 70 fibre/microwave segments · 8 hardware models · 4 sites · 8 topics</p></div>
+    <div class="box" style="position:relative;height:190px" data-t="0.9"><div style="font-size:54px;font-weight:bold" class="o">423 · 36</div><h3>alarms · device events</h3><p>e.g. TRN-042 1/1/3: MODULE_REMOVED 05:00Z → LINK_UP 05:15Z → IF_DISABLED 06:23Z</p></div>
+    <div class="box" style="position:relative;height:190px" data-t="1.2"><div style="font-size:54px;font-weight:bold" class="k">31,680</div><h3>telemetry samples</h3><p>15-min PM counters, TRN nodes, 2025-10-07 … 2025-10-21</p></div>
+    <div class="box" style="position:relative;height:190px" data-t="1.5"><div style="font-size:54px;font-weight:bold">582 · 145</div><h3>Teams messages · Outlook emails</h3><p>4 channels, real .msg files, mostly noise around a few cases</p></div>
+    <div class="box" style="position:relative;height:190px" data-t="1.8"><div style="font-size:54px;font-weight:bold">PDF · KB</div><h3>documents</h3><p>scanned 2019 expert notes, Confluence pages, a stale ITSM KB that says “reboot the node”</p></div>
+    <div class="box" style="position:relative;height:190px" data-t="2.1"><div style="font-size:54px;font-weight:bold" class="v">24</div><h3>gold assertions</h3><p>13 believed true · 7 superseded · 3 disputed · 1 expired</p></div>
+    <div class="box" style="position:relative;height:190px" data-t="2.4"><div style="font-size:54px;font-weight:bold" class="g">15 · 9</div><h3>answer key: questions · cases</h3><p>6 documented · 7 never documented (“ask a human” is correct) · 2 from network data</p></div>
+    <div class="box" style="position:relative;height:190px" data-t="2.7"><div style="font-size:54px;font-weight:bold" class="a">held-out</div><h3>eval threads</h3><p>hand-written threads in <span class="mono">eval/heldout/</span>, kept apart from the generator</p></div>
+  </div>
+  <div class="cap" data-t="0">Elisa's example is one case, so we generated a corpus around it: other devices, advice that goes stale, experts who disagree.</div>
+  <div class="cap" data-t="7.5">A gold answer key records what is documented and where, and what was never written down at all.</div>
+</section>
+
+<!-- ============================ S4 TIME MODEL ============================ -->
+<section class="scene" data-dur="25" data-chap="Time model" id="time">
+  <div class="h1" data-t="0">Everything is bound to time<small>Elisa's reference model, enforced by our rules R1–R10 (<span class="mono">domain/time.py</span>, pure functions, unit-tested)</small></div>
+  <div style="position:absolute;left:80px;top:250px;width:560px">
+    <div class="box" style="position:relative;margin-bottom:10px;padding:12px 16px" data-t="0.6"><h3 style="font-size:19px">Intent / design <span class="m" style="font-size:15px">as-designed</span></h3></div>
+    <div class="box" style="position:relative;margin-bottom:10px;padding:12px 16px;border-color:#5b8cff77" data-t="0.8"><h3 style="font-size:19px">Physical <span class="m" style="font-size:15px">as-built</span></h3></div>
+    <div class="box" style="position:relative;margin-bottom:10px;padding:12px 16px;border-color:#5b8cff77" data-t="1.0"><h3 style="font-size:19px">Runtime <span class="m" style="font-size:15px">as-running: snapshots, telemetry</span></h3></div>
+    <div class="box" style="position:relative;margin-bottom:10px;padding:12px 16px;border-color:#a78bfa" data-t="1.2"><h3 style="font-size:19px">Context <span class="m" style="font-size:15px">as-experienced: assertions</span></h3></div>
+    <div class="box" style="position:relative;padding:12px 16px;border-color:#ff9f5a88" data-t="1.4"><h3 style="font-size:19px">Event stream <span class="m" style="font-size:15px">as-observed</span></h3></div>
+    <div style="margin-top:22px;font-size:19px;line-height:1.6" data-t="2.4"><span class="o">Events</span>: one timestamp, record time = event time (R1: Slack <span class="mono">ts</span>, email <span class="mono">Date:</span>).<br><span class="v">States</span>: a window <span class="mono">[valid_from, valid_to)</span>;<br><span class="mono">valid_to = null</span> means “still believed true”.</div>
+  </div>
+  <div id="tl" style="position:absolute;left:720px;top:250px;width:1130px;height:560px">
+    <div style="position:absolute;left:0;top:0;font-size:17px;color:var(--muted)" data-t="3">assertion timelines from the graph</div>
+    <div class="axis" style="position:absolute;left:300px;right:20px;top:470px;height:2px;background:#33415f" data-t="3"></div>
+    <div id="ticks" data-t="3"></div>
+    <div class="tlrow" data-t="3.5"  data-y="40"  data-from="2024-03-02" data-to="2025-10-14T06:22:08" data-c="#8e9ab5" data-id="ASR-0030" data-txt="ITSM KB: reboot the node"></div>
+    <div class="tlrow" data-t="4.0"  data-y="95"  data-from="2025-10-14T06:22:08" data-to="" data-c="#3ddc97" data-id="ASR-0001" data-txt="Erkki, Teams: bounce the interface"></div>
+    <div class="tlrow" data-t="5.5"  data-y="165" data-from="2025-10-14T06:25:39" data-to="2026-03-10T07:39:42" data-c="#8e9ab5" data-id="ASR-0005" data-txt="Erkki: only Gen1 units"></div>
+    <div class="tlrow" data-t="6.0"  data-y="220" data-from="2026-03-10T07:39:42" data-to="" data-c="#3ddc97" data-id="ASR-0006" data-txt="Aino: also Gen2 (TNC-2X)"></div>
+    <div class="tlrow" data-t="7.5"  data-y="290" data-from="2025-10-20T09:19:38" data-to="2026-08-02T21:00:00" data-c="#8e9ab5" data-id="ASR-0023" data-txt="Kemi gate: padlock, Pekka's key"></div>
+    <div class="tlrow" data-t="8.0"  data-y="345" data-from="2026-08-02T21:00:00" data-to="" data-c="#3ddc97" data-id="ASR-0024" data-txt="Kemi gate: code lock, ask security"></div>
+    <div id="cursor" style="position:absolute;top:24px;height:460px;width:2px;background:var(--cyan);box-shadow:0 0 12px var(--cyan)"><div id="curlbl" class="mono" style="position:absolute;top:-24px;left:-90px;width:180px;text-align:center;font-size:15px;color:var(--cyan)"></div></div>
+  </div>
+  <div style="position:absolute;left:720px;top:800px;width:1130px;font-size:19px;line-height:1.5" data-t="16"><span class="k">in scope at t</span> ⇔ <span class="mono">valid_from ≤ t &lt; coalesce(valid_to, ∞)</span> &nbsp;·&nbsp; <span class="k">known at k</span> ⇔ <span class="mono">recorded_at ≤ k</span>, not retracted (R10)</div>
+  <div class="cap" data-t="0">Elisa's model: the network in <b>time-aware layers</b>. Events have one timestamp; everything else is a state with a validity window.</div>
+  <div class="cap" data-t="8.5">A successor's valid_from closes its predecessor (R4b). Doubt changes status, never validity (R5). Stated dates mean 00:00 Helsinki.</div>
+  <div class="cap" data-t="16.5">So one query answers “what was true at time t?” and, with <b>known_at</b>, “what did we believe at that moment?”</div>
+</section>
+
+<!-- ============================ S5 BUILD GRAPH ============================ -->
+<section class="scene" data-dur="30" data-chap="Building the graph" id="build">
+  <div class="h1" style="font-size:38px" data-t="0">Building the graph: <span class="mono k" style="font-size:34px">kaiku seed</span></div>
+  <div style="position:absolute;left:70px;top:185px;width:800px">
+    <div class="step" data-t="0.8" data-hl="0.8" data-hlend="4"><span class="sn">1</span><b>Read &amp; validate mock_data</b><p>pydantic row models; a malformed row fails before any write</p></div>
+    <div class="step" data-t="1.4" data-hl="4" data-hlend="8"><span class="sn">2</span><b>Apply migrations V0001–V0004</b><p>unique keys · range indexes on valid_from/valid_to · vector index with status filter</p></div>
+    <div class="step" data-t="2.0" data-hl="8" data-hlend="14"><span class="sn">3</span><b>Write network layers</b><p class="mono" style="font-size:14px">UNWIND $rows AS r MERGE (n:Entity {entity_id: r.entity_id}) SET n:Device, n += r.props</p></div>
+    <div class="step" data-t="2.6" data-hl="14" data-hlend="21"><span class="sn">4</span><b>Write gold assertions</b> <span class="m" style="font-size:15px">(full profile, eval only)</span><p>ABOUT bindings · SUPERSEDES / CONTRADICTS / CORROBORATES · access register</p></div>
+    <div class="step" data-t="3.2" data-hl="21" data-hlend="23.5"><span class="sn">5</span><b>Prune</b><p>seed/gold rows that left the source are deleted; extracted knowledge never touched</p></div>
+    <div class="step" data-t="3.8" data-hl="23.5" data-hlend="26.5"><span class="sn">6</span><b>12 temporal checks in Cypher</b><p>e.g. supersession_timestamp, event_within_device · exit 1 on any violation</p></div>
+    <div class="step" data-t="4.4" data-hl="26.5" data-hlend="31"><span class="sn">7</span><b>Embed at API start</b><p>Qwen3-Embedding-8B via Featherless, Matryoshka-truncated to 1024-d</p></div>
+  </div>
+  <svg width="1920" height="1080">
+    <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5d6a86"/></marker></defs>
+    <!-- edges -->
+    <g class="ge" data-t="9.4" data-fx="fade"><path class="edge" d="M1250 452 L1250 300" marker-end="url(#ar)"/><text x="1262" y="380" class="el">IS_MODEL</text></g>
+    <g class="ge" data-t="10.0" data-fx="fade"><path class="edge" d="M1320 250 L1440 212" marker-end="url(#ar)"/><text x="1330" y="216" class="el">OF_GENERATION</text></g>
+    <g class="ge" data-t="10.6" data-fx="fade"><path class="edge" d="M1050 612 L1180 505" marker-end="url(#ar)"/><text x="1010" y="565" class="el">CONNECTS</text></g>
+    <g class="ge" data-t="10.9" data-fx="fade"><path class="edge" d="M1060 410 L1172 465" marker-end="url(#ar)"/><text x="1060" y="455" class="el">CONNECTS</text></g>
+    <g class="ge" data-t="11.6" data-fx="fade"><path class="edge" d="M1430 630 L1300 510" marker-end="url(#ar)"/><text x="1380" y="600" class="el">SNAPSHOT_OF</text></g>
+    <g class="ge" data-t="12.4" data-fx="fade"><path class="edge" d="M1200 755 L1235 510" marker-end="url(#ar)"/><path class="edge" d="M1390 760 L1270 510" marker-end="url(#ar)"/><text x="1230" y="700" class="el">ON</text></g>
+    <g class="ge" data-t="15.0" data-fx="fade"><path class="edge" style="stroke:#a78bfa" d="M1555 440 L1330 480" marker-end="url(#ar)"/><text x="1390" y="448" class="el v">observed_on</text></g>
+    <g class="ge" data-t="15.6" data-fx="fade"><path class="edge" style="stroke:#a78bfa" d="M1580 400 L1330 282" marker-end="url(#ar)"/><text x="1420" y="320" class="el v">applies_to</text></g>
+    <g class="ge" data-t="16.2" data-fx="fade"><path class="edge" style="stroke:#a78bfa" d="M1660 395 L1730 318" marker-end="url(#ar)"/><text x="1708" y="370" class="el v">activity</text></g>
+    <g class="ge" data-t="17.4" data-fx="fade"><path class="edge" style="stroke:#8e9ab5" d="M1640 460 L1690 615" marker-end="url(#ar)"/><text x="1680" y="540" class="el">SUPERSEDES</text></g>
+    <g class="ge" data-t="18.2" data-fx="fade"><path class="edge" style="stroke:#3ddc97" d="M1705 435 L1735 452"/><text x="1712" y="420" class="el g">CORROBORATES</text></g>
+    <g class="ge" data-t="19.0" data-fx="fade"><path class="edge" style="stroke:#a78bfa" d="M1000 800 L1000 672" marker-end="url(#ar)"/><text x="1012" y="745" class="el v">observed_on</text></g>
+    <!-- nodes -->
+    <g data-t="8.4" data-fx="pop"><rect x="1170" y="452" width="160" height="58" rx="29" fill="#1b2d5c" stroke="#5b8cff" stroke-width="3"/><text x="1250" y="479" class="nt">TRN-042</text><text x="1250" y="499" class="ns">Device · Kemi · 2019</text></g>
+    <g data-t="9.4" data-fx="pop"><rect x="1180" y="244" width="140" height="56" rx="28" fill="#1b2d5c" stroke="#5b8cff" stroke-width="2"/><text x="1250" y="270" class="nt">TNC-1X</text><text x="1250" y="289" class="ns">HwModel</text></g>
+    <g data-t="10.0" data-fx="pop"><rect x="1440" y="180" width="110" height="52" rx="26" fill="#1b2d5c" stroke="#5b8cff" stroke-width="2"/><text x="1495" y="204" class="nt">Gen1</text><text x="1495" y="222" class="ns">Generation</text></g>
+    <g data-t="10.6" data-fx="pop"><rect x="925" y="614" width="150" height="58" rx="29" fill="#16314a" stroke="#4cc9f0" stroke-width="2"/><text x="1000" y="640" class="nt">SEG-042</text><text x="1000" y="659" class="ns">private road · gate</text></g>
+    <g data-t="10.9" data-fx="pop"><rect x="915" y="380" width="160" height="52" rx="26" fill="#16314a" stroke="#4cc9f0" stroke-width="2"/><text x="995" y="404" class="nt" style="font-size:15px">SEG-ACC-0032</text><text x="995" y="422" class="ns">Segment</text></g>
+    <g data-t="11.6" data-fx="pop"><rect x="1390" y="630" width="180" height="52" rx="10" fill="#1b2540" stroke="#5d6a86" stroke-width="2"/><text x="1480" y="654" class="nt" style="font-size:15px">RunningSnapshot</text><text x="1480" y="672" class="ns">as-running hw</text></g>
+    <g data-t="12.4" data-fx="pop"><rect x="1110" y="755" width="190" height="52" rx="8" fill="#3a2614" stroke="#ff9f5a" stroke-width="2"/><text x="1205" y="778" class="nt" style="font-size:15px">ALM-000004</text><text x="1205" y="796" class="ns">LINK_UP 05:15:20Z</text></g>
+    <g data-t="12.7" data-fx="pop"><rect x="1310" y="760" width="200" height="52" rx="8" fill="#3a2614" stroke="#ff9f5a" stroke-width="2"/><text x="1410" y="783" class="nt" style="font-size:15px">ALM-000007</text><text x="1410" y="801" class="ns">IF_DISABLED 06:23Z</text></g>
+    <g data-t="14.6" data-fx="pop"><rect x="1545" y="392" width="160" height="70" rx="12" fill="#2a2150" stroke="#a78bfa" stroke-width="3"/><text x="1625" y="419" class="nt">ASR-0001</text><text x="1625" y="438" class="ns">bounce · high</text><text x="1625" y="454" class="ns">believed_true</text></g>
+    <g data-t="16.2" data-fx="pop"><rect x="1660" y="262" width="230" height="56" rx="8" fill="#1d2a3a" stroke="#8e9ab5" stroke-width="2"/><text x="1775" y="286" class="nt" style="font-size:14px">TOPIC:forwarding_state</text><text x="1775" y="305" class="ns">_after_sfp_swap</text></g>
+    <g data-t="17.4" data-fx="pop"><rect x="1620" y="615" width="170" height="76" rx="12" fill="#22263a" stroke="#8e9ab5" stroke-width="2" stroke-dasharray="6 5"/><text x="1705" y="641" class="nt">ASR-0030</text><text x="1705" y="662" class="ns">ITSM “reboot”</text><text x="1705" y="680" class="ns">superseded</text></g>
+    <g data-t="18.2" data-fx="pop"><rect x="1735" y="440" width="140" height="64" rx="12" fill="#2a2150" stroke="#a78bfa" stroke-width="2"/><text x="1805" y="466" class="nt">ASR-0002</text><text x="1805" y="486" class="ns">same, by email</text></g>
+    <g data-t="19.0" data-fx="pop"><rect x="915" y="800" width="170" height="64" rx="12" fill="#2a2150" stroke="#a78bfa" stroke-width="2"/><text x="1000" y="826" class="nt">ASR-0024</text><text x="1000" y="846" class="ns">code lock · access</text></g>
+  </svg>
+  <div style="position:absolute;left:70px;top:820px;width:820px;font-size:16px;line-height:1.45;color:var(--muted)" data-t="20"><span class="tag next" style="background:#4cc9f022;color:var(--cyan);border-color:#4cc9f066">PROFILES</span> <b class="k">demo</b>: network only, never gold; the forwarding-stall chat &amp; email are held out so live capture is the first time that knowledge enters. <b class="k">full</b>: + gold, for the eval.</div>
+  <div class="cap" data-t="0"><b>kaiku seed</b> loads the network layers from mock_data into Neo4j, every node and edge with its validity window.</div>
+  <div class="cap" data-t="8.4">Every write is UNWIND + <b>MERGE</b> on a stable key, so re-running changes nothing. Here is TRN-042's neighbourhood.</div>
+  <div class="cap" data-t="14.4">Assertions bind with a scope: <b>observed_on</b> the device, <b>applies_to</b> its model, <b>activity</b> for the topic. History is edges.</div>
+  <div class="cap" data-t="21.5">Then 12 temporal invariants run as Cypher; any violation fails the seed. Assertion text is embedded for semantic search.</div>
+</section>
+
+<!-- ============================ S6 CAPTURE (NEXT) ============================ -->
+<section class="scene" data-dur="17" data-chap="Capture (next)">
+  <div class="h1" data-t="0">Capture from the channels experts already use <span class="tag next" style="font-size:18px">NEXT · not built yet</span><small>Designed in plan 002 §3.2 and plan 001 §6.1. Today the bot already receives channel messages and logs them.</small></div>
+  <div style="position:absolute;left:80px;top:270px;width:1000px">
+    <div class="flow" data-t="0.8"><span class="fn">1</span><b>Slack message → Message event</b><p>event_time = Slack ts, exact to the microsecond (R1, <span class="mono">slack_ts_to_datetime</span>: built)</p></div>
+    <div class="flow" data-t="1.6"><span class="fn">2</span><b>Trigger on a resolution signal</b><p>“Traffic is back 👍”, a ✅ reaction, or idle time</p></div>
+    <div class="flow" data-t="2.4"><span class="fn">3</span><b>LLM extraction (LangGraph) + gates</b><p><span class="k">V1</span> every field grounded in a quote · <span class="k">V2</span> “So another SFP?” is a refuted guess → avoid[] · <span class="k">V3</span> entity exists at valid_from · <span class="k">V4</span> symptoms vs telemetry · <span class="k">V5</span> temporal invariants in the same transaction · <span class="k">V6</span> reconcile: corroborate / supersede / contradict</p></div>
+    <div class="flow" data-t="3.2"><span class="fn">4</span><b>One threaded card; buttons are optional</b><p>no response = stays <span class="mono">unverified</span> and still usable</p></div>
+  </div>
+  <div class="slack" style="left:1150px;top:300px;width:700px" data-t="5">
+    <div><span class="nm">kaiku</span><span class="ts">APP · planned card (from plan 002)</span></div>
+    <div style="margin-top:8px">📌 <b>Captured for TNC-1X (Gen1)</b> · seen on TRN-042 · after SFP replacement<br>If interface UP + optics normal + counters at 0 → disable/enable the interface.<br><b>Avoid:</b> replacing the SFP again, rebooting the unit.<br><i>Valid from 09:22 today · source: Erkki (this thread) · telemetry agrees ✓</i></div>
+    <div style="margin-top:12px;display:flex;gap:10px"><span class="chip" style="font-size:15px;margin:0">✅ Correct</span><span class="chip" style="font-size:15px;margin:0">✏️ Fix</span><span class="chip" style="font-size:15px;margin:0">🚫 Not knowledge</span></div>
+  </div>
+  <div class="cap" data-t="0">The capture side is <b>designed, not built yet</b>: messages in opted-in Slack channels become events and extraction runs in the background.</div>
+  <div class="cap" data-t="8.5">Gates ground every field in a quote and check it against entities and telemetry. Experts get one optional card; doing nothing is fine.</div>
+</section>
+
+<!-- ============================ S7a REQUEST JOURNEY ============================ -->
+<section class="scene" data-dur="22" data-chap="Answering · the request" id="seq">
+  
+  <div class="lanehd" style="left:200px" data-t="0.3">Engineer<br><span class="m" style="font-size:14px;font-weight:normal">Slack</span></div>
+  <div class="lanehd" style="left:560px" data-t="0.4">Slack bot<br><span class="m" style="font-size:14px;font-weight:normal">SlackOps</span></div>
+  <div class="lanehd" style="left:960px" data-t="0.5">Ops agent<br><span class="m" style="font-size:14px;font-weight:normal">LLM + rules</span></div>
+  <div class="lanehd" style="left:1360px" data-t="0.6">MCP server<br><span class="m" style="font-size:14px;font-weight:normal">bearer: ops-agent</span></div>
+  <div class="lanehd" style="left:1720px" data-t="0.7">Context layer<br><span class="m" style="font-size:14px;font-weight:normal">Neo4j · DuckDB</span></div>
+  <div class="lane" style="left:200px;top:180px" data-t="0.3" data-fx="fade"></div><div class="lane" style="left:560px;top:180px" data-t="0.4" data-fx="fade"></div><div class="lane" style="left:960px;top:180px" data-t="0.5" data-fx="fade"></div><div class="lane" style="left:1360px;top:180px" data-t="0.6" data-fx="fade"></div><div class="lane" style="left:1720px;top:180px" data-t="0.7" data-fx="fade"></div>
+  <div class="arrow" data-a="200" data-b="560" data-y="205" data-t="1.0" data-lbl="@kaiku swapped SFP on TRN-042, no traffic"></div>
+  <div class="arrow" data-a="560" data-b="200" data-y="255" data-t="2.2" data-lbl="⏳ Looking into it…  (placeholder)" data-c="#8e9ab5"></div>
+  <div class="arrow" data-a="560" data-b="960" data-y="305" data-t="3.2" data-lbl="ask(question, request_id)"></div>
+  <div class="arrow" data-a="960" data-b="1360" data-y="355" data-t="4.4" data-lbl="list tools · get_prompt(ops_triage)" data-c="#a78bfa"></div>
+  <div class="arrow" data-a="960" data-b="1720" data-y="410" data-t="7.0" data-lbl="resolve_entities(text) → TRN-042 · 1.0"></div>
+  <div class="arrow" data-a="960" data-b="1720" data-y="460" data-t="8.4" data-lbl="get_context(TRN-042) → 8 ranked assertions"></div>
+  <div class="arrow" data-a="960" data-b="1720" data-y="510" data-t="9.8" data-lbl="check_conditions(ASR-0001, TRN-042, at) → met / not_met / unknown"></div>
+  <div class="arrow" data-a="960" data-b="960" data-y="560" data-t="11.4" data-lbl="structured OpsAnswer" data-self="1"></div>
+  <div class="arrow" data-a="960" data-b="560" data-y="620" data-t="12.6" data-lbl="enforce_rules(answer, seen ids)" data-c="#3ddc97"></div>
+  <div class="arrow" data-a="560" data-b="200" data-y="675" data-t="13.8" data-lbl="chat_update(formatted answer)" data-c="#3ddc97"></div>
+  <div class="code" style="left:90px;top:745px;width:1740px;font-size:15px;white-space:normal;line-height:1.5" data-t="15.0"><span class="m">ops_triage rules (served by the MCP server):</span> 1 resolve entities first · 2 get_context, then check_conditions for any assertion with symptoms; never claim met when unknown · 3 never recommend a step without citing its assertion id, respect avoid · 4 show both sides of disputes with dates · 5 nothing documented → say so + open_knowledge_gap · 6 site visits → get_site_access at the visit time · 7 report_outcome after actions</div>
+  <div class="cap" data-t="0">An engineer @mentions the bot. It posts a placeholder at once and hands the question to the <b>ops agent</b>.</div>
+  <div class="cap" data-t="4.2">The agent's only tools come from our <b>MCP server</b>, plus the server's rules prompt. It authenticates with its own token.</div>
+  <div class="cap" data-t="11.2">It resolves, reads, checks, answers. Then code checks the answer, and the placeholder is edited into the reply.</div>
+  <div class="cap" data-t="16.5">From the bot's log, a real run of a question like this: <b>answered</b>, 1 step, sources ASR-0001 + ASR-0003, 4 tool calls.</div>
+</section>
+
+<!-- ============================ S7b RESOLVE + CONTEXT ============================ -->
+<section class="scene" data-dur="26" data-chap="Answering · resolve & retrieve" id="ctx">
+  <div class="h1" style="font-size:36px;top:96px" data-t="0">Which entity? What do we know about it, now?</div>
+  <div class="box" style="left:70px;top:175px;width:700px;height:330px" data-t="0.5">
+    <h3><span class="mono k">resolve_entities</span> <span class="m" style="font-size:16px">deterministic, explainable</span></h3>
+    <p style="margin-bottom:12px">exact ids → aliases (rapidfuzz partial_ratio ≥ 88) → place names</p>
+    <div class="rq" data-t="1.2"><span class="mono">“…the SFP on TRN-042, no traffic”</span><br>→ <b>TRN-042</b> <span class="g">1.0</span> <span class="m">exact id</span></div>
+    <div class="rq" data-t="2.4"><span class="mono">“the older transmission units in Pori”</span><br>→ <b>TNC-1X</b> <span class="g">0.9</span> <span class="m">alias</span> · <b>TRN-017</b> <span class="g">0.85</span> <span class="m">city + “units”</span></div>
+    <div class="rq" data-t="3.6"><span class="mono">“the gate at the Kemi site”</span><br>→ <b>SEG-042</b> <span class="g">0.8</span> <span class="m">access word + private road</span> · TRN-042 0.75</div>
+  </div>
+  <div class="box" style="left:70px;top:530px;width:700px;height:200px" data-t="6">
+    <h3><span class="mono k">get_context(TRN-042)</span>: scope expansion</h3>
+    <div style="display:grid;grid-template-columns:auto 1fr auto;gap:8px 16px;font-size:17px;margin-top:10px;align-items:center">
+      <span class="b">direct</span><span>TRN-042 itself</span><span class="mono">× 1.0</span>
+      <span class="b">model</span><span>TNC-1X, Gen1</span><span class="mono">× 0.9</span>
+      <span class="b">segment</span><span>SEG-042, SEG-ACC-0032, SEG-ACC-0033</span><span class="mono">× 0.8</span>
+      <span class="b">same model</span><span>observed on other TNC-1X devices</span><span class="mono">× 0.5</span>
+    </div>
+  </div>
+  <div style="position:absolute;left:820px;top:175px;width:1040px" data-t="9">
+    <div style="font-size:18px;color:var(--muted);margin-bottom:8px">real result · as_of = known_at = now · <span class="mono">score = match × status × confidence</span></div>
+    <table class="t" style="width:100%">
+      <tr><th>id</th><th>match</th><th>score</th><th>conf.</th><th>statement (source)</th></tr>
+      <tr data-t="9.6"><td class="mono v" style="white-space:nowrap">ASR-0001</td><td>direct</td><td class="mono">1.00</td><td>high</td><td>Gen1: UP + optics + 0 counters → bounce, not SFP / reboot <span class="m">(Teams, Erkki)</span></td></tr>
+      <tr data-t="10.0"><td class="mono v" style="white-space:nowrap">ASR-0002</td><td>direct</td><td class="mono">1.00</td><td>high</td><td>disable/enable once before replacing <span class="m">(email, Erkki)</span></td></tr>
+      <tr data-t="10.4"><td class="mono v" style="white-space:nowrap">ASR-0021</td><td>direct</td><td class="mono">0.85</td><td>medium</td><td>same symptom on TRN-042 again, bounce fixed it <span class="m">(2026-09)</span></td></tr>
+      <tr data-t="10.8"><td class="mono v" style="white-space:nowrap">ASR-0024</td><td>segment</td><td class="mono">0.80</td><td>high</td><td>Kemi gate is a code lock, no key <span class="m">(email)</span></td></tr>
+      <tr data-t="11.2"><td class="mono v" style="white-space:nowrap">ASR-0003</td><td>model</td><td class="mono">0.765</td><td>medium</td><td>Gen1: bounce cleared it in 4/4 cases <span class="m">(2019 PDF)</span></td></tr>
+      <tr data-t="11.6"><td class="mono v" style="white-space:nowrap">ASR-0004</td><td>model</td><td class="mono">0.765</td><td>medium</td><td>scanned 2019 notes forwarded <span class="m">(email)</span></td></tr>
+      <tr data-t="12.0"><td class="mono v" style="white-space:nowrap">ASR-0017</td><td style="white-space:nowrap">same model</td><td class="mono">0.425</td><td>medium</td><td>seen on TRN-014, bounce fixed it</td></tr>
+      <tr data-t="12.4"><td class="mono v" style="white-space:nowrap">ASR-0019</td><td style="white-space:nowrap">same model</td><td class="mono">0.425</td><td>medium</td><td>seen on TRN-019, bounce fixed it</td></tr>
+    </table>
+    <div style="margin-top:16px;font-size:18px;line-height:1.5" data-t="16"><span class="r">✗ not returned:</span> <span class="mono">ASR-0030</span> ITSM “reboot the node”: its validity ended 2025-10-14 06:22Z when ASR-0001 superseded it.</div>
+    <div style="margin-top:8px;font-size:18px;line-height:1.5;color:var(--muted)" data-t="18">Each row carries bindings, validity, citations, contradicts / corroborates, and qualifiers: <span class="mono">symptom[]</span>, <span class="mono">action</span>, <span class="mono">avoid[]</span>.</div>
+  </div>
+  <div class="cap" data-t="0"><b>resolve_entities</b> maps free text to graph entities: exact ids, then known aliases with fuzzy matching, then place names.</div>
+  <div class="cap" data-t="6">get_context expands the scope: the device, its <b>model and generation</b>, its segments, and the same model elsewhere.</div>
+  <div class="cap" data-t="12.5">Only knowledge valid now and on record comes back, ranked. Stale advice is not hidden by a prompt; it is out of its time window.</div>
+  <div class="cap" data-t="19.5">Search works too: <b>search_context</b> ranks by vector similarity, with a keyword fallback when embeddings are unavailable.</div>
+</section>
+
+<!-- ============================ S7c CONDITIONS ============================ -->
+<section class="scene" data-dur="24" data-chap="Answering · check against telemetry" id="cond">
+  <div class="h1" style="font-size:36px;top:96px" data-t="0"><span class="mono k">check_conditions(ASR-0001, TRN-042)</span><small>ASR-0001's symptoms: oper_up · rx_power_normal · counters_zero — checked in DuckDB, port 1/1/3, 2025-10-14 (UTC)</small></div>
+  <svg width="1920" height="1080" id="chart"></svg>
+  <div class="box" style="left:1320px;top:250px;width:540px;height:270px" data-t="8">
+    <h3>at <span class="mono k">06:21:30Z</span> <span class="m" style="font-size:16px">(Veikko: “counters basically zero”)</span></h3>
+    <div style="font-size:18px;line-height:1.75;margin-top:6px">
+      <div><span class="ok">✔ met</span> oper_up · interface UP</div>
+      <div><span class="ok">✔ met</span> rx_power_normal · RX −3.3 dBm (−10..0)</div>
+      <div><span class="ok">✔ met</span> counters_zero · &lt; 0.01 Mbps, UP, 60 min</div>
+      <div class="mono m" style="font-size:15px">values 0.0006 · 0.0005 · 0.0004 · 0.0004</div>
+      <div class="g" style="margin-top:4px">all_met = true</div>
+    </div>
+  </div>
+  <div class="box" style="left:1320px;top:545px;width:540px;height:150px" data-t="14">
+    <h3>at <span class="mono k">07:30Z</span>, after the bounce</h3>
+    <div style="font-size:18px;line-height:1.6"><span class="bad">✘ not_met</span> counters_zero · traffic flowing (max 2.718 Mbps) → the rule no longer applies</div>
+  </div>
+  <div class="box" style="left:1320px;top:720px;width:540px;height:120px" data-t="17">
+    <h3>at “now”, no live data yet</h3>
+    <div style="font-size:18px;line-height:1.5"><span class="unk">? unknown</span> × 3 · “no telemetry for 23:30–23:45 UTC”. Never reported as met.</div>
+  </div>
+  <div class="cap" data-t="0">Before recommending anything, the agent checks the assertion's <b>symptoms against real telemetry</b>.</div>
+  <div class="cap" data-t="7.5">Only complete 15-minute intervals count: at 06:21:30 that is 06:00–06:15. UP, RX −3.3 dBm, no traffic for an hour: <b>all met</b>.</div>
+  <div class="cap" data-t="14">After the bounce at 06:23 traffic recovers, and the same check says <b>not_met</b>. With no data it says <b>unknown</b>.</div>
+</section>
+
+<!-- ============================ S7d GUARDRAILS + ANSWER ============================ -->
+<section class="scene" data-dur="24" data-chap="Answering · guardrails & reply">
+  <div class="h1" style="font-size:36px;top:96px" data-t="0">The model proposes, code enforces</div>
+  <div class="code" style="left:70px;top:180px;width:560px;font-size:15px" data-t="0.6"><span class="m">class</span> <span class="k">OpsAnswer</span>(BaseModel):
+  status: answered | not_documented
+        | disputed | partial
+        | needs_clarification
+  summary: str
+  entity_ids: list[str]
+  steps: list[Step]   <span class="m"># action + assertion_ids</span>
+  avoid: list[str]
+  conditions: list[ConditionReport]
+  sources: list[Source]
+  gap_id: str | None
+  review_notes: list[str]</div>
+  <div class="box" style="left:70px;top:585px;width:560px;height:290px" data-t="3.5">
+    <h3><span class="mono k">enforce_rules</span> <span class="m" style="font-size:15px">after the model, whatever it said</span></h3>
+    <div style="font-size:17px;line-height:1.6;margin-top:8px">
+      <div data-t="4.5"><span class="bad">✘</span> step citing no assertion the tools returned → removed</div>
+      <div data-t="5.5"><span class="bad">✘</span> step whose conditions are <span class="mono">not_met</span> → removed</div>
+      <div data-t="6.5"><span class="bad">✘</span> sources not seen in tool results → dropped</div>
+      <div data-t="7.5"><span class="unk">●</span> <span class="mono">not_documented</span> → no steps at all</div>
+      <div data-t="8.5"><span class="unk">●</span> “answered” with no steps and no sources → not_documented</div>
+    </div>
+  </div>
+  <div class="slack" style="left:700px;top:180px;width:1150px;height:560px" data-t="10.5">
+    <div><span class="nm">kaiku</span><span class="ts">APP · in thread · layout of <span class="mono">format_answer</span></span></div>
+    <div style="margin-top:10px">On this Gen1 TNC-1X node, UP + normal optics + zero counters after an SFP swap points to a forwarding-state stall, not a faulty SFP.</div>
+    <div style="margin-top:14px" data-t="11.5"><b>Next step</b><br>1. Disable and re-enable interface 1/1/3 before replacing any hardware &nbsp;<i>(ASR-0001)</i></div>
+    <div style="margin-top:6px" data-t="12.3"><b>Avoid:</b> replace sfp; reboot node</div>
+    <div style="margin-top:14px" data-t="13.1"><b>Conditions</b><br><span class="ok">✅</span> oper up — interface UP<br><span class="ok">✅</span> rx power normal — RX -3.3 dBm (normal -10..0 dBm)<br><span class="ok">✅</span> counters zero — in-traffic below 0.01 Mbps with the port UP for 60 min</div>
+    <div style="margin-top:14px" data-t="14.1"><b>Why (sources)</b><br>• ASR-0001: erkki, teams message, 2025-10-14<br>• ASR-0003: erkki, pdf, 2019-11-12</div>
+  </div>
+  <div style="position:absolute;left:700px;top:760px;width:1150px;font-size:16px;color:var(--dim);line-height:1.45" data-t="15">Step, avoid list, condition lines and sources are filled from the real tool outputs above, in format_answer's layout, with conditions as checked at 06:21:30Z on 2025-10-14; the summary sentence is illustrative wording (the LLM writes its own).</div>
+  <div class="cap" data-t="0">The model must return a typed <b>OpsAnswer</b>. Then code, not the prompt, enforces the hard rules.</div>
+  <div class="cap" data-t="9.5">The placeholder becomes the answer: the next step, what to avoid, the checked conditions, and who said it, where and when.</div>
+  <div class="cap" data-t="16.5">That is Elisa's strong demo, step 3: the right next step <b>before hardware is replaced or the unit rebooted</b>.</div>
+</section>
+
+<!-- ============================ S8 OTHER PATHS ============================ -->
+<section class="scene" data-dur="24" data-chap="Time travel, disputes, gaps">
+  <div class="h1" style="font-size:36px;top:96px" data-t="0">Same graph, harder questions</div>
+  <div class="box" style="left:70px;top:180px;width:1780px;height:250px;border-color:#4cc9f088" data-t="0.5">
+    <h3>Kemi gate: <span class="mono k" style="font-size:19px">get_site_access(SEG-042, as_of = 2026-08-10, known_at = …)</span></h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:16px">
+      <div data-t="1.5" style="padding:16px;border-radius:10px;background:#1b2540;border:1px solid var(--line)">
+        <div class="m" style="font-size:16px">known_at = 2026-08-01 · what we believed then</div>
+        <div style="font-size:20px;margin-top:8px;line-height:1.5"><span class="mono v">ASR-0023</span> padlock; key on Pekka Hämäläinen's keyring<br><span class="m" style="font-size:16px">register: lock padlock · holder Pekka · keyring</span></div>
+      </div>
+      <div data-t="3.5" style="padding:16px;border-radius:10px;background:#16302a;border:1px solid #3ddc9766">
+        <div class="m" style="font-size:16px">known_at = now · what is true for that visit</div>
+        <div style="font-size:20px;margin-top:8px;line-height:1.5"><span class="mono v">ASR-0024</span> code lock (installed 2026-08-03), no key; code with site security / Heikki Lehtonen<br><span class="m" style="font-size:16px">recorded 2026-08-18, valid from 2026-08-02 21:00Z</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="box" style="left:70px;top:470px;width:870px;height:260px;border-color:#f6b44b88" data-t="9">
+    <h3>Conflicting advice stays visible</h3>
+    <p style="font-size:18px;line-height:1.55;margin-top:8px;color:var(--ink)"><span class="mono">get_context(TRN-003)</span> (TNC-3X, Gen3):<br><span class="mono v">ASR-0020</span> “bounce failed; replacing the SFP fixed it”<br>status <span class="a">disputed</span> · CONTRADICTS <span class="mono v">ASR-0001</span></p>
+    <p style="font-size:17px;margin-top:10px">Rule 4: the agent shows both views with their dates and answers <span class="mono a">disputed</span>.</p>
+  </div>
+  <div class="box" style="left:980px;top:470px;width:870px;height:260px;border-color:#ff6b6b88" data-t="13">
+    <h3>Nothing documented? Don't guess.</h3>
+    <p style="font-size:18px;line-height:1.55;margin-top:8px;color:var(--ink)">status <span class="mono a">not_documented</span>, no steps (enforced)<br>+ <span class="mono k">open_knowledge_gap(question, entity_ids)</span><br>→ KnowledgeGap, routed to the most frequent author on those entities</p>
+    <p style="font-size:17px;margin-top:10px">The answer key has 7 such questions: saying so is the correct answer.</p>
+  </div>
+  <div class="cap" data-t="0">Access questions use the same time model. Asked as of before the August email, the gate is a <b>padlock with Pekka's key</b>…</div>
+  <div class="cap" data-t="4.5">…asked today for the same visit, it's a <b>code lock</b>. known_at explains why an AI once sent someone with the wrong key.</div>
+  <div class="cap" data-t="9.5">Conflicting advice is kept and labelled <b>disputed</b>, never silently merged.</div>
+  <div class="cap" data-t="14.5">And when nothing is documented, the agent says so and opens a <b>knowledge gap</b> for the right expert.</div>
+</section>
+
+<!-- ============================ S9 WRITES ============================ -->
+<section class="scene" data-dur="22" data-chap="Closing the loop: governed writes">
+  <div class="h1" style="font-size:36px;top:96px" data-t="0">Agents can add evidence, never rewrite truth</div>
+  <div style="position:absolute;left:70px;top:180px;width:1780px;display:grid;grid-template-columns:1fr 1fr;gap:22px">
+    <div class="box" style="position:relative;height:290px;font-size:19px" data-t="0.6"><h3 class="mono k">report_outcome</h3>
+      <div style="font-size:19px;line-height:1.7;margin-top:8px">
+        <div data-t="1.4"><span class="ok">resolved</span> → <span class="mono">SUPPORTS</span>, support_n + 1</div>
+        <div data-t="2.6"><span class="bad">not_resolved</span> + conditions met → <span class="mono">REFUTES</span>, refute_n + 1, review_due</div>
+        <div data-t="3.8"><span class="bad">not_resolved</span> + conditions not met → not counted (the rule didn't apply)</div>
+        <div data-t="5.0"><span class="bad">not_resolved</span> + conditions unknown → not counted, review_due</div>
+        <div class="m" style="font-size:15px;margin-top:4px" data-t="5.6">conditions are re-checked against telemetry at observed_at</div>
+      </div></div>
+    <div class="box" style="position:relative;height:290px" data-t="1.0"><h3>three more writes</h3>
+      <div style="font-size:19px;line-height:1.7;margin-top:8px">
+        <div><span class="mono k">open_knowledge_gap</span> → KnowledgeGap, routed to the top author</div>
+        <div><span class="mono k">propose_assertion</span> → status <span class="mono">unverified</span>, must cite ≥ 1 existing event</div>
+        <div><span class="mono k">flag_assertion</span> → sets review_due for a person</div>
+        <div style="margin-top:14px" class="r">absent on purpose: confirm · retract · delete · edit validity</div>
+        <div class="m">those stay with people</div>
+      </div></div>
+  </div>
+  <div class="code" style="left:70px;top:500px;width:1780px;white-space:normal;font-size:19px;line-height:1.9" data-t="9">
+    every write: <span class="k">agent_id</span> from the bearer token (constant-time compare) · never from the request<br>
+    <span class="k">idempotency_key</span> → <span class="mono">(:WriteReceipt {agent, tool, key})</span>: a replay returns the first result<br>
+    one transaction per write · recorded as an <span class="o">AgentAction</span> event (R1: every write is itself an event)
+  </div>
+  <div class="cap" data-t="0">Agents write back <b>only evidence</b>: outcomes, knowledge gaps, proposals and flags.</div>
+  <div class="cap" data-t="6">A failed fix counts against a rule only if its conditions were met, so wrong usage can't erode good knowledge.</div>
+  <div class="cap" data-t="12">Every write is attributed to the agent's token, idempotent, transactional, and itself an event.</div>
+</section>
+
+<!-- ============================ S10 MAPPING ============================ -->
+<section class="scene" data-dur="24" data-chap="How it answers Elisa's brief">
+  <div class="h1" style="font-size:36px;top:96px" data-t="0">Back to Elisa's brief</div>
+  <table class="t" style="position:absolute;left:70px;top:180px;width:1780px;font-size:21px">
+    <tr><th style="width:470px">Brief asks for</th><th>How kaiku does it</th><th style="width:130px">Status</th></tr>
+    <tr data-t="0.8"><td><b>Capture with minimal work</b>, from the channels experts use <span class="m">(primary)</span></td><td>passive Slack + email capture, one optional card, nothing required</td><td><span class="tag next">NEXT</span></td></tr>
+    <tr data-t="2.0"><td><b>Right entity</b></td><td>ABOUT bindings: observed_on TRN-042 · applies_to TNC-1X / Gen1 · activity SFP swap; resolver for free text</td><td><span class="tag built">BUILT</span></td></tr>
+    <tr data-t="3.2"><td><b>Right time validity</b></td><td>valid_from / valid_to on every state, supersession, as_of + known_at queries, 12 temporal checks</td><td><span class="tag built">BUILT</span></td></tr>
+    <tr data-t="4.4"><td><b>Available to AI agents</b></td><td>one MCP server: 12 tools, rules prompt, resource; our own agent uses nothing else</td><td><span class="tag built">BUILT</span></td></tr>
+    <tr data-t="5.6"><td><b>Right next step before hardware is replaced</b></td><td>conditions checked on telemetry, avoid[] respected, citations enforced in code</td><td><span class="tag built">BUILT</span></td></tr>
+    <tr data-t="6.8"><td><b>Outdated or conflicting advice</b></td><td>SUPERSEDES / CONTRADICTS edges, disputed status, get_history; outcomes as evidence</td><td><span class="tag built">BUILT</span></td></tr>
+  </table>
+  <div style="position:absolute;left:70px;top:700px;width:1780px;font-size:21px;line-height:1.5;color:var(--muted)" data-t="9"><b style="color:var(--ink)">Strong-demo steps:</b> ① captured from chat without a documentation task <span class="a">(next)</span> · ② stored as an assertion linked to TRN-042, older units and SFP replacement, with source and validity <span class="g">(the graph model is built; today it is seeded)</span> · ③ agent proposes the bounce before hardware is touched <span class="g">(built)</span></div>
+  <div class="cap" data-t="0">Mapping back to the brief: linking, time validity, agent access and the right next step work today on the seeded graph.</div>
+  <div class="cap" data-t="10">The primary criterion, <b>zero-effort capture</b>, is the next piece, and the graph, time rules and bot it needs are in place.</div>
+</section>
+
+<!-- ============================ S11 STATUS ============================ -->
+<section class="scene" data-dur="16" data-chap="Status">
+  <div class="h1" style="font-size:36px;top:96px" data-t="0">Where we are</div>
+  <div class="box" style="left:70px;top:180px;width:870px;height:520px;border-color:#3ddc9788" data-t="0.5">
+    <h3><span class="tag built">BUILT</span> and tested</h3>
+    <div style="font-size:21px;line-height:1.95;margin-top:10px">
+      ✔ time rules R1–R10 as pure functions<br>✔ Neo4j schema, migrations, vector indexes<br>✔ seed loader, demo / full profiles, 12 temporal checks<br>✔ Featherless embedder (probe + MRL fallback), chat-model factory<br>✔ ContextService + repository (as-of, known-at, scope, ranking)<br>✔ DuckDB telemetry condition checks<br>✔ MCP server: 12 tools + prompt + resource, stdio too<br>✔ ops agent + enforced guardrails, Slack Q&amp;A bot<br>✔ docker compose stack · ruff · mypy --strict · pytest + Neo4j testcontainers
+    </div></div>
+  <div class="box" style="left:980px;top:180px;width:870px;height:520px;border-color:#f6b44b88" data-t="1.5">
+    <h3><span class="tag next">NEXT</span></h3>
+    <div style="font-size:21px;line-height:1.95;margin-top:10px">
+      ○ Slack + email capture and the extraction graph (gates V1–V6)<br>○ context card, clarifying questions, people confirm / fix / retract<br>○ network simulator: live telemetry, faults and actions (SIM-1)<br>○ outcome verifier: telemetry decides resolved / not_resolved<br>○ eval on held-out threads, deterministic metrics<br>○ live demo: capture in Slack → the next case is answered
+    </div></div>
+  <div style="position:absolute;left:70px;top:745px;width:1780px;text-align:center;font-size:32px" data-t="4">So the autonomous workflow doesn't have to stop and wait for a human.</div>
+  <div class="cap" data-t="0">The context layer, its time model and agent access are <b>built and tested</b>.</div>
+  <div class="cap" data-t="7">Next: zero-effort capture from Slack and email, the live simulator, and the held-out eval.</div>
+</section>
+
+<div id="capbar"></div>
+
+<style>
+.step{position:relative;padding:12px 16px 12px 62px;margin-bottom:10px;border-radius:12px;border:2px solid transparent;background:#111a2e}
+.step b{font-size:20px} .step p{font-size:15px;color:var(--muted);margin-top:4px;line-height:1.35}
+.step .sn{position:absolute;left:14px;top:12px;width:34px;height:34px;border-radius:50%;background:#1d2a48;color:var(--cyan);text-align:center;line-height:34px;font-weight:bold}
+.step.on{border-color:var(--cyan);background:#13223f}
+.flow{position:relative;padding:14px 18px 14px 66px;margin-bottom:14px;border-radius:12px;background:#111a2e;border:2px dashed #f6b44b55}
+.flow b{font-size:21px} .flow p{font-size:16px;color:var(--muted);margin-top:5px;line-height:1.45}
+.flow .fn{position:absolute;left:16px;top:14px;width:34px;height:34px;border-radius:50%;background:#3a2c14;color:var(--amber);text-align:center;line-height:34px;font-weight:bold}
+.nt{fill:#e8edf7;font-size:18px;font-weight:bold;text-anchor:middle;font-family:"DejaVu Sans"}
+.ns{fill:#8e9ab5;font-size:13px;text-anchor:middle;font-family:"DejaVu Sans"}
+.el{fill:#8e9ab5;font-size:13px;font-family:"DejaVu Sans Mono"}
+.el.v{fill:#a78bfa} .el.g{fill:#3ddc97}
+.rq{font-size:18px;line-height:1.5;padding:10px 0;border-top:1px solid var(--line)}
+</style>
+
+<script>
+const $=(s,r=document)=>[...r.querySelectorAll(s)];
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+const ease=p=>{p=clamp(p);return 1-Math.pow(1-p,3)};
+const scenes=$('.scene').map(el=>({el,dur:+el.dataset.dur,chap:el.dataset.chap}));
+let acc=0;scenes.forEach((s,i)=>{s.start=acc;acc+=s.dur;s.i=i});
+const TOTAL=acc; window.TOTAL=TOTAL;
+const capbar=document.getElementById('capbar');
+
+// --- build: sequence arrows
+$('.arrow').forEach(a=>{
+  const x1=+a.dataset.a,x2=+a.dataset.b,y=+a.dataset.y,c=a.dataset.c||'#4cc9f0';
+  a.className='msg'; a.style.top=(y)+'px';
+  if(a.dataset.self){a.style.left=(x1)+'px';a.innerHTML=`<div class="lbl" style="left:16px;color:${c}">↺ ${a.dataset.lbl}</div>`;return}
+  const L=Math.min(x1,x2),R=Math.max(x1,x2);a.style.left=L+'px';a.style.width=(R-L)+'px';
+  const right=x2>x1;
+  a.innerHTML=`<div class="ln" style="left:0;width:${R-L}px;background:${c}"></div><div style="position:absolute;top:24px;${right?'right:-2px':'left:-2px'};width:0;height:0;border-top:7px solid transparent;border-bottom:7px solid transparent;${right?'border-left:12px solid '+c:'border-right:12px solid '+c}"></div><div class="lbl" style="${right?'left:10px':'right:10px'};color:${c==='#4cc9f0'?'#e8edf7':c}">${a.dataset.lbl}</div>`;
+  a.dataset.fx=right?'grow':'growl';
+});
+// --- build: timeline rows
+(function(){
+  const tl=document.getElementById('tl'); if(!tl) return;
+  const t0=Date.parse('2024-01-01T00:00:00Z'), t1=Date.parse('2026-12-01T00:00:00Z');
+  const X0=300,X1=1110; const xOf=d=>X0+(Date.parse(d)-t0)/(t1-t0)*(X1-X0);
+  window.tlX=xOf; window.tlRange=[t0,t1,X0,X1];
+  const ticks=document.getElementById('ticks');
+  ['2024-01-01','2024-07-01','2025-01-01','2025-07-01','2026-01-01','2026-07-01'].forEach(d=>{
+    const x=xOf(d+'T00:00:00Z');ticks.insertAdjacentHTML('beforeend',`<div style="position:absolute;left:${x}px;top:470px;width:1px;height:10px;background:#33415f"></div><div class="mono" style="position:absolute;left:${x-50}px;top:484px;width:100px;text-align:center;font-size:14px;color:#5d6a86">${d.slice(0,7)}</div>`)
+  });
+  $('.tlrow').forEach(r=>{
+    const y=+r.dataset.y, f=r.dataset.from+(r.dataset.from.length===10?'T00:00:00':'')+'Z';
+    const to=r.dataset.to?r.dataset.to+(r.dataset.to.length===10?'T00:00:00':'')+'Z':null;
+    const xa=xOf(f), xb=to?xOf(to):X1+10;
+    r.style.cssText=`position:absolute;left:0;top:${y}px;width:1130px;height:40px`;
+    r.innerHTML=`<div style="position:absolute;left:0;top:2px;width:290px;font-size:15px;line-height:1.3"><span class="mono" style="color:#a78bfa">${r.dataset.id}</span><br><span style="color:#c9d2e6">${r.dataset.txt}</span></div>
+      <div class="bar" style="position:absolute;left:${xa}px;width:${xb-xa}px;top:10px;height:20px;border-radius:5px;background:${r.dataset.c}33;border:2px solid ${r.dataset.c}"></div>
+      ${to?'':`<div style="position:absolute;left:${X1+14}px;top:6px;font-size:20px;color:${r.dataset.c}">∞</div>`}`;
+    r._from=Date.parse(f); r._to=to?Date.parse(to):Infinity;
+  });
+})();
+// --- build: telemetry chart
+(function(){
+  const svg=document.getElementById('chart'); if(!svg) return;
+  const data=[["04:00","UP",2.0605,-4.1],["04:15","UP",2.1733,-4.15],["04:30","UP",2.1313,-3.99],["04:45","UP",2.1766,-3.9],["05:00","DOWN",0.0004,-40],["05:15","UP",0.0006,-3.62],["05:30","UP",0.0005,-3.44],["05:45","UP",0.0004,-3.51],["06:00","UP",0.0004,-3.28],["06:15","UP",1.0129,-3.7],["06:30","UP",2.4565,-3.61],["06:45","UP",2.5701,-3.59],["07:00","UP",2.6476,-3.85],["07:15","UP",2.7182,-3.79],["07:30","UP",2.7389,-4.05],["07:45","UP",2.73,-3.75],["08:00","UP",2.7466,-4.2],["08:15","UP",2.9065,-3.87],["08:30","UP",2.9136,-3.81],["08:45","UP",2.9127,-4.07]];
+  const L=110,R=1260,T=230,B=700; const n=data.length; const bw=(R-L)/n;
+  const xs=i=>L+i*bw, ymax=3.2, yOf=v=>B-(v/ymax)*(B-T);
+  let h='';
+  for(let v=0;v<=3;v++){h+=`<line x1="${L}" x2="${R}" y1="${yOf(v)}" y2="${yOf(v)}" stroke="#1f2a44"/><text x="${L-14}" y="${yOf(v)+5}" text-anchor="end" fill="#5d6a86" font-size="14" font-family="DejaVu Sans Mono">${v}</text>`}
+  h+=`<text x="${L}" y="${T-18}" fill="#8e9ab5" font-size="16">in_octets_mbps · TRN-042 port 1/1/3 · 15-min bins stamped at interval start (UTC)</text>`;
+  // windows
+  const iOf=hh=>data.findIndex(d=>d[0]===hh);
+  h+=`<g data-t="5" data-fx="fade"><rect x="${xs(iOf('05:15'))}" y="${T}" width="${bw*4}" height="${B-T}" fill="#4cc9f014" stroke="#4cc9f066" stroke-dasharray="5 5"/><text x="${xs(iOf('05:15'))+8}" y="${T+44}" fill="#4cc9f0" font-size="14" font-family="DejaVu Sans Mono">counters_zero: 60 min, 4 bins</text></g>`;
+  h+=`<g data-t="4" data-fx="fade"><rect x="${xs(iOf('06:00'))}" y="${T}" width="${bw}" height="${B-T}" fill="#3ddc9722" stroke="#3ddc97"/><text x="${xs(iOf('06:00'))+bw-4}" y="${T-6}" fill="#3ddc97" font-size="13" text-anchor="end" font-family="DejaVu Sans Mono">last complete ▸</text></g>`;
+  h+=`<g data-t="4.5" data-fx="fade"><rect x="${xs(iOf('06:15'))}" y="${T}" width="${bw}" height="${B-T}" fill="#ff6b6b14" stroke="#ff6b6b88" stroke-dasharray="4 4"/><text x="${xs(iOf('06:15'))+4}" y="${T-6}" fill="#ff6b6b" font-size="13" text-anchor="start" font-family="DejaVu Sans Mono">◂ still open</text></g>`;
+  // bars
+  data.forEach((d,i)=>{const v=d[2];const y=yOf(Math.max(v,0.03));const col=d[1]==='DOWN'?'#ff6b6b':(v<0.01?'#f6b44b':'#4cc9f0');
+    h+=`<g data-t="${0.6+i*0.12}" data-fx="fade"><rect x="${xs(i)+5}" y="${y}" width="${bw-10}" height="${B-y}" rx="3" fill="${col}" opacity=".85"/>${i%2===0?`<text x="${xs(i)+bw/2}" y="${B+22}" text-anchor="middle" fill="#5d6a86" font-size="13" font-family="DejaVu Sans Mono">${d[0]}</text>`:''}${d[1]==='DOWN'?`<text x="${xs(i)+bw/2}" y="${B-14}" text-anchor="middle" fill="#ff6b6b" font-size="12" font-family="DejaVu Sans Mono">DOWN</text>`:''}</g>`});
+  // annotations (events)
+  const ev=[["05:00","SFP removed",0],["05:15","LINK_UP",1],["06:23","IF_DISABLED / ENABLED",0]];
+  ev.forEach(([hh,lbl,row],k)=>{const [H,M]=hh.split(':').map(Number);const x=L+((H*60+M-240)/15)*bw;
+    h+=`<g data-t="${2.2+k*0.5}" data-fx="fade"><line x1="${x}" x2="${x}" y1="${T}" y2="${B}" stroke="#ff9f5a" stroke-width="2" stroke-dasharray="3 4"/><text x="${x+6}" y="${T+70+row*22+k*0}" fill="#ff9f5a" font-size="14">${lbl}</text></g>`});
+  // check cursor 06:21:30
+  const xc=L+((6*60+21.5-240)/15)*bw;
+  h+=`<g data-t="7" data-fx="fade"><line x1="${xc}" x2="${xc}" y1="${T+4}" y2="${B+30}" stroke="#e8edf7" stroke-width="2"/><text x="${xc+6}" y="${B+46}" fill="#e8edf7" font-size="14" font-family="DejaVu Sans Mono">check at 06:21:30</text></g>`;
+  h+=`<g data-t="3" data-fx="fade"><text x="${L}" y="${B+80}" fill="#8e9ab5" font-size="15">RX power per bin (dBm): ${data.slice(4,11).map(d=>d[0]+' '+d[3]).join(' · ')}</text></g>`;
+  svg.innerHTML=h;
+})();
+
+// --- prepare animated elements
+const items=$('[data-t]').filter(e=>!e.classList.contains('cap'));
+items.forEach(e=>{
+  const fx=e.dataset.fx||'up';
+  if(fx==='draw'){const L=e.getTotalLength();e._len=L;e.style.strokeDasharray=L;}
+});
+$('[data-along]').forEach(c=>{c._path=document.getElementById(c.dataset.along);c._len=c._path.getTotalLength()});
+// captions per scene
+scenes.forEach(s=>{s.caps=$('.cap',s.el).map(c=>({t:+c.dataset.t,html:c.innerHTML}));$('.cap',s.el).forEach(c=>c.remove());});
+
+function applyItem(e,lt){
+  const t0=+e.dataset.t, d=+(e.dataset.d||0.6), fx=e.dataset.fx||'up';
+  if(e.hasAttribute('data-along')){
+    const raw=(lt-t0)/d; const on=raw>=0&&raw<=1; e.style.opacity=on?1:0;
+    if(on){let p=clamp(raw);p=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2; if(e.dataset.rev)p=1-p; const pt=e._path.getPointAtLength(p*e._len); e.setAttribute('cx',pt.x);e.setAttribute('cy',pt.y);}
+    return;
+  }
+  let p=ease((lt-t0)/d);
+  if(e.dataset.hl!==undefined){const on=lt>=+e.dataset.hl&&lt<+e.dataset.hlend;e.classList.toggle('on',on)}
+  switch(fx){
+    case 'up': e.style.opacity=p; e.style.transform=`translateY(${(1-p)*22}px)`; break;
+    case 'left': e.style.opacity=p; e.style.transform=`translateX(${(1-p)*-40}px)`; break;
+    case 'fade': e.style.opacity=p; break;
+    case 'pop': e.style.opacity=p; e.style.transform=`scale(${0.6+0.4*p})`; break;
+    case 'draw': e.style.opacity=p>0?1:0; e.style.strokeDashoffset=e._len*(1-ease((lt-t0)/(+(e.dataset.d||0.9)))); break;
+    case 'grow': case 'growl': { e.style.opacity=p; const ln=e.querySelector('.ln'); if(ln){ln.style.transformOrigin=fx==='grow'?'left':'right'; ln.style.transform=`scaleX(${p})`;} break; }
+  }
+}
+const hooks={
+  time(lt,el){
+    const c=document.getElementById('cursor'),lbl=document.getElementById('curlbl');
+    const [t0,t1,X0,X1]=window.tlRange; const a=9.5,b=21;
+    const p=clamp((lt-a)/(b-a)); const pe=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;
+    const tt=Date.parse('2024-02-01T00:00:00Z')+pe*(Date.parse('2026-11-07T00:00:00Z')-Date.parse('2024-02-01T00:00:00Z'));
+    c.style.opacity=lt>=9?ease((lt-9)/.5):0; c.style.left=(X0+(tt-t0)/(t1-t0)*(X1-X0))+'px';
+    lbl.textContent='t = '+new Date(tt).toISOString().slice(0,10);
+    $('.tlrow',el).forEach(r=>{const on=lt>=9&&r._from<=tt&&tt<r._to;const bar=r.querySelector('.bar');bar.style.boxShadow=on?`0 0 16px ${r.dataset.c}`:'none';bar.style.filter=on?'brightness(1.6)':'none';r.style.opacity=Math.min(+r.style.opacity||1, lt>=9&&!on?0.45:1)});
+  }
+};
+function seek(t){
+  t=clamp(t,0,TOTAL-1e-6);
+  let cur=null;
+  for(const s of scenes){
+    const lt=t-s.start, on=lt>=0&&lt<s.dur;
+    s.el.style.display=on?'block':'none';
+    if(!on) continue; cur=s;
+    const fi=s.i===0?1:ease(lt/0.45), fo=s.i===scenes.length-1?1:ease((s.dur-lt)/0.45);
+    s.el.style.opacity=Math.min(fi,fo);
+    $('[data-t]',s.el).forEach(e=>applyItem(e,lt));
+    if(s.el.id&&hooks[s.el.id]) hooks[s.el.id](lt,s.el);
+    // captions
+    let idx=-1; s.caps.forEach((c,i)=>{if(lt>=c.t)idx=i});
+    if(idx>=0){
+      const c=s.caps[idx], next=s.caps[idx+1];
+      const tin=ease((lt-c.t)/0.35), tout=next?ease((next.t-lt)/0.3):Math.min(1,ease((s.dur-lt)/0.45));
+      if(capbar._k!==s.i+':'+idx){capbar.innerHTML=`<div class="cap">${c.html}</div>`;capbar._k=s.i+':'+idx}
+      capbar.firstChild.style.opacity=Math.min(tin,tout);
+    } else {capbar.innerHTML='';capbar._k=null}
+  }
+  document.getElementById('chap').textContent=cur?cur.chap:'';
+  document.getElementById('num').textContent=cur?`${String(cur.i+1).padStart(2,'0')}/${scenes.length} · ${fmt(t)} / ${fmt(TOTAL)}`:'';
+  document.getElementById('progi').style.width=(t/TOTAL*100)+'%';
+}
+const fmt=x=>`${Math.floor(x/60)}:${String(Math.floor(x%60)).padStart(2,'0')}`;
+window.seek=seek;
+// live preview when opened in a browser
+if(!/render/.test(location.hash)){let st=performance.now();const q=new URLSearchParams(location.search);const off=+(q.get('t')||0);(function loop(){seek(off+(performance.now()-st)/1000);requestAnimationFrame(loop)})()}
+</script>
+</body></html>
