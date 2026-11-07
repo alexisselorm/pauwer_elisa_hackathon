@@ -63,36 +63,12 @@ export function ScorecardPage() {
           )
         })}
       </div>
-      <div className="grid2">
-        {r.sets.map((s) => (
-          <div key={s.name} className="card sect">
-            <h3>{s.name}</h3>
-            {Object.keys(s.field_accuracy).length > 0 && (
-              <table style={{ marginBottom: 16 }}>
-                <thead>
-                  <tr><th>Check</th><th>Passed</th><th /></tr>
-                </thead>
-                <tbody>
-                  {Object.entries(s.field_accuracy).map(([k, v]) => {
-                    const [p, n] = ratio(v)
-                    return (
-                      <tr key={k}>
-                        <td>{pretty(k)}</td>
-                        <td className="mono">{v}</td>
-                        <td style={{ width: '40%' }}><div className="bar"><i style={{ width: `${n ? (100 * p) / n : 0}%` }} /></div></td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            )}
-            <table>
-              <tbody>
-                {s.items.map((i) => (
-                  <ItemRow key={i.id} item={i} />
-                ))}
-              </tbody>
-            </table>
+      <div className="score-cols">
+        {columns(r.sets).map((col, c) => (
+          <div key={c}>
+            {col.map((s) => (
+              <SetCard key={s.name} s={s} />
+            ))}
           </div>
         ))}
       </div>
@@ -138,5 +114,52 @@ function ItemRow({ item: i }: { item: EvalItem }) {
         <Pill value={i.skipped ? 'skip' : i.passed ? 'pass' : 'fail'} label={i.skipped ? 'skipped' : i.passed ? 'pass' : 'fail'} />
       </td>
     </tr>
+  )
+}
+
+/** Two independent columns, each set going to the shorter one (by rows), so a short card
+ * never leaves a gap under it the height of its taller neighbour. */
+function columns(sets: EvalSet[]): EvalSet[][] {
+  const cols: EvalSet[][] = [[], []]
+  const h = [0, 0]
+  for (const s of sets) {
+    const c = h[0] <= h[1] ? 0 : 1
+    cols[c].push(s)
+    h[c] += 2 + s.items.length + Object.keys(s.field_accuracy).length
+  }
+  return cols
+}
+
+function SetCard({ s }: { s: EvalSet }) {
+  return (
+    <div className="card sect">
+      <h3>{s.name}</h3>
+      {Object.keys(s.field_accuracy).length > 0 && (
+        <table style={{ marginBottom: 16 }}>
+          <thead>
+            <tr><th>Check</th><th>Passed</th><th /></tr>
+          </thead>
+          <tbody>
+            {Object.entries(s.field_accuracy).map(([k, v]) => {
+              const [p, n] = ratio(v)
+              return (
+                <tr key={k}>
+                  <td>{pretty(k)}</td>
+                  <td className="mono">{v}</td>
+                  <td style={{ width: '40%' }}><div className="bar"><i style={{ width: `${n ? (100 * p) / n : 0}%` }} /></div></td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      )}
+      <table>
+        <tbody>
+          {s.items.map((i) => (
+            <ItemRow key={i.id} item={i} />
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }
