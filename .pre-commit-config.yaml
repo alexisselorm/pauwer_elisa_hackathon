@@ -19,3 +19,10 @@ repos:
         language: system
         files: ^backend/.*\.py$
         pass_filenames: false
+      - id: pytest-unit
+        name: pytest (unit)
+        # No Docker and no LLM: the integration (testcontainers) and live tests run in CI.
+        entry: bash -c 'cd backend && uv run --frozen pytest -m "not integration" -q'
+        language: system
+        files: ^backend/.*\.py$
+        pass_filenames: false

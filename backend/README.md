@@ -9,8 +9,12 @@ Plans: [`docs/plans/001`](../docs/plans/001-backend-setup.md), [`002`](../docs/p
 cd backend
 uv sync                      # Python 3.12, deps pinned in uv.lock
 cp .env.example .env         # MCP_TOKENS at least; see the comments in the file
-uv run pre-commit install    # ruff format/check + mypy --strict on commit
+uv run pre-commit install    # ruff format/check, mypy --strict and the unit tests on commit
 ```
+
+`pre-commit install` is required: cloning does not install the hooks, and until it runs
+nothing checks a commit locally. The same checks, plus the Neo4j integration tests and the
+frontend's, run in CI (`.github/workflows/ci.yml`) on every push and pull request.
 
 The whole stack (Neo4j, api, slackbot, sim) runs with `docker compose up --build` from the
 repo root: see the root README. To run the API alone against a local Neo4j:
