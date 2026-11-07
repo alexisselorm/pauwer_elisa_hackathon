@@ -46,6 +46,7 @@ from kaiku.eval.score import (
 from kaiku.extraction.graph import CaptureResult, Extractor
 from kaiku.extraction.llm import LlmJudge
 from kaiku.graph import schema
+from kaiku.graph.checks import CheckResult, run_checks
 from kaiku.graph.driver import create_driver
 from kaiku.graph.repository import ContextRepository
 from kaiku.ingest.backfill import elisa_example
@@ -74,6 +75,8 @@ class EvalReport(BaseModel):
     models: dict[str, str | None] = {}
     graph: str = "extracted-only (gold never loaded)"
     sets: list[SetResult] = []
+    # The temporal checks on the graph the run left behind.
+    temporal: list[CheckResult] = []
     caveat: str = (
         "T0 is Elisa's own example. T2 is hand-written and held out, n = 9 threads / "
         "12 questions; one run, so no variance is reported."
@@ -437,6 +440,7 @@ async def run_eval(
                 report.sets.append(t0)
                 if "heldout" in sets:
                     report.sets += await h.t2(heldout_dir, rule)
+            report.temporal = await run_checks(h.driver, settings.neo4j_database)
         finally:
             await h.driver.close()
     report.finished_at = datetime.now(UTC)
@@ -459,6 +463,11 @@ def to_markdown(report: EvalReport) -> str:
     for s in report.sets:
         acc = ", ".join(f"{k} {v}" for k, v in s.field_accuracy.items()) or "—"
         lines.append(f"| {s.name} | {s.passed}/{s.scored} | {acc} |")
+    if report.temporal:
+        broken = [f"{c.name} ({', '.join(c.examples)})" for c in report.temporal if c.violations]
+        total = sum(c.violations for c in report.temporal)
+        detail = f": {'; '.join(broken)}" if broken else ""
+        lines += ["", f"Temporal checks (`kaiku eval time`): {total} violation(s){detail}"]
     for s in report.sets:
         lines += ["", f"## {s.name}", "", "| Item | Result | Failed checks |", "|---|---|---|"]
         for i in s.items:

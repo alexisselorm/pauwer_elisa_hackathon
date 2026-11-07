@@ -40,6 +40,7 @@ from kaiku.context.models import (
 from kaiku.domain import time as rules
 from kaiku.domain.models import AssertionStatus
 from kaiku.errors import WriteRejectedError
+from kaiku.graph import checks
 from kaiku.graph.cypher import vector
 
 END_OF_TIME: LiteralString = "datetime('9999-12-31T00:00:00Z')"
@@ -1691,6 +1692,8 @@ RETURN a.assertion_id AS id, [x IN [
 async def _check_v5(tx: AsyncManagedTransaction, ids: Sequence[str]) -> None:
     rows = await (await tx.run(_V5, ids=sorted(set(ids)))).data()
     problems = [f"{r['id']}: {p}" for r in rows for p in r["problems"]]
+    # ...and the assertion checks of checks.cypher on the same assertions and their links.
+    problems += await checks.write_violations(tx, ids)
     if problems:
         raise WriteRejectedError("temporal check failed (V5): " + "; ".join(problems))
 

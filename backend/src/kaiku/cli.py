@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -201,17 +202,28 @@ def eval_run(
 
 
 @eval_app.command("time")
-def eval_time() -> None:
-    """The temporal checks (R-rules, V5 port) on the configured graph. Read-only, no LLM."""
+def eval_time(
+    at: Annotated[
+        str | None,
+        typer.Option(help="ISO instant the status checks call now (default: the clock)."),
+    ] = None,
+) -> None:
+    """The temporal checks (graph/checks.cypher: R1-R7 and the verify_temporal rules) on the
+    configured graph. Read-only, no LLM. Exit code 1 on any violation."""
+    from kaiku.domain.time import ensure_utc
     from kaiku.graph.checks import run_checks
     from kaiku.graph.driver import create_driver
 
     settings = get_settings()
+    try:
+        now = None if at is None else ensure_utc(datetime.fromisoformat(at))
+    except ValueError as exc:
+        raise typer.BadParameter(f"--at: {exc}") from exc
 
     async def go() -> int:
         driver = create_driver(settings)
         try:
-            results = await run_checks(driver, settings.neo4j_database)
+            results = await run_checks(driver, settings.neo4j_database, now=now)
         finally:
             await driver.close()
         for r in results:

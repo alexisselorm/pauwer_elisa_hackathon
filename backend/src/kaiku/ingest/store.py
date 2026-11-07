@@ -11,7 +11,7 @@ when it has a message newer than `last_triaged_ts` and is resolved or idle (BE-2
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from datetime import datetime, timedelta
 from typing import Any, LiteralString
 
@@ -19,7 +19,11 @@ from neo4j import AsyncDriver
 from pydantic import BaseModel
 
 from kaiku.domain.models import Platform, UtcDatetime
+from kaiku.graph.checks import CheckResult, run_checks
 from kaiku.graph.repository import py
+from kaiku.logging import get_logger
+
+log = get_logger(__name__)
 
 
 class MessageIn(BaseModel):
@@ -104,7 +108,22 @@ class CaptureStore:
         if not unique:
             return 0
         rows = await self._q(_STORE, rows=[m.model_dump() for m in unique.values()], now=now)
+        await self.check(unique.values())
         return int(rows[0]["n"]) if rows else 0
+
+    async def check(self, messages: Iterable[MessageIn]) -> list[CheckResult]:
+        """The event and thread checks (R1, R7) on these messages and their threads, run
+        after every ingest. An event is a fact from its platform, so a violation is logged
+        for `kaiku eval time` to fail on, not refused."""
+        batch = list(messages)
+        scope = {
+            "event": [m.event_id for m in batch],
+            "thread": [m.thread_id for m in batch],
+        }
+        failed = [r for r in await run_checks(self._driver, self._db, scope=scope) if r.violations]
+        for r in failed:
+            log.warning("temporal_violation", check=r.name, count=r.violations, ids=r.examples)
+        return failed
 
     # --- Channel watermark (ST-08) ------------------------------------------------------
 
