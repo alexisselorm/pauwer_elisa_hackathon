@@ -762,6 +762,8 @@ class ContextRepository:
             if found is not None:
                 return json.loads(found["r"]), True
             result: dict[str, Any] = await work(tx)
+            if result.get("assertion_id"):  # V5 on the assertion this write touched
+                await _check_v5(tx, [result["assertion_id"]])
             action_id = new_id("ACT")
             await tx.run(
                 "CREATE (r:WriteReceipt {key: $key, result: $result, created_at: $now}) "
