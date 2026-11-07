@@ -28,7 +28,7 @@ from zoneinfo import ZoneInfo
 from langchain.agents import create_agent
 from langchain.agents.middleware import AgentMiddleware
 from langchain.agents.structured_output import ToolStrategy
-from langchain_core.messages import AIMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import BaseTool
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from pydantic import BaseModel, Field
@@ -344,6 +344,25 @@ def _from_plain_text(messages: list[Any]) -> OpsAnswer:
     return OpsAnswer(status=AnswerStatus.NEEDS_CLARIFICATION, summary=text)
 
 
+FINISH_NUDGE = (
+    "Return your final answer now: call the OpsAnswer tool with what the tool results above "
+    "show. Do not call any other tool."
+)
+
+
+async def run_to_answer(agent: Any, messages: list[Any], config: dict[str, Any]) -> dict[str, Any]:
+    """Run the agent; if it stops on plain text ("Let me compile the answer:") instead of
+    the OpsAnswer, ask once more for the structured answer, with the whole run as context.
+    A second plain-text ending still falls back to `_from_plain_text`."""
+    result: dict[str, Any] = await agent.ainvoke({"messages": messages}, config=config)
+    if isinstance(result.get("structured_response"), OpsAnswer):
+        return result
+    log.warning("ops_agent_unstructured_ending", nudged=True)
+    history = [*result.get("messages", []), HumanMessage(content=FINISH_NUDGE)]
+    second: dict[str, Any] = await agent.ainvoke({"messages": history}, config=config)
+    return second
+
+
 class ToolErrorsExceeded(RuntimeError):
     """The tools kept failing: the run stops visibly rather than guess (BE-4.3)."""
 
@@ -425,10 +444,7 @@ class OpsAgent:
         )
         content = question if not asker else f"{question}\n\n(asked by {asker})"
         result = await asyncio.wait_for(
-            agent.ainvoke(
-                {"messages": [{"role": "user", "content": content}]},
-                config={"recursion_limit": 30},
-            ),
+            run_to_answer(agent, [HumanMessage(content=content)], config={"recursion_limit": 30}),
             timeout=self._settings.ops_agent_timeout_s,
         )
         answer = result.get("structured_response")

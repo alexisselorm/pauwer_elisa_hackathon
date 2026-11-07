@@ -10,6 +10,7 @@ import pytest
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from kaiku.agents.ops_agent import (
+    FINISH_NUDGE,
     AnswerStatus,
     ConditionReport,
     OpsAnswer,
@@ -18,6 +19,7 @@ from kaiku.agents.ops_agent import (
     _from_plain_text,
     enforce_rules,
     name_successors,
+    run_to_answer,
     seen_assertion_ids,
     seen_records,
 )
@@ -157,6 +159,43 @@ def test_plain_text_ending_becomes_a_clarification() -> None:
     assert out.steps == []
     with pytest.raises(RuntimeError):
         _from_plain_text([HumanMessage(content="q")])
+
+
+class _ScriptedAgent:
+    """Ends on plain text first, then returns `then` (or plain text again)."""
+
+    def __init__(self, then: OpsAnswer | None) -> None:
+        self.then = then
+        self.inputs: list[list[object]] = []
+
+    async def ainvoke(self, state: dict[str, list[object]], config: object) -> dict[str, object]:
+        self.inputs.append(state["messages"])
+        msgs = [*state["messages"], AIMessage(content="Let me compile the answer:")]
+        answer = self.then if len(self.inputs) > 1 else None
+        return {"messages": msgs, "structured_response": answer}
+
+
+async def test_plain_text_ending_is_nudged_once_for_the_structured_answer() -> None:
+    agent = _ScriptedAgent(then=_answer(summary="bounce 1/1/2"))
+    result = await run_to_answer(agent, [HumanMessage(content="q")], config={})
+    assert result["structured_response"].summary == "bounce 1/1/2"
+    assert len(agent.inputs) == 2
+    second = agent.inputs[1]
+    assert isinstance(second[-1], HumanMessage)
+    assert second[-1].content == FINISH_NUDGE
+    assert any(isinstance(m, AIMessage) for m in second)  # the first run is kept as context
+
+
+async def test_a_structured_answer_is_not_nudged() -> None:
+    class Direct:
+        calls = 0
+
+        async def ainvoke(self, state: object, config: object) -> dict[str, object]:
+            Direct.calls += 1
+            return {"messages": [], "structured_response": _answer()}
+
+    await run_to_answer(Direct(), [HumanMessage(content="q")], config={})
+    assert Direct.calls == 1
 
 
 def test_slack_rendering() -> None:
