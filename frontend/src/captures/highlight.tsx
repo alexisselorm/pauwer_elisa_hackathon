@@ -5,13 +5,6 @@ import type { ReactNode } from 'react'
 
 export const CATEGORIES = ['action', 'avoid', 'condition', 'observed', 'entity'] as const
 export type Category = (typeof CATEGORIES)[number]
-export const CATEGORY_LABEL: Record<Category, string> = {
-  action: 'action',
-  avoid: 'avoid',
-  condition: 'condition',
-  observed: 'observed',
-  entity: 'entity',
-}
 
 type Range = { start: number; end: number; cat: Category }
 
@@ -44,7 +37,7 @@ export function highlight(text: string, quotes: Partial<Record<Category, string[
   taken.forEach((r, i) => {
     if (r.start > at) out.push(text.slice(at, r.start))
     out.push(
-      <mark key={i} className={r.cat} title={CATEGORY_LABEL[r.cat]}>
+      <mark key={i} className={r.cat} title={r.cat}>
         {text.slice(r.start, r.end)}
       </mark>,
     )
