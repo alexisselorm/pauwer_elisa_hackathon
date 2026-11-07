@@ -179,6 +179,12 @@ class Meta(BaseModel):
     phoenix_project: str
 
 
+class RunsDeleted(BaseModel):
+    """What DELETE /api/ui/agent-runs[/{run_id}] removed: the MCP calls on record."""
+
+    deleted_calls: int
+
+
 class ResetOut(BaseModel):
     """What POST /api/ui/reset did: the nodes it deleted and what it seeded again."""
 

@@ -193,7 +193,31 @@ export interface paths {
         get: operations["agent_runs_api_ui_agent_runs_get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete Agent Runs
+         * @description Clear the agent-run log. Gaps and outcomes the agents recorded stay.
+         */
+        delete: operations["delete_agent_runs_api_ui_agent_runs_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ui/agent-runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Agent Run
+         * @description Remove one run (as GET /agent-runs groups it) from the log.
+         */
+        delete: operations["delete_agent_run_api_ui_agent_runs__run_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -314,7 +338,10 @@ export interface components {
             status: components["schemas"]["AssertionStatus"];
             /** Origin */
             origin?: string | null;
-            /** Confidence */
+            /**
+             * Confidence
+             * @description once there is evidence: the mean of Beta(1 + support_n, 1 + refute_n)
+             */
             confidence?: string | number | null;
             /**
              * Valid From
@@ -376,6 +403,12 @@ export interface components {
             superseded_by?: string | null;
             /** Supersedes */
             supersedes?: string | null;
+            /**
+             * Network Confirmed On
+             * @description entities where telemetry confirmed that following this advice worked
+             * @default []
+             */
+            network_confirmed_on: string[];
             match?: components["schemas"]["Match"] | null;
             /** Score */
             score?: number | null;
@@ -725,6 +758,18 @@ export interface components {
             agent_id?: string | null;
             /** Conditions Met */
             conditions_met?: boolean | null;
+            /**
+             * Verified
+             * @description the network's telemetry agreed
+             * @default false
+             */
+            verified: boolean;
+            /**
+             * Overridden
+             * @description the network disagreed with the reported result: not counted
+             * @default false
+             */
+            overridden: boolean;
         };
         /** FlagView */
         FlagView: {
@@ -1046,6 +1091,14 @@ export interface components {
             valid_from?: components["schemas"]["StatedTimeOut"] | null;
             /** @description only an explicit end date, else null */
             valid_to?: components["schemas"]["StatedTimeOut"] | null;
+        };
+        /**
+         * RunsDeleted
+         * @description What DELETE /api/ui/agent-runs[/{run_id}] removed: the MCP calls on record.
+         */
+        RunsDeleted: {
+            /** Deleted Calls */
+            deleted_calls: number;
         };
         /**
          * Scope
@@ -1450,6 +1503,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentRun"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_agent_runs_api_ui_agent_runs_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunsDeleted"];
+                };
+            };
+        };
+    };
+    delete_agent_run_api_ui_agent_runs__run_id__delete: {
+        parameters: {
+            query?: {
+                hours?: number;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunsDeleted"];
                 };
             };
             /** @description Validation Error */

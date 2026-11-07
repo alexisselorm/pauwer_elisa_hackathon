@@ -1,6 +1,9 @@
-import { Link, useParams } from 'react-router'
-import type { AgentRun } from '../api/client'
-import { useAgentRuns } from '../api/hooks'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Trash2 } from 'lucide-react'
+import type { MouseEvent } from 'react'
+import { Link, useNavigate, useParams } from 'react-router'
+import { api, unwrap, type AgentRun } from '../api/client'
+import { keys, useAgentRuns } from '../api/hooks'
 import { Empty, ErrorNote, Loading, Pill } from '../components/ui'
 import { pretty } from '../lib/format'
 import { ago, fmt } from '../lib/time'
@@ -23,12 +26,53 @@ export function AgentRunsPage() {
   const q = useAgentRuns()
   const runs = q.data ?? []
   const run = runs.find((r) => r.run_id === runId) ?? runs[0]
+  const navigate = useNavigate()
+  const qc = useQueryClient()
+  const done = () => qc.invalidateQueries({ queryKey: keys.agentRuns })
+  // Removes the MCP calls from the log only: gaps and outcomes the agent recorded stay.
+  const removeOne = useMutation({
+    mutationFn: (id: string) =>
+      unwrap(api.DELETE('/api/ui/agent-runs/{run_id}', { params: { path: { run_id: id } } })),
+    onSuccess: (_, id) => {
+      if (id === run?.run_id) void navigate('/agents')
+    },
+    onSettled: done,
+  })
+  const removeAll = useMutation({
+    mutationFn: () => unwrap(api.DELETE('/api/ui/agent-runs')),
+    onSuccess: () => void navigate('/agents'),
+    onSettled: done,
+  })
+  const trashOne = (e: MouseEvent, id: string) => {
+    e.preventDefault() // the button sits inside the run's link
+    e.stopPropagation()
+    removeOne.mutate(id)
+  }
+  const trashAll = () => {
+    const ok = window.confirm(
+      `Delete all ${runs.length} agent runs from the log?\n\nGaps and outcomes the agents recorded stay.`,
+    )
+    if (ok) removeAll.mutate()
+  }
   return (
     <div className="split">
       <div className="list">
         <div className="list-head">
           <h3>Agent runs</h3>
-          <span className="subtle small">last 72 h</span>
+          <span className="list-head-end">
+            <span className="subtle small">last 72 h</span>
+            {runs.length > 0 && (
+              <button
+                className="icon-btn"
+                onClick={trashAll}
+                disabled={removeAll.isPending}
+                title="Delete all agent runs"
+                aria-label="Delete all agent runs"
+              >
+                <Trash2 size={15} />
+              </button>
+            )}
+          </span>
         </div>
         {q.isPending && <Loading />}
         {q.isError && <ErrorNote error={q.error} />}
@@ -44,7 +88,18 @@ export function AgentRunsPage() {
                 <Pill value={o.value} label={o.label} />
               </div>
               <div className="l2">
-                {r.agent_id} · {ago(r.started_at)} · {r.calls.length} MCP call{r.calls.length > 1 ? 's' : ''}
+                <span>
+                  {r.agent_id} · {ago(r.started_at)} · {r.calls.length} MCP call{r.calls.length > 1 ? 's' : ''}
+                </span>
+                <button
+                  className="li-trash"
+                  onClick={(e) => trashOne(e, r.run_id)}
+                  disabled={removeOne.isPending && removeOne.variables === r.run_id}
+                  title="Delete this run"
+                  aria-label={`Delete run: ${r.title}`}
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
             </Link>
           )

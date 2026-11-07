@@ -35,6 +35,7 @@ from kaiku.ui.models import (
     GraphOut,
     Meta,
     ResetOut,
+    RunsDeleted,
     SourceQuote,
     ThreadMessage,
     ToolCallView,
@@ -255,12 +256,8 @@ def _title(calls: list[ToolCallView]) -> str:
     return calls[0].tool.replace("_", " ")
 
 
-@router.get("/agent-runs")
-async def agent_runs(
-    console: ConsoleDep, hours: Annotated[int, Query(ge=1, le=24 * 30)] = 72
-) -> list[AgentRun]:
-    """MCP tool calls by any agent, grouped into runs: one agent, no pause over 90 s."""
-    calls = await console.queries.tool_calls(datetime.now(UTC) - timedelta(hours=hours))
+def group_runs(calls: list[ToolCallView]) -> list[AgentRun]:
+    """MCP tool calls grouped into runs: one agent, no pause over 90 s. Newest first."""
     runs: list[list[ToolCallView]] = []
     open_run: dict[str, list[ToolCallView]] = {}
     for c in calls:
@@ -283,6 +280,32 @@ async def agent_runs(
         for r in runs
     ]
     return sorted(out, key=lambda r: r.started_at, reverse=True)
+
+
+Hours = Annotated[int, Query(ge=1, le=24 * 30)]
+
+
+@router.get("/agent-runs")
+async def agent_runs(console: ConsoleDep, hours: Hours = 72) -> list[AgentRun]:
+    """MCP tool calls by any agent, grouped into runs: one agent, no pause over 90 s."""
+    return group_runs(await console.queries.tool_calls(datetime.now(UTC) - timedelta(hours=hours)))
+
+
+@router.delete("/agent-runs")
+async def delete_agent_runs(console: ConsoleDep) -> RunsDeleted:
+    """Clear the agent-run log. Gaps and outcomes the agents recorded stay."""
+    return RunsDeleted(deleted_calls=await console.queries.delete_tool_calls())
+
+
+@router.delete("/agent-runs/{run_id}")
+async def delete_agent_run(run_id: str, console: ConsoleDep, hours: Hours = 72) -> RunsDeleted:
+    """Remove one run (as GET /agent-runs groups it) from the log."""
+    calls = await console.queries.tool_calls(datetime.now(UTC) - timedelta(hours=hours))
+    run = next((r for r in group_runs(calls) if r.run_id == run_id), None)
+    if run is None:
+        raise HTTPException(404, f"no agent run {run_id!r}")
+    ids = [c.call_id for c in run.calls]
+    return RunsDeleted(deleted_calls=await console.queries.delete_tool_calls(ids))
 
 
 @router.get("/eval")

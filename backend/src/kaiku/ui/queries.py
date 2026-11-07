@@ -237,6 +237,18 @@ class UiQueries:
 
     # --- Agent runs --------------------------------------------------------------------
 
+    async def delete_tool_calls(self, call_ids: list[str] | None = None) -> int:
+        """Forget MCP calls from the log (all of them with None). What they wrote, a gap or
+        an outcome, is knowledge and stays."""
+        records, _, _ = await self._driver.execute_query(
+            "MATCH (c:ToolCall) WHERE $ids IS NULL OR c.call_id IN $ids "
+            "WITH collect(c) AS calls "
+            "FOREACH (c IN calls | DETACH DELETE c) RETURN size(calls) AS n",
+            {"ids": call_ids},
+            database_=self._db,
+        )
+        return int(records[0]["n"]) if records else 0
+
     async def tool_calls(self, since: datetime, limit: int = 1000) -> list[ToolCallView]:
         rows = await self._read(
             "MATCH (c:ToolCall) WHERE c.at >= $since RETURN c {.*} AS c ORDER BY c.at DESC "

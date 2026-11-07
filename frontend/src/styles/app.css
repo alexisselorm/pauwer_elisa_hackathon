@@ -147,6 +147,14 @@ button.chip:hover { border-color: var(--accent); color: var(--accent); }
 .li .l1 span:first-child { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .li .l2 { font-size: 12px; color: var(--text-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 400; }
 .li.fresh { animation: flash 2.5s; }
+.list-head-end { display: flex; align-items: center; gap: 10px; }
+.li .l2 { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.li .l2 > span { overflow: hidden; text-overflow: ellipsis; }
+.li-trash { flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; margin: -4px -6px -4px 0; border: 0; border-radius: var(--r-double); background: none; color: var(--text-subtle); cursor: pointer; opacity: 0; }
+.li:hover .li-trash, .li.active .li-trash, .li-trash:focus-visible { opacity: 1; }
+.li-trash:hover { background: var(--bad-soft); color: var(--bad); }
+.li-trash:disabled { opacity: .4; cursor: progress; }
+@media (hover: none) { .li-trash { opacity: 1; } }
 @keyframes flash { 0%, 40% { background: var(--accent-soft); } }
 .detail { overflow-y: auto; padding: 24px 32px 48px; }
 .detail-head { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }

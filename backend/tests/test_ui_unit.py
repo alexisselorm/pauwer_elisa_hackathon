@@ -3,7 +3,7 @@ titles, and the MCP wrapper that records tool calls. No Neo4j, no LLM."""
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -19,7 +19,7 @@ from kaiku.extraction.reconcile import Decision
 from kaiku.mcp.server import ServiceHolder, create_mcp_server
 from kaiku.ui import gates
 from kaiku.ui.models import ToolCallView
-from kaiku.ui.router import _title, diff
+from kaiku.ui.router import _title, diff, group_runs
 
 T = datetime(2025, 10, 14, 6, 22, 8, tzinfo=UTC)
 
@@ -277,3 +277,29 @@ async def test_people_only_writes_are_not_mcp_tools() -> None:
     people_only = {"confirm", "retract", "correct", "supersede", "assert", "set", "edit", "delete"}
     assert [n for n in names if n.split("_")[0] in people_only] == []
     assert not [n for n in names if "valid" in n]  # no tool sets validity
+
+
+def test_runs_group_by_agent_and_pause_newest_first() -> None:
+    """The run ids GET /agent-runs shows are the ones DELETE /agent-runs/{id} finds."""
+
+    def call(cid: str, agent: str, secs: int) -> ToolCallView:
+        return ToolCallView(
+            call_id=cid,
+            agent_id=agent,
+            tool="get_context",
+            args={"entity_id": "TRN-017"},
+            ok=True,
+            summary="",
+            ms=1,
+            at=T + timedelta(seconds=secs),
+        )
+
+    calls = [
+        call("a1", "ops-agent", 0),
+        call("b1", "inspector", 10),
+        call("a2", "ops-agent", 60),  # within 90 s of a1: same run
+        call("a3", "ops-agent", 300),  # a pause: a new run
+    ]
+    runs = group_runs(calls)
+    assert [r.run_id for r in runs] == ["a3", "b1", "a1"]
+    assert [c.call_id for c in runs[2].calls] == ["a1", "a2"]
