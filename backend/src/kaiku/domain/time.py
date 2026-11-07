@@ -467,3 +467,9 @@ def in_scope_at(
     if not any(window_contains(e.valid_from, e.valid_to, t) for e in entities):
         return False
     return qualifiers_match(required_qualifiers or {}, snapshot or {})
+
+
+def now_utc() -> datetime:
+    """The wall clock, as an aware UTC instant. For operations (`ingested_at`, backoff,
+    polling), never for a temporal fact: event and validity times come from the source."""
+    return datetime.now(UTC)

@@ -68,6 +68,8 @@ class ThreadView(BaseModel):
     slack_thread_ts: str | None = None
     card_ts: str | None = None
     assertion_ids: list[str] = []
+    # Failed extraction attempts in a row (the capture loop backs off between them).
+    retry_n: int = 0
     messages: list[MessageView] = []
 
     def text(self) -> str:
@@ -151,7 +153,7 @@ class CaptureStore:
         """A ✅/🎉 reaction or the capture shortcut on a message: its thread is resolved and
         counts as active at `at`, so the sweeper triages it again."""
         rows = await self._q(
-            "MATCH (:Message {event_id: $id})-[:IN_THREAD]->(t:Thread) "
+            "MATCH (:Event:Message {event_id: $id})-[:IN_THREAD]->(t:Thread) "
             "SET t.resolved = true, t.forced = coalesce(t.forced, false) OR $forced, "
             "  t.last_message_ts = CASE WHEN $at > t.last_message_ts THEN $at "
             "    ELSE t.last_message_ts END "
@@ -166,7 +168,7 @@ class CaptureStore:
         """A reply in the thread where a knowledge gap was asked is the expert's answer:
         its thread is read now, with no resolution word or ✅ needed."""
         rows = await self._q(
-            "MATCH (m:Message {event_id: $id})-[:IN_THREAD]->(t:Thread) "
+            "MATCH (m:Event:Message {event_id: $id})-[:IN_THREAD]->(t:Thread) "
             "WHERE t.slack_thread_ts IS NOT NULL AND m.platform_seq <> t.slack_thread_ts "
             "AND EXISTS { MATCH (:KnowledgeGap {ask_channel: t.slack_channel, "
             "  ask_ts: t.slack_thread_ts}) } "
@@ -176,14 +178,17 @@ class CaptureStore:
         return bool(rows)
 
     async def due_threads(self, now: datetime, idle: timedelta, limit: int = 50) -> list[str]:
-        """Threads with news since their last triage that are resolved or idle. A thread with
-        no new message is never returned, so a sweep costs no LLM call (ST-09)."""
+        """Threads with news since their last triage that are resolved or idle, oldest news
+        first. A thread with no new message is never returned, so a sweep costs no LLM
+        call (ST-09); one whose last attempt failed waits out its backoff (`retry_after`)."""
         rows = await self._q(
             "MATCH (t:Thread) WHERE t.last_message_ts > coalesce(t.last_triaged_ts, "
             "  datetime('0001-01-01T00:00:00Z')) "
             "AND (t.resolved OR t.last_message_ts <= $cutoff) "
+            "AND (t.retry_after IS NULL OR t.retry_after <= $now) "
             "RETURN t.thread_id AS id ORDER BY t.last_message_ts LIMIT $limit",
             cutoff=now - idle,
+            now=now,
             limit=limit,
         )
         return [r["id"] for r in rows]
@@ -212,7 +217,12 @@ class CaptureStore:
             shown = {**m, "event_id": edit["event_id"], "text": edit["text"]} if edit else m
             messages.append(MessageView.model_validate({**shown, "text": shown.get("text") or ""}))
         return ThreadView.model_validate(
-            {**t, "forced": bool(t.get("forced")), "messages": messages}
+            {
+                **t,
+                "forced": bool(t.get("forced")),
+                "retry_n": int(t.get("retry_n") or 0),
+                "messages": messages,
+            }
         )
 
     async def set_triage(
@@ -223,29 +233,45 @@ class CaptureStore:
         kind: str,
         reason: str,
         seen_up_to: datetime,
-        assertion_ids: Sequence[str] | None = None,
+        add: Sequence[str] = (),
+        remove: Sequence[str] = (),
         capture_json: str | None = None,
-    ) -> None:
+        retry_n: int = 0,
+        retry_after: datetime | None = None,
+    ) -> list[str]:
         """The decision, remembered (BE-2.4). `seen_up_to` is the last message the decision
         read: anything newer re-triages the thread. `capture_json` is the pipeline's full
-        result (steps, gates, decisions), kept for the console (UI-1)."""
-        await self._q(
+        result (steps, gates, decisions), kept for the console (UI-1).
+
+        The thread's assertion ids are merged in the query, not replaced: `remove` are the
+        versions this run corrected, `add` what it produced. A ✏️ Fix saved while the run
+        was going (`replace_assertion`) is therefore kept. `retry_n` and `retry_after`
+        carry the capture loop's backoff; a decision that stands resets them. Returns the
+        thread's assertion ids after the merge."""
+        rows = await self._q(
             "MATCH (t:Thread {thread_id: $id}) "
+            "WITH t, [x IN coalesce(t.assertion_ids, []) WHERE NOT x IN $remove] AS kept "
             "SET t.status = $status, t.triage_kind = $kind, t.triage_reason = $reason, "
             "  t.last_triaged_ts = $seen, "
             # A message (or ✅) that arrived while triage ran keeps the thread due.
             "  t.resolved = CASE WHEN t.last_message_ts > $seen THEN t.resolved ELSE false END, "
             "  t.forced = CASE WHEN t.last_message_ts > $seen THEN t.forced ELSE false END, "
-            "  t.assertion_ids = CASE WHEN $aids IS NULL THEN t.assertion_ids ELSE $aids END, "
-            "  t.capture_json = coalesce($capture, t.capture_json)",
+            "  t.assertion_ids = kept + [x IN $add WHERE NOT x IN kept], "
+            "  t.capture_json = coalesce($capture, t.capture_json), "
+            "  t.retry_n = $retry_n, t.retry_after = $retry_after "
+            "RETURN t.assertion_ids AS ids",
             id=thread_id,
             status=status,
             kind=kind,
             reason=reason or "no reason given",
             seen=seen_up_to,
-            aids=list(assertion_ids) if assertion_ids is not None else None,
+            add=list(dict.fromkeys(add)),
+            remove=list(remove),
             capture=capture_json,
+            retry_n=retry_n,
+            retry_after=retry_after,
         )
+        return [str(x) for x in rows[0]["ids"]] if rows else []
 
     async def set_card(self, thread_id: str, card_ts: str) -> None:
         await self._q(
