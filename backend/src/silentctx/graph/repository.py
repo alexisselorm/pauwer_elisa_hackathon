@@ -149,7 +149,12 @@ def assertion_view(
                 "recorded_at": a.get("recorded_at"),
             }
         )
-    for src in py(record.get("sources") or []):
+    # The message that made it knowledge (recorded_at) is cited first; the rest follow.
+    sources = sorted(
+        py(record.get("sources") or []),
+        key=lambda src: (src.get("event_time") != a.get("recorded_at"), str(src.get("event_time"))),
+    )
+    for src in sources:
         citations.append(
             {
                 "source_type": src.get("platform"),
