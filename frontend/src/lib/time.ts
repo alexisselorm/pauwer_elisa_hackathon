@@ -1,4 +1,4 @@
-import type { GraphNode } from '../api/client'
+import type { GraphNode, Successor } from '../api/client'
 
 // Elisa's time conventions: stored in UTC, shown in Europe/Helsinki.
 const TZ = 'Europe/Helsinki'
@@ -31,14 +31,27 @@ export const ms = (t: string | null | undefined) => (t ? new Date(t).getTime() :
  *  - otherwise its status; superseded/expired knowledge was current before it ended. */
 export type TimeState = 'unknown' | 'future' | 'ended' | 'believed_true' | 'unverified' | 'disputed'
 
+/** Whether a successor was on record at k: recorded by then and not retracted by then. */
+const liveAt = (s: Successor, k: number) => ms(s.recorded_at)! <= k && (ms(s.retracted_at) ?? Infinity) > k
+
+/** The valid_to in force as known at k, mirroring the backend. A stored valid_to applies when
+ *  nothing supersedes the assertion (a stated expiry) or while a successor is live at k. With
+ *  successors but none live at k, the assertion is open-ended again, however its record reads. */
+export function validToAt(a: GraphNode, k: number): number | null {
+  const successors = a.successors ?? []
+  if (successors.length > 0 && !successors.some((s) => liveAt(s, k))) return null
+  return ms(a.valid_to)
+}
+
 export function stateAt(a: GraphNode, t: number, k: number): TimeState {
   const recorded = ms(a.recorded_at) ?? ms(a.valid_from)!
   const retracted = ms(a.retracted_at)
   if (recorded > k || (retracted !== null && retracted <= k)) return 'unknown'
   if (ms(a.valid_from)! > t) return 'future'
-  const vt = ms(a.valid_to)
-  if (vt !== null && vt <= t && vt <= k) return 'ended'
+  const vt = validToAt(a, k)
+  if (vt !== null && vt <= t) return 'ended'
   const s = a.status ?? 'unverified'
+  // Before its successor was recorded (or after that was retracted), it was simply believed.
   if (s === 'superseded' || s === 'expired') return 'believed_true'
   return s as TimeState
 }

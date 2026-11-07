@@ -4,7 +4,11 @@ import type { components, paths } from './schema'
 // Types come from the API's OpenAPI schema: `npm run gen:api` regenerates schema.d.ts.
 export type Schemas = components['schemas']
 export type GraphOut = Schemas['GraphOut']
-export type GraphNode = Schemas['GraphNode']
+/** An assertion that SUPERSEDES another, as the graph lists it on the predecessor. */
+export type Successor = { assertion_id: string; recorded_at: string; retracted_at: string | null }
+// `successors` is added here by hand until schema.d.ts is regenerated from an API that serves
+// it; the intersection is harmless once it is. Missing means "none known".
+export type GraphNode = Schemas['GraphNode'] & { successors?: Successor[] }
 export type GraphEdge = Schemas['GraphEdge']
 export type AssertionDetail = Schemas['AssertionDetail']
 export type AssertionView = Schemas['AssertionView']

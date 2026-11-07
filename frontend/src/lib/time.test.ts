@@ -1,8 +1,116 @@
 import { describe, expect, it } from 'vitest'
-import { ago, fmt, fmtClock, fmtDay, isVisible, ms } from './time'
+import type { GraphNode } from '../api/client'
+import { ago, fmt, fmtClock, fmtDay, isVisible, ms, stateAt, validToAt } from './time'
 
 const H = 3600_000
 const D = 24 * H
+
+const assertion = (over: Partial<GraphNode>): GraphNode => ({
+  id: 'A:1',
+  kind: 'assertion',
+  label: 'statement',
+  status: 'believed_true',
+  support_n: 0,
+  refute_n: 0,
+  review_due: false,
+  alarms: 0,
+  successors: [],
+  ...over,
+})
+
+describe('stateAt', () => {
+  // The Kemi padlock: stated in June, its lock replaced by a code lock recorded on 18 Aug
+  // that applies from 2 Aug 21:00 UTC.
+  const padlock = assertion({
+    id: 'A:padlock',
+    status: 'superseded',
+    valid_from: '2026-06-01T09:00:00Z',
+    valid_to: '2026-08-02T21:00:00Z',
+    recorded_at: '2026-06-01T09:00:00Z',
+    successors: [{ assertion_id: 'A:codelock', recorded_at: '2026-08-18T10:00:00Z', retracted_at: null }],
+  })
+  const codelock = assertion({
+    id: 'A:codelock',
+    status: 'believed_true',
+    valid_from: '2026-08-02T21:00:00Z',
+    recorded_at: '2026-08-18T10:00:00Z',
+  })
+  const aug10 = Date.UTC(2026, 7, 10)
+  const aug20 = Date.UTC(2026, 7, 20)
+
+  it('ignores a supersession that was not yet on record at k', () => {
+    expect(stateAt(padlock, aug10, aug10)).toBe('believed_true')
+    expect(stateAt(codelock, aug10, aug10)).toBe('unknown')
+  })
+
+  it('applies the supersession once its successor is live at k', () => {
+    expect(stateAt(padlock, aug20, aug20)).toBe('ended')
+    expect(stateAt(codelock, aug20, aug20)).toBe('believed_true')
+  })
+
+  it('shows the past as known today: the padlock had ended by 10 Aug', () => {
+    expect(stateAt(padlock, aug10, aug20)).toBe('ended')
+    expect(stateAt(codelock, aug10, aug20)).toBe('believed_true')
+    expect(stateAt(codelock, Date.UTC(2026, 7, 1), aug20)).toBe('future')
+  })
+
+  it('applies a stated expiry with no successor at all', () => {
+    const seasonal = assertion({
+      status: 'expired',
+      valid_from: '2026-01-01T00:00:00Z',
+      valid_to: '2026-03-01T00:00:00Z',
+      recorded_at: '2026-01-01T00:00:00Z',
+    })
+    const feb = Date.UTC(2026, 1, 1)
+    const apr = Date.UTC(2026, 3, 1)
+    expect(stateAt(seasonal, feb, feb)).toBe('believed_true')
+    expect(stateAt(seasonal, apr, feb)).toBe('ended')
+    expect(stateAt(seasonal, apr, apr)).toBe('ended')
+    expect(stateAt({ ...seasonal, successors: undefined }, apr, apr)).toBe('ended')
+  })
+
+  it('reopens the predecessor when its only successor is retracted', () => {
+    const retracted = assertion({
+      ...padlock,
+      successors: [{ assertion_id: 'A:codelock', recorded_at: '2026-08-18T10:00:00Z', retracted_at: '2026-08-25T10:00:00Z' }],
+    })
+    const sep = Date.UTC(2026, 8, 1)
+    expect(stateAt(retracted, aug20, aug20)).toBe('ended')
+    expect(stateAt(retracted, sep, sep)).toBe('believed_true')
+    expect(validToAt(retracted, sep)).toBeNull()
+  })
+
+  it('keeps the supersession while any one successor is live', () => {
+    const twice = assertion({
+      ...padlock,
+      successors: [
+        { assertion_id: 'A:first', recorded_at: '2026-08-05T10:00:00Z', retracted_at: '2026-08-06T10:00:00Z' },
+        { assertion_id: 'A:codelock', recorded_at: '2026-08-18T10:00:00Z', retracted_at: null },
+      ],
+    })
+    expect(stateAt(twice, aug10, aug10)).toBe('believed_true')
+    expect(stateAt(twice, aug20, aug20)).toBe('ended')
+  })
+
+  it('is future before valid_from, and unknown before it was recorded or once retracted', () => {
+    const a = assertion({
+      status: 'unverified',
+      valid_from: '2026-08-02T21:00:00Z',
+      recorded_at: '2026-08-01T00:00:00Z',
+      retracted_at: '2026-09-01T00:00:00Z',
+    })
+    expect(stateAt(a, Date.UTC(2026, 6, 31), Date.UTC(2026, 6, 31))).toBe('unknown')
+    expect(stateAt(a, Date.UTC(2026, 7, 2), Date.UTC(2026, 7, 2))).toBe('future')
+    expect(stateAt(a, aug10, aug10)).toBe('unverified')
+    expect(stateAt(a, aug10, Date.UTC(2026, 8, 1))).toBe('unknown')
+  })
+
+  it('falls back to valid_from when recorded_at is missing', () => {
+    const a = assertion({ status: 'disputed', valid_from: '2026-08-02T21:00:00Z', recorded_at: null })
+    expect(stateAt(a, Date.UTC(2026, 7, 2), Date.UTC(2026, 7, 2))).toBe('unknown')
+    expect(stateAt(a, aug10, aug10)).toBe('disputed')
+  })
+})
 
 describe('fmt', () => {
   it('shows UTC instants in Helsinki time', () => {
