@@ -118,7 +118,10 @@ def ground(draft: RuleDraft, messages: Sequence[MessageView]) -> Grounded | str:
     if is_question(draft.action.quote, action_msg):
         return "V2: the action comes from a question, not an answer"
     conditions = keep(draft.conditions, "condition")
-    said = {a.value for a in draft.avoid}
+    # Only what the model grounded counts as said: an avoid with a paraphrased quote is
+    # dropped below, and must not stop the backstop from adding the rejected suggestion
+    # (T0 lost replace_sfp this way: "another SFP" quoted loosely, then dropped by V1).
+    said = {a.value for a in draft.avoid if locate(a.quote, messages) is not None}
     missed = [r for r in rejected_suggestions(messages) if r.value not in said]
     avoid = keep([*draft.avoid, *missed], "avoid")
     observed = keep(draft.observed, "observed")

@@ -118,6 +118,18 @@ def test_v1_drops_unquoted_fields_but_keeps_the_rule() -> None:
     assert g.dropped == ["avoid:call_vendor (no verbatim quote)"]
 
 
+def test_a_loosely_quoted_avoid_does_not_hide_the_rejected_suggestion() -> None:
+    """ST-04: the model names replace_sfp but paraphrases its quote. V1 drops that copy, and
+    the backstop still adds replace_sfp from "So another SFP?" -> "No."."""
+    avoid = [a for a in ELISA_RULE.avoid if a.value != "replace_sfp"]
+    draft = ELISA_RULE.model_copy(
+        update={"avoid": [*avoid, q("replace_sfp", "another SFP would not help")]}
+    )
+    g = gates.ground(draft, elisa_thread().messages)
+    assert isinstance(g, gates.Grounded)
+    assert "replace_sfp" in {a.value for a in g.draft.avoid}
+
+
 def test_stated_dates_are_resolved_by_code_in_helsinki() -> None:
     """H-02 (future date), H-08 ("from Monday"), and an expiry (R4a)."""
     sent = datetime(2026, 11, 4, 10, 0, tzinfo=UTC)  # a Wednesday

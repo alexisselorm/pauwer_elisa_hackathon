@@ -226,6 +226,8 @@ class Extractor:
         items = []
         for item in state["items"]:
             grounded = gates.ground(item.draft, thread.messages)
+            if not isinstance(grounded, str) and grounded.dropped:
+                log.info("grounding_dropped", thread_id=thread.thread_id, dropped=grounded.dropped)
             if isinstance(grounded, str):
                 items.append(item.model_copy(update={"dropped": grounded}))
                 continue
