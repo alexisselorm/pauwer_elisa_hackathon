@@ -1,8 +1,9 @@
 # kaiku console
 
-A read-only web view of the context layer. People capture and ask in Slack, and agents use
-MCP. The console shows what happened: the live knowledge graph over time, how each thread
-was captured, and every MCP call an agent made. Plan: [`docs/plans/005-console.md`](../docs/plans/005-console.md).
+A web view of the context layer. People capture and ask in Slack, and agents use MCP. The
+console shows what happened: the live knowledge graph over time, how each thread was
+captured, every MCP call an agent made, and the eval scorecard. Its only write is the
+Reset button. Plan: [`docs/plans/005-console.md`](../docs/plans/005-console.md).
 
 | Stack | Why |
 |---|---|
@@ -44,5 +45,7 @@ http://localhost:8080.
 - **Agent runs:** MCP tool calls recorded by the server, grouped per agent. A new run
   starts after 90 s without a call.
 - **Reset** (header): `POST /api/ui/reset` deletes everything captured or recorded since
-  seeding and seeds the network and gold knowledge again. It's the console's only write.
+  seeding and seeds the network and the gold knowledge minus the forwarding-stall rule
+  again (the demo baseline, see the root README). It's the console's only write, and the
+  API accepts it only from localhost origins.
 - **Traces:** "Trace ↗" opens the capture's trace in Arize Phoenix (`PHOENIX_PUBLIC_URL`).

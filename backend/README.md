@@ -24,17 +24,22 @@ docker run -d --name neo4j -p 7687:7687 -e NEO4J_AUTH=neo4j/kaiku-local-dev neo4
 uv run kaiku-api         # http://localhost:8000  (API_RELOAD=true for --reload)
 ```
 
+`API_HOST`, `API_PORT`, `API_RELOAD`, `SIM_HOST` and `SIM_PORT` are settings, so they can
+be set in `.env` like everything else.
+
 | Entry point | What |
 |---|---|
-| `kaiku-api` | FastAPI: health probes and the MCP server at `/mcp` |
-| `kaiku-slackbot` | Bolt app in Socket Mode |
+| `kaiku-api` | FastAPI: health probes, the MCP server at `/mcp`, the console API at `/api/ui/*` |
+| `kaiku-slackbot` | Bolt app in Socket Mode: capture loop, email drop, fault watcher, ops agent |
 | `kaiku-sim` | Network simulator for the live demo |
+| `kaiku` | CLI: `seed`, `backfill`, `replay`, `eval run|rescore|retrieval|time`, `mcp --stdio` |
 
 | Endpoint | What it says |
 |---|---|
 | `GET /healthz` | Liveness. Always 200 while the process is up. |
 | `GET /readyz` | 200 when Neo4j answers and the schema is applied; `degraded` (still 200) when an LLM key is missing; 503 while Neo4j is down (retried in the background with backoff, never a crash-loop) or when `EMBEDDING_DIM` doesn't match the vector indexes (not retried). |
 | `POST /mcp` | MCP over Streamable HTTP. `Authorization: Bearer <token>` from `MCP_TOKENS`; the token identifies the agent. |
+| `/api/ui/*` | The console's API (plan 005): read-only except `POST /api/ui/reset`, which wipes the graph and only accepts requests from localhost origins. |
 | `GET /docs` | OpenAPI UI (not in `ENV=prod`). |
 
 Errors are RFC 9457 `application/problem+json` and carry the `X-Request-ID`
@@ -88,9 +93,11 @@ Writes are idempotent per (agent, tool, `idempotency_key`) and each is recorded 
 
 ## Console API and traces (plan 005)
 
-`/api/ui/*` is read-only and serves the web console (`frontend/`): `graph`, `assertions/{id}`,
+`/api/ui/*` serves the web console (`frontend/`): `graph`, `assertions/{id}`,
 `entities/{id}`, `captures`, `captures/{thread_id}`, `agent-runs`, `eval`, `meta`, and
-`stream` (server-sent events). Each capture's `CaptureResult` (step timings, gates, trace id)
+`stream` (server-sent events). It is read-only except `POST /api/ui/reset`, which wipes the
+graph back to the demo baseline and only accepts requests from localhost origins (the
+console's Reset button). Each capture's `CaptureResult` (step timings, gates, trace id)
 is kept on its `Thread`. Every MCP tool call is kept as a `(:ToolCall)` node. With
 `PHOENIX_COLLECTOR_ENDPOINT` set, the api and the slackbot send OpenTelemetry traces
 (OpenInference LangChain instrumentation) to Arize Phoenix.
@@ -131,24 +138,35 @@ uv run kaiku seed --network --gold --profile full   # + gold answers, for the ev
 uv run kaiku seed --wipe-gold                       # drop gold before scoring extraction
 ```
 
-Loads `DATA_DIR` (mock_data): devices, segments, sites, hardware models and generations,
-as-running snapshots and links (all with validity), plus device events and alarms as
-events (R1). Gold assertions and the access register are eval-only and refused with the
-demo profile. Every run converges on the source: rows are MERGEd, rows that left the source
-are pruned, and a re-run changes nothing. The temporal checks (`graph/checks.py`) run at the
-end; the command exits 1 on any violation. The JSON report goes to stdout, logs to stderr.
+Loads `DATA_DIR` (mock_data): the as-designed layer (planned nodes and links), the
+as-built layer (devices, segments, sites, hardware models and generations), the as-running
+snapshots and links (all with validity), plus device events and alarms as events (R1).
+Gold assertions and the access register are for the eval: with the full profile all of
+them load; with the demo profile (and the console's Reset, which seeds gold this way) they
+load **minus** the forwarding-stall knowledge, so the live capture is still the first time
+that knowledge enters. Every run converges on the source: rows are MERGEd, rows that left
+the source are pruned, and a re-run changes nothing. The temporal checks (`graph/checks.py`)
+run at the end; the command exits 1 on any violation. The JSON report goes to stdout, logs
+to stderr.
 
 The demo profile (`seed/profiles.py`) also defines what the historical backfill must skip:
 every corpus source about the forwarding stall after an SFP swap (plan 001 §3.5).
 
 ```bash
 uv run kaiku backfill                                # Teams, email, documents (demo profile)
-uv run kaiku backfill --profile full --elisa-dir ../Elisa_SinceAI2026/ELISA_HIDDEN_KNOWLEDGE_EXAMPLE_2026
+uv run kaiku backfill --profile full                 # + Elisa's example, for the T1 eval
+uv run kaiku replay --channel '#noc-transport'       # Elisa's 12 messages into Slack, as personas
 ```
+
+`--elisa-dir` (backfill, replay, eval) defaults to `ELISA_DIR`, which compose sets to the
+mounted example folder (`/data/elisa`); on the host it is
+`../Elisa_SinceAI2026/ELISA_HIDDEN_KNOWLEDGE_EXAMPLE_2026`.
 
 The backfill stores historical messages as events with their original times (Elisa's
 example is dated 2025-10-14 Europe/Helsinki, R8). The slackbot's capture loop then triages
-them. A re-run is a no-op.
+them: after a backfill every stored thread is due at once, and the sweeper takes 50 per
+`CAPTURE_SWEEP_SECONDS` with the fast model, so the knowledge appears over 10–20 minutes
+(watch `#context-log` or the console's Captures page). A re-run is a no-op.
 
 Documents come in with both profiles, one event per document: the expert PDF notes
 (`documents/expert_notes/`, at their CreationDate), the Confluence pages
@@ -166,21 +184,36 @@ uv run pytest                        # + Neo4j via testcontainers (Docker, ~1 mi
 uv run pytest -m live -s             # real models from .env: ST-01 latency, ST-03 (~4 min)
 ```
 
+The eval (plan 003 §2) is separate from the tests:
+
+```bash
+uv run kaiku eval run --set elisa|all      # T0 (+ T2 held-out) with the real models on a throwaway Neo4j
+uv run kaiku eval rescore ../eval/results/<start>.json   # score a saved run again, no Neo4j, no LLM
+uv run kaiku eval retrieval                # search_context alone on the gold graph
+uv run kaiku eval time                     # temporal checks on the configured graph
+```
+
+Each run writes `eval/results/<start>.json` and `.md`, which are committed, so the
+console's Scorecard shows them on a fresh clone.
+
 ## Layout
 
 ```
 src/kaiku/
-  main.py config.py logging.py errors.py health.py state.py cli.py
+  main.py config.py logging.py errors.py health.py state.py cli.py tracing.py (Phoenix/OTel)
   domain/       time rules R1-R10 (time.py), shared types (models.py)
   graph/        driver + readiness, schema.py, checks.py, cypher/vector.py, migrations/V*.cypher
-  seed/         mock_data loader, demo/full profiles (kaiku seed)
+  seed/         mock_data loader, demo/full profiles (kaiku seed), reset.py (the console's Reset)
+  context/      ContextService: knowledge in scope at t, ranking, entity resolution (resolve.py)
   llm/          chat-model factory, Featherless embedder
   mcp/          MCP server (auth, tools)
-  slack/        Bolt app (bot.py), fault thread and buttons (actions.py), capture + card (capture.py)
-  ingest/       Message events, threads, trigger, Slack + backfill, capture loop
+  slack/        Bolt app (bot.py), fault thread and buttons (actions.py), capture + card (capture.py), replay.py
+  ingest/       Message events, threads, trigger, Slack + email + backfill, capture loop
   extraction/   triage -> extract -> link -> validate -> reconcile -> persist (graph.py)
+  validation/   outcome verifier (outcomes.py), lifecycle watcher (lifecycle.py)
+  ui/           console API /api/ui/* (router.py, queries.py, gates.py, SSE stream)
   sim/          network simulator (network.py state, app.py endpoints)
-  validation/ agents/ telemetry/ eval/
+  agents/ telemetry/ eval/
 ```
 
 ## Schema migrations

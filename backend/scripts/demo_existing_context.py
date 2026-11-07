@@ -1,11 +1,13 @@
 """Demo chat 1: a thread about knowledge kaiku ALREADY has.
 
 Veikko is about to drive to Kemi and asks whether the gate is still on Pekka's padlock.
-Erkki answers with what the graph already holds from the backfill (demo profile): since
-2026-08-03 the Kemi gate is a code lock, and Heikki Lehtonen gives out the code
-(ASR-0024; the padlock rule ASR-0023 ended when the code lock went in). The thread
-ends with "All good now", so kaiku triages it right away. Expect the card to
-corroborate the existing rule ("+1 source") rather than add a new one.
+Erkki answers with what the graph already holds about the Kemi site: the gate was on
+Pekka's padlock, and since 2026-08-03 it is a code lock that Heikki Lehtonen (site
+security) gives out per visit, recorded by an email of 2026-08-18. That knowledge is in
+the demo baseline: the console's Reset loads it at once, and `kaiku backfill` (demo
+profile) yields it once the capture loop has triaged the Kemi threads. The thread ends
+with "All good now", so kaiku triages it right away. Expect the card to corroborate the
+existing rule ("+1 source") rather than add a new one.
 
 Then ask the bot yourself, as a real user, in the same channel:
     @kaiku How do I get through the gate at the Kemi site?
