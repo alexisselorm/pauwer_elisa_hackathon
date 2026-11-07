@@ -93,7 +93,7 @@ function Detail({ id }: { id: string }) {
             <p style={{ margin: 0 }}>
               <Pill value="info" label={pretty(d.summary.triage_kind ?? 'none')} /> {d.summary.triage_reason}
             </p>
-            {!d.raw && <p className="subtle small" style={{ marginBottom: 0 }}>Captured before step tracing was on: no gate details.</p>}
+            {!d.summary.has_trace && <p className="subtle small" style={{ marginBottom: 0 }}>Captured before step tracing was on: no gate details.</p>}
           </div>
           {d.items.map((item, i) => (
             <Rule key={i} item={item} />
