@@ -676,13 +676,14 @@ async def test_catch_up_lists_private_channels_and_falls_back_without_the_scope(
 
     class Lister:
         def __init__(self, scoped: bool) -> None:
-            self.scoped, self.types = scoped, []
+            self.scoped = scoped
+            self.types: list[str] = []
 
         async def conversations_list(self, **kw: Any) -> dict[str, Any]:
             self.types.append(kw["types"])
             if "private" in kw["types"] and not self.scoped:
                 resp = {"ok": False, "error": "missing_scope"}
-                raise SlackApiError("missing_scope", resp)
+                raise SlackApiError("missing_scope", resp)  # type: ignore[no-untyped-call]
             return {"channels": [{"id": "C1", "is_member": True}, {"id": "G1", "is_member": True}]}
 
     ingest, _ = _ingest()

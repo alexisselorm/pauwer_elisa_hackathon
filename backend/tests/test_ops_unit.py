@@ -294,7 +294,7 @@ async def test_three_tool_errors_in_a_row_fail_the_run() -> None:
 
     def reply(status: str) -> object:
         async def handler(_: object) -> ToolMessage:
-            return ToolMessage("x", tool_call_id="1", status=status)  # type: ignore[arg-type]
+            return ToolMessage("x", tool_call_id="1", status=status)
 
         return handler
 

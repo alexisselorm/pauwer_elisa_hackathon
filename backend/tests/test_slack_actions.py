@@ -74,7 +74,8 @@ class Client:
 
 class Answerer:
     def __init__(self, answer: OpsAnswer | Exception = ADVICE) -> None:
-        self.answer, self.asked = answer, []
+        self.answer = answer
+        self.asked: list[tuple[str, str]] = []
 
     async def ask(
         self,
@@ -177,10 +178,11 @@ async def test_a_new_fault_posts_one_alarm_with_advice_in_its_thread() -> None:
     client, answerer = Client(), Answerer()
     ops = _ops(answerer=answerer)
     ops.network.feed = [{**FAULT[2], "event_id": "OLD"}]  # type: ignore[union-attr]
-    assert await ops.poll_once(client) == 0  # first poll: what already happened isn't re-posted
+    # First poll: what already happened isn't re-posted.
+    assert await ops.poll_once(client) == 0  # type: ignore[arg-type]
     ops.network.feed += FAULT  # type: ignore[union-attr]
-    assert await ops.poll_once(client) == 1
-    assert await ops.poll_once(client) == 0  # once only
+    assert await ops.poll_once(client) == 1  # type: ignore[arg-type]
+    assert await ops.poll_once(client) == 0  # type: ignore[arg-type]  # once only
 
     head, reply = client.posted
     assert head["channel"] == "CALARM"
