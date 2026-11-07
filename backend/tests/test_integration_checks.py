@@ -278,9 +278,16 @@ def test_eval_time_fails_on_a_violation(
 # --- Inside every write (V5) ---------------------------------------------------------------------
 
 
-async def test_a_write_that_breaks_a_rule_rolls_back(driver: AsyncDriver) -> None:
-    """The new assertion would contradict one whose CONTRADICTS link points at itself: the
-    checks see it in the write's own transaction, and nothing is written."""
+_CHK_ITEM = {
+    "statement": "CHK gate: code lock 4321",
+    "bindings": [{"entity_id": "CHK-SEG", "scope": "observed_on"}],
+    "sources": [{"event_id": "chk:src", "quote": "code lock 4321"}],
+}
+
+
+async def _chk_graph(driver: AsyncDriver) -> None:
+    """A segment, a source message, and CHK-SELF: an assertion whose CONTRADICTS link points
+    at itself, committed before any of the writes below."""
     await driver.execute_query(
         "CREATE (:Entity:Segment {entity_id: 'CHK-SEG', valid_from: $t0, chk: true}) "
         "CREATE (:Event:Message {event_id: 'chk:src', event_time: $t0 + duration('PT1H'), "
@@ -290,31 +297,57 @@ async def test_a_write_that_breaks_a_rule_rolls_back(driver: AsyncDriver) -> Non
         "CREATE (x)-[:CONTRADICTS]->(x)",
         t0=T0,
     )
+
+
+async def test_a_violation_already_in_the_graph_does_not_block_a_write(
+    driver: AsyncDriver,
+) -> None:
+    """The new assertion contradicts CHK-SELF, whose self-link was committed earlier. The
+    checks see it inside the write, but the write didn't cause it: it commits, and the old
+    violation is logged (the whole-graph checks still report it)."""
+    await _chk_graph(driver)
     repo = ContextRepository(driver, "neo4j")
-    item = AssertionIn.model_validate(
-        {
-            "statement": "CHK gate: code lock 4321",
-            "bindings": [{"entity_id": "CHK-SEG", "scope": "observed_on"}],
-            "sources": [{"event_id": "chk:src", "quote": "code lock 4321"}],
-            "contradicts": ["CHK-SELF"],
-        }
+    item = AssertionIn.model_validate(_CHK_ITEM | {"contradicts": ["CHK-SELF"]})
+    with capture_logs() as logs:
+        out = await repo.assert_(item)
+    await driver.execute_query(
+        "MATCH (a:ContextAssertion {assertion_id: $id}) SET a.chk = true", id=out.assertion_id
     )
-    with pytest.raises(WriteRejectedError, match="symmetric_link_stored_once"):
-        await repo.assert_(item)
+    assert out.recorded_at == T0 + timedelta(hours=1)
+    kept = [e for e in logs if e["event"] == "v5_preexisting_violations"]
+    assert kept
+    assert any("CONTRADICTS:CHK-SELF/CHK-SELF" in p for p in kept[0]["problems"])
+    found = await _found(driver, scope={"assertion": ["CHK-SELF"]})
+    assert "symmetric_link_stored_once" in found
+
+
+async def test_a_violation_the_write_introduces_rolls_it_back(
+    driver: AsyncDriver, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A check that flags the new assertion itself: it can't be in the committed graph, so the
+    write is rejected and nothing is written. The stub stands in for any check a write can
+    break; the R4b rejections in the write-path tests go through the same comparison."""
+    from kaiku.graph import checks
+
+    async def flags_the_new_assertion(tx: Any, assertion_ids: Any) -> list[str]:
+        rows = await (
+            await tx.run(
+                "MATCH (a:ContextAssertion) WHERE a.assertion_id IN $ids "
+                "AND a.statement STARTS WITH 'CHK gate' RETURN a.assertion_id AS id",
+                ids=list(assertion_ids),
+            )
+        ).data()
+        return [f"stub_check: {r['id']}" for r in rows]
+
+    monkeypatch.setattr(checks, "write_violations", flags_the_new_assertion)
+    await _chk_graph(driver)
+    repo = ContextRepository(driver, "neo4j")
+    with pytest.raises(WriteRejectedError, match="stub_check"):
+        await repo.assert_(AssertionIn.model_validate(_CHK_ITEM))
     records, _, _ = await driver.execute_query(
         "MATCH (a:ContextAssertion {statement: 'CHK gate: code lock 4321'}) RETURN count(a) AS n"
     )
     assert records[0]["n"] == 0
-
-    # Without the broken neighbour the same write goes through and passes the checks.
-    await driver.execute_query(
-        "MATCH (:ContextAssertion {assertion_id: 'CHK-SELF'})-[r:CONTRADICTS]->() DELETE r"
-    )
-    out = await repo.assert_(item.model_copy(update={"contradicts": []}))
-    assert out.recorded_at == T0 + timedelta(hours=1)
-    await driver.execute_query(
-        "MATCH (a:ContextAssertion {assertion_id: $id}) SET a.chk = true", id=out.assertion_id
-    )
 
 
 # --- After every ingest ---------------------------------------------------------------------------

@@ -19,7 +19,7 @@ from collections.abc import Awaitable, Callable, Mapping, Sequence
 from datetime import datetime
 from typing import Any, Literal, LiteralString
 
-from neo4j import AsyncDriver, AsyncManagedTransaction
+from neo4j import READ_ACCESS, AsyncDriver, AsyncManagedTransaction
 from neo4j.exceptions import ConstraintError
 from neo4j.time import DateTime as Neo4jDateTime
 from pydantic import ValidationError
@@ -42,6 +42,7 @@ from kaiku.domain.models import AssertionStatus
 from kaiku.errors import WriteRejectedError
 from kaiku.graph import checks
 from kaiku.graph.cypher import vector
+from kaiku.logging import get_logger
 
 END_OF_TIME: LiteralString = "datetime('9999-12-31T00:00:00Z')"
 
@@ -77,6 +78,9 @@ SCOPE_BY_ENTITY_TYPE = {
     "generation": "applies_to",
     "topic": "activity",
 }
+
+
+log = get_logger(__name__)
 
 
 class NotFoundError(LookupError):
@@ -677,7 +681,7 @@ class ContextRepository:
         async def work(tx: AsyncManagedTransaction) -> AssertionOut:
             out = await _create(tx, item)
             if not out.replayed:
-                await _check_v5(tx, [out.assertion_id, *item.contradicts, *item.corroborates])
+                await self._check_v5(tx, [out.assertion_id, *item.contradicts, *item.corroborates])
             return out
 
         return await self._tx(work)
@@ -717,7 +721,7 @@ class ContextRepository:
                 valid_to=ended.valid_to,
                 status=ended.status.value,
             )
-            await _check_v5(tx, [predecessor_id, out.assertion_id])
+            await self._check_v5(tx, [predecessor_id, out.assertion_id])
             return out
 
         return await self._tx(work)
@@ -796,7 +800,7 @@ class ContextRepository:
                 fixed=out.assertion_id,
                 at=fixed_state.recorded_at,
             )
-            await _check_v5(tx, [wrong_id, out.assertion_id, *preds])
+            await self._check_v5(tx, [wrong_id, out.assertion_id, *preds])
             return await _out(tx, out.assertion_id, replayed=False)
 
         return await self._tx(work)
@@ -855,7 +859,7 @@ class ContextRepository:
                     "RETURN collect(p.assertion_id) AS ids",
                     id=assertion_id,
                 )
-                await _check_v5(tx, [assertion_id, *(reopened or [])])
+                await self._check_v5(tx, [assertion_id, *(reopened or [])])
                 replayed = False
             return await _out(tx, assertion_id, replayed=replayed)
 
@@ -879,7 +883,7 @@ class ContextRepository:
                 )
             except NotFoundError as exc:
                 raise WriteRejectedError(str(exc)) from exc
-            await _check_v5(tx, [assertion_id])
+            await self._check_v5(tx, [assertion_id])
             return counters
 
         return await self._tx(work)
@@ -914,7 +918,7 @@ class ContextRepository:
                 by=by,
                 s=AssertionStatus.BELIEVED_TRUE.value,
             )
-            await _check_v5(tx, [assertion_id])
+            await self._check_v5(tx, [assertion_id])
             return await _out(tx, assertion_id, replayed=False)
 
         return await self._tx(work)
@@ -939,7 +943,7 @@ class ContextRepository:
                 id=assertion_id,
                 scope=row,
             )
-            await _check_v5(tx, [assertion_id])
+            await self._check_v5(tx, [assertion_id])
 
         await self._tx(work)
 
@@ -983,7 +987,7 @@ class ContextRepository:
             )
             if agrees:
                 await _evidence(tx, event_id, assertion_id, "SUPPORTS", True, False)
-            await _check_v5(tx, [assertion_id])
+            await self._check_v5(tx, [assertion_id])
 
         await self._tx(work)
 
@@ -1044,7 +1048,7 @@ class ContextRepository:
                 return json.loads(found["r"]), True
             result: dict[str, Any] = await work(tx)
             if result.get("assertion_id"):  # V5 on the assertion this write touched
-                await _check_v5(tx, [result["assertion_id"]])
+                await self._check_v5(tx, [result["assertion_id"]])
             action_id = new_id("ACT")
             await tx.run(
                 "CREATE (r:WriteReceipt {key: $key, result: $result, created_at: $now}) "
@@ -1247,7 +1251,7 @@ class ContextRepository:
                     await tx.run(
                         _CONFIRMED_BY_NETWORK, aid=aid, entity=o["entity_id"], id=outcome_id
                     )
-                await _check_v5(tx, [aid])
+                await self._check_v5(tx, [aid])
             return _outcome_row(await (await tx.run(_OUTCOME_STATE, id=outcome_id)).single())
 
         return await self._tx(work)
@@ -1509,6 +1513,23 @@ class ContextRepository:
             on_behalf_of=on_behalf_of,
             trigger_event_id=trigger_event_id,
         )
+
+    async def _check_v5(self, tx: AsyncManagedTransaction, ids: Sequence[str]) -> None:
+        """Reject the write when it leaves a V5 violation on the assertions it touched that
+        was not already in the committed graph. A violation that was already there (data
+        written before a check existed, say) is logged and left to the whole-graph checks:
+        refusing every later write near it would stop capture without repairing anything."""
+        problems = await _v5_problems(tx, ids)
+        if not problems:
+            return
+        # The committed graph is the graph before this write: read it outside the transaction.
+        async with self._driver.session(database=self._db, default_access_mode=READ_ACCESS) as s:
+            before = set(await s.execute_read(_v5_problems, list(ids)))
+        new = [p for p in problems if p not in before]
+        if kept := sorted(set(problems) & before):
+            log.warning("v5_preexisting_violations", problems=kept)
+        if new:
+            raise WriteRejectedError("temporal check failed (V5): " + "; ".join(new))
 
 
 def _json_default(value: Any) -> Any:
@@ -1783,13 +1804,14 @@ RETURN a.assertion_id AS id, [x IN [
 """
 
 
-async def _check_v5(tx: AsyncManagedTransaction, ids: Sequence[str]) -> None:
+async def _v5_problems(tx: AsyncManagedTransaction, ids: Sequence[str]) -> list[str]:
+    """V5 on the given assertions, as "id: problem" strings that compare equal between two
+    reads of the same graph."""
     rows = await (await tx.run(_V5, ids=sorted(set(ids)))).data()
     problems = [f"{r['id']}: {p}" for r in rows for p in r["problems"]]
     # ...and the assertion checks of checks.cypher on the same assertions and their links.
     problems += await checks.write_violations(tx, ids)
-    if problems:
-        raise WriteRejectedError("temporal check failed (V5): " + "; ".join(problems))
+    return problems
 
 
 # Confidence (plan 001 §6.2): the mean of Beta(1 + support_n, 1 + refute_n). Set whenever

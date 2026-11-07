@@ -107,6 +107,7 @@ async def run_checks(
 
 async def write_violations(tx: AsyncManagedTransaction, assertion_ids: Sequence[str]) -> list[str]:
     """The assertion checks on the assertions a write touched, inside its transaction (V5).
-    Returns "check: id" per violation; empty when the write may commit."""
-    results = await _run(tx, {"assertion": assertion_ids}, None, limit=20)
+    Returns "check: id" for every violation (uncapped, so two reads compare exactly); empty
+    when the write may commit."""
+    results = await _run(tx, {"assertion": assertion_ids}, None, limit=10_000)
     return [f"{r.name}: {example}" for r in results for example in r.examples]
