@@ -102,7 +102,8 @@ _ASSERTION_FIELDS: LiteralString = """
   [(a)-[:CORROBORATES]-(x:ContextAssertion) | x.assertion_id] AS corroborates,
   head([(x:ContextAssertion)-[:SUPERSEDES]->(a) WHERE x.retracted_at IS NULL | x.assertion_id]
     + [(x:ContextAssertion)-[:SUPERSEDES]->(a) | x.assertion_id]) AS superseded_by,
-  [(x:ContextAssertion)-[:SUPERSEDES]->(a) | x.recorded_at] AS superseded_recorded_at,
+  [(x:ContextAssertion)-[:SUPERSEDES]->(a) | x { .assertion_id, .recorded_at,
+      .retracted_at }] AS successors,
   head([(a)-[:SUPERSEDES]->(x:ContextAssertion) WHERE x.retracted_at IS NULL | x.assertion_id]
     + [(a)-[:SUPERSEDES]->(x:ContextAssertion) | x.assertion_id]) AS supersedes,
   [(a)-[:DERIVED_FROM]->(ev:Event) | ev { .event_id, .event_time, .platform, .author,
@@ -113,13 +114,18 @@ _ASSERTION_FIELDS: LiteralString = """
 # in an entity's scope until a person picks it on the Slack card.
 _CONFIRMED: LiteralString = "NOT coalesce(r.candidate, false)"
 _KNOWN: LiteralString = "a.recorded_at <= $k AND (a.retracted_at IS NULL OR a.retracted_at > $k)"
-# R10: validity as it was known at k. A supersession is recorded when its successor is
-# (R2), so if no successor was on record by k, the predecessor was still open-ended then:
-# "why did the AI dispatch to Kemi on 08-10 with the padlock key?" A corrected successor
-# hands over to its fix at the correction instant, so the earliest one decides.
+# R10: validity as it was known at k. A supersession holds while its successor is live:
+# on record by k (R2) and not retracted by k (R6). With no live successor the predecessor
+# is open-ended at k: before the successor was recorded ("why did the AI dispatch to Kemi
+# on 08-10 with the padlock key?"), and again after the successor is retracted (BE-1.8).
+# A corrected successor hands over to its fix at the same instant, so there is no gap.
+# The stored valid_to stays on record; it is only applied while a successor is live.
+_LIVE_SUCC: LiteralString = (
+    "succ.recorded_at <= $k AND (succ.retracted_at IS NULL OR succ.retracted_at > $k)"
+)
 _VALID_TO_AT_K: LiteralString = (
     "CASE WHEN EXISTS { MATCH (:ContextAssertion)-[:SUPERSEDES]->(a) } AND NOT EXISTS { "
-    "MATCH (succ:ContextAssertion)-[:SUPERSEDES]->(a) WHERE succ.recorded_at <= $k } "
+    "MATCH (succ:ContextAssertion)-[:SUPERSEDES]->(a) WHERE " + _LIVE_SUCC + " } "
     "THEN null ELSE a.valid_to END"
 )
 _VALID: LiteralString = (
@@ -130,16 +136,34 @@ _VALID: LiteralString = (
 def assertion_view(
     record: Mapping[str, Any], match: Match | None = None, known_at: datetime | None = None
 ) -> AssertionView:
-    """One assertion. With `known_at`, as it was on record then (R10): a supersession
-    recorded later is not applied (open-ended, believed true, no successor yet)."""
+    """One assertion, as it was on record at `known_at` (R10; None = as stored now). A
+    supersession applies only while its successor is live: recorded by then and not yet
+    retracted (BE-1.8). Otherwise the assertion is open-ended with its own status."""
     a = py(dict(record["a"]))
     superseded_by = record.get("superseded_by")
-    succ_recorded = min(py(record.get("superseded_recorded_at") or []), default=None)
-    if known_at is not None and succ_recorded is not None and succ_recorded > known_at:
-        a["valid_to"] = None
-        if a.get("status") == "superseded":
-            a["status"] = "believed_true"
-        superseded_by = None
+    successors = py(record.get("successors") or [])
+    if successors:
+        live = sorted(
+            (
+                s
+                for s in successors
+                if (known_at is None or s["recorded_at"] <= known_at)
+                and (
+                    s.get("retracted_at") is None
+                    or (known_at is not None and s["retracted_at"] > known_at)
+                )
+            ),
+            key=lambda s: s["recorded_at"],
+        )
+        if live:
+            superseded_by = live[-1]["assertion_id"]
+            if a.get("status") != "expired":
+                a["status"] = "superseded"
+        else:
+            a["valid_to"] = None
+            if a.get("status") == "superseded":
+                a["status"] = a.get("status_before") or "believed_true"
+            superseded_by = None
     qualifiers = json.loads(a.get("qualifiers_json") or "{}")
     citations = []
     if a.get("source_type") or a.get("source_ref"):
@@ -681,7 +705,9 @@ class ContextRepository:
             await tx.run(
                 "MATCH (p:ContextAssertion {assertion_id: $pred}), "
                 "(s:ContextAssertion {assertion_id: $succ}) "
-                "SET p.valid_to = $valid_to, p.status = $status, p.superseded_by = $succ "
+                "SET p.status_before = CASE WHEN p.status = 'superseded' "
+                "  THEN p.status_before ELSE p.status END, "
+                "  p.valid_to = $valid_to, p.status = $status, p.superseded_by = $succ "
                 "CREATE (s)-[:SUPERSEDES]->(p)",
                 pred=predecessor_id,
                 succ=out.assertion_id,
@@ -736,7 +762,8 @@ class ContextRepository:
                 "CALL (w, f) { MATCH (s:ContextAssertion)-[:SUPERSEDES]->(w) "
                 "  WHERE s.retracted_at IS NULL "
                 "  CREATE (s)-[:SUPERSEDES]->(f) "
-                "  SET f.status = 'superseded', f.superseded_by = s.assertion_id } "
+                "  SET f.status_before = f.status, f.status = 'superseded', "
+                "    f.superseded_by = s.assertion_id } "
                 "CALL (w, f) { MATCH (w)-[:SUPERSEDES]->(p:ContextAssertion) "
                 "  CREATE (f)-[:SUPERSEDES]->(p) SET p.superseded_by = f.assertion_id } "
                 # A fix corrects the wording or scope, not a disagreement with other
@@ -777,7 +804,20 @@ class ContextRepository:
                     id=assertion_id,
                     at=at_utc,
                 )
-                await _check_v5(tx, [assertion_id])
+                # BE-1.8: what it superseded, with no other live successor, is believed
+                # again. Its old valid_to and the SUPERSEDES edge stay on record (R6, R10).
+                reopened = await _single(
+                    tx,
+                    "OPTIONAL MATCH (:ContextAssertion {assertion_id: $id})-[:SUPERSEDES]->"
+                    "(p:ContextAssertion) WHERE p.retracted_at IS NULL AND NOT EXISTS { "
+                    "  MATCH (x:ContextAssertion)-[:SUPERSEDES]->(p) "
+                    "  WHERE x.retracted_at IS NULL } "
+                    "SET p.status = coalesce(p.status_before, 'believed_true'), "
+                    "  p.superseded_by = null "
+                    "RETURN collect(p.assertion_id) AS ids",
+                    id=assertion_id,
+                )
+                await _check_v5(tx, [assertion_id, *(reopened or [])])
                 replayed = False
             return await _out(tx, assertion_id, replayed=replayed)
 

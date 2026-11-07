@@ -196,6 +196,43 @@ async def test_correcting_a_successor_hands_the_supersession_to_the_fix(
         assert bool(found) is in_scope, hours
 
 
+async def test_retracting_a_successor_reopens_its_predecessor(driver: AsyncDriver) -> None:
+    """BE-1.8: 🚫 on the code lock (no correction) means nothing believed now says the lock
+    changed, so the padlock is in scope again. What was believed before stays on record."""
+    repo = ContextRepository(driver, "neo4j")
+    start = T0 + timedelta(days=1)
+    pad = await repo.assert_(_item("padlock, key in the hut", 0))
+    code = await repo.supersede(pad.assertion_id, _item("code lock 1111", 2, valid_from=start))
+    retracted_at = T0 + timedelta(hours=3)
+    await repo.retract(code.assertion_id, retracted_at)
+
+    later = start + timedelta(days=1)
+    # Known after the retraction: open-ended again, with its pre-supersession status.
+    [now] = await repo.assertions([pad.assertion_id], later, T0 + timedelta(hours=4))
+    assert (now.status, now.valid_to, now.superseded_by) == (pad.status, None, None)
+    [stored] = await repo.assertions([pad.assertion_id])
+    assert (stored.status, stored.valid_to, stored.superseded_by) == (pad.status, None, None)
+    # R10: known before the retraction it was superseded by the code lock...
+    assert (
+        await repo.assertions([pad.assertion_id], later, T0 + timedelta(hours=2, minutes=30)) == []
+    )
+    # ...and known before the code lock was recorded it was simply open-ended.
+    assert await repo.assertions([pad.assertion_id], later, T0 + timedelta(hours=1))
+    # R6: nothing deleted. The old boundary and the edge stay on record.
+    rows = await _q(
+        driver,
+        "MATCH (s:ContextAssertion {assertion_id: $s})-[:SUPERSEDES]->"
+        "(p:ContextAssertion {assertion_id: $p}) RETURN p.valid_to AS valid_to",
+        s=code.assertion_id,
+        p=pad.assertion_id,
+    )
+    assert [r["valid_to"].to_native() for r in rows] == [start]
+    # It can be superseded again by a real change.
+    again = await repo.supersede(pad.assertion_id, _item("code lock 2222", 4, valid_from=start))
+    [view] = await repo.assertions([pad.assertion_id])
+    assert (view.status, view.superseded_by) == ("superseded", again.assertion_id)
+
+
 async def test_correcting_a_superseded_version_keeps_it_superseded(driver: AsyncDriver) -> None:
     repo = ContextRepository(driver, "neo4j")
     start = T0 + timedelta(days=1)
