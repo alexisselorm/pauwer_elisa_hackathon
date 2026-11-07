@@ -325,12 +325,11 @@ async def test_reset_returns_to_the_seeded_baseline(
     neo4j_url: str, make_settings: Callable[..., Settings]
 ) -> None:
     """The console's Reset: live captures go, seeded knowledge is restored, cursors stay."""
-    from kaiku.seed.profiles import Profile
-    from kaiku.seed.reset import reset
-    from kaiku.seed.service import SeedRequest, seed
+    from kaiku.seed.reset import DEMO_SEED, reset
+    from kaiku.seed.service import seed
 
     settings = make_settings(neo4j_uri=neo4j_url, neo4j_password=PASSWORD, data_dir=MOCK_DATA)
-    await seed(settings, SeedRequest(network=True, gold=True, profile=Profile.FULL))
+    await seed(settings, DEMO_SEED)  # the demo baseline: gold minus the forwarding stall
     baseline = await _snapshot(neo4j_url)
 
     # What a demo leaves behind: a captured thread and assertion, a changed gold status.

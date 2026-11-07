@@ -260,7 +260,8 @@ async def test_ignored_thread_is_re_triaged_once_when_an_expert_replies(
 
 
 async def test_an_llm_outage_parks_the_thread_and_retries_it(driver: AsyncDriver) -> None:
-    """BE-3.1 off-nominal, ST-60: nothing half-written; the next sweep tries again."""
+    """BE-3.1 off-nominal, ST-60: nothing half-written; once its backoff has passed, the
+    next sweep tries again."""
     rig = Rig(driver, FakeJudge(fail=ExtractionError("timeout")))
     for ev in slack_events()[:9]:
         await rig.handlers.on_message(ev)
@@ -268,7 +269,10 @@ async def test_an_llm_outage_parks_the_thread_and_retries_it(driver: AsyncDriver
     assert r.status == "extraction_failed"
     assert await rig.q("MATCH (a:ContextAssertion) RETURN count(a) AS n") == [{"n": 0}]
     assert (await rig.q("MATCH (t:Thread) RETURN t.status AS s")) == [{"s": "extraction_failed"}]
+    assert await rig.loop.sweep_once() == []  # still backing off
     rig.judge.fail = None
+    later = rig.loop.clock() + timedelta(minutes=2)
+    rig.loop.clock = lambda: later
     (again,) = await rig.loop.sweep_once()
     assert again.status == "captured"
 
