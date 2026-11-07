@@ -18,7 +18,8 @@ Needs Docker with Compose v2.24+.
 1. `cp backend/.env.example backend/.env`, then set:
    - `MCP_TOKENS`: one bearer token per agent, e.g. `{"ops-agent": "<token>", "inspector": "<token>"}`
      (`python -c "import secrets; print(secrets.token_urlsafe(32))"`);
-   - `SLACK_BOT_TOKEN` (`xoxb-…`), `SLACK_APP_TOKEN` (`xapp-…`) and `SLACK_CAPTURE_CHANNELS`
+   - `SLACK_BOT_TOKEN` (`xoxb-…`), `SLACK_APP_TOKEN` (`xapp-…`), `SLACK_CAPTURE_CHANNELS`,
+     `SLACK_ALARM_CHANNEL` and `SLACK_GAP_CHANNEL`
      from the Slack app (SL-0);
    - `ANTHROPIC_API_KEY` and `FEATHERLESS_API_KEY` (without them `/readyz` reports `degraded`).
 2. `docker compose up --build`
@@ -51,6 +52,13 @@ curl -XPOST localhost:8100/sim/action -H 'content-type: application/json' \
 `check_conditions` pulls the simulator's 15-minute samples into the same DuckDB view as the
 history; `GET /sim/live?node=TRN-017&port=1/1/2` is the fine series and `GET /sim/events` the
 event feed. Restarting `sim` resets the network to healthy.
+
+With `SLACK_ALARM_CHANNEL` set (the `#noc-alarms` channel id), the bot posts each fault
+there with the ops agent's advice in the thread: conditions, next step, avoid and sources,
+plus [Run bounce (simulated)] [Done manually ✓] [Didn't work ✗]. A click reports the outcome
+through MCP; Run bounce also checks the live counters first, so the thread ends with
+"network-confirmed on TRN-017 1/1/2 · support 1". When the agent finds nothing documented,
+its answer offers [Ask <expert>], which posts the question in `SLACK_GAP_CHANNEL`.
 
 **Reset:** `docker compose down -v` deletes the graph and the checkpoints.
 

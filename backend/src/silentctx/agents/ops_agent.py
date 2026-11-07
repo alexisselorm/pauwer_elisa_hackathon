@@ -14,6 +14,7 @@ answered, not only asked for in the prompt (plan 001 WS5):
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import re
 from collections.abc import Iterable
@@ -77,6 +78,10 @@ class Source(BaseModel):
     who: str | None = Field(default=None, description="author of the knowledge")
     where: str | None = Field(default=None, description="channel, email, document")
     when: str | None = Field(default=None, description="date it was recorded")
+    link: str | None = Field(
+        default=None,
+        description="the citation's source_ref when it is a URL (a Slack permalink), else null",
+    )
 
 
 class OpsAnswer(BaseModel):
@@ -90,6 +95,9 @@ class OpsAnswer(BaseModel):
     conditions: list[ConditionReport] = []
     sources: list[Source] = []
     gap_id: str | None = Field(default=None, description="set if a knowledge gap was opened")
+    gap_routed_to: str | None = Field(
+        default=None, description="the expert the gap was routed to (from open_knowledge_gap)"
+    )
     review_notes: list[str] = Field(
         default=[], description="caveats: disputed, unverified, stale, unknown conditions"
     )
@@ -128,6 +136,35 @@ def seen_assertion_ids(messages: Iterable[Any]) -> set[str]:
         if m.artifact:
             _collect_ids(m.artifact, ids)
     return ids
+
+
+def opened_gap(messages: Iterable[Any]) -> dict[str, Any] | None:
+    """What open_knowledge_gap actually returned (the model's copy of it isn't trusted)."""
+    for m in messages:
+        if isinstance(m, ToolMessage) and m.name == "open_knowledge_gap" and m.status != "error":
+            found: dict[str, Any] = {}
+            _gap_fields(m.artifact, found)
+            parts = m.content if isinstance(m.content, list) else [m.content]
+            for part in parts:
+                text = part.get("text") if isinstance(part, dict) else part
+                if isinstance(text, str):
+                    with contextlib.suppress(json.JSONDecodeError):
+                        _gap_fields(json.loads(text), found)
+            if found.get("gap_id"):
+                return found
+    return None
+
+
+def _gap_fields(value: Any, out: dict[str, Any]) -> None:
+    if isinstance(value, dict):
+        if isinstance(value.get("gap_id"), str):
+            out.setdefault("gap_id", value["gap_id"])
+            out.setdefault("routed_to", value.get("routed_to"))
+        for v in value.values():
+            _gap_fields(v, out)
+    elif isinstance(value, list):
+        for v in value:
+            _gap_fields(v, out)
 
 
 def enforce_rules(answer: OpsAnswer, seen: set[str]) -> OpsAnswer:
@@ -225,12 +262,28 @@ class OpsAgent:
         answer = result.get("structured_response")
         if not isinstance(answer, OpsAnswer):
             answer = _from_plain_text(result.get("messages", []))
-        checked = enforce_rules(answer, seen_assertion_ids(result.get("messages", [])))
+        messages = result.get("messages", [])
+        checked = enforce_rules(answer, seen_assertion_ids(messages))
+        gap = opened_gap(messages)
+        if gap is not None:
+            checked = checked.model_copy(
+                update={"gap_id": gap["gap_id"], "gap_routed_to": gap.get("routed_to")}
+            )
         log.info(
             "ops_agent_answered",
             status=checked.status,
             steps=len(checked.steps),
             sources=[s.assertion_id for s in checked.sources],
-            tool_calls=sum(1 for m in result.get("messages", []) if isinstance(m, ToolMessage)),
+            tool_calls=sum(1 for m in messages if isinstance(m, ToolMessage)),
         )
         return checked
+
+    async def call_tool(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Call one MCP tool directly, as this agent (the Slack buttons report outcomes this
+        way: through MCP like any agent, never by importing the repository)."""
+        async with self._client.session(SERVER) as session:
+            result = await session.call_tool(name, arguments)
+        text = " ".join(getattr(c, "text", "") for c in result.content).strip()
+        if result.isError:
+            raise RuntimeError(f"{name} failed: {text or 'tool error'}")
+        return dict(result.structuredContent or {})

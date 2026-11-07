@@ -1,6 +1,7 @@
 """`silentctx-slackbot`: the Bolt app in Socket Mode (no public URL needed).
 
-Answers questions with the ops agent (@mention in a channel, or a DM), and logs that channel
+Answers questions with the ops agent (@mention in a channel, or a DM), posts simulator faults
+with the agent's advice and outcome buttons (SL-2, `slack/actions.py`), and logs that channel
 messages arrive (capture is SL-1). The agent reaches the context layer through the API's
 MCP server only, never by importing it (plan 002).
 """
@@ -9,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+from datetime import timedelta
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -19,7 +21,8 @@ from slack_sdk.web.async_client import AsyncWebClient
 from silentctx.agents.ops_agent import OpsAgent, OpsAnswer
 from silentctx.config import Settings, get_settings
 from silentctx.logging import configure_logging, get_logger
-from silentctx.slack.format import format_answer
+from silentctx.slack import actions as ops_actions
+from silentctx.slack.format import format_answer, text_blocks
 
 # Written once connected; the compose healthcheck looks for it.
 READY_FILE = Path("/tmp/silentctx-slackbot.ready")  # noqa: S108  # container-local marker
@@ -75,13 +78,15 @@ class SlackOps:
                 question, request_id=f"slack:{channel}:{event.get('ts')}", asker=f"<@{user}>"
             )
             text = format_answer(result)
+            blocks = ops_actions.answer_blocks(result, question=question)
         except Exception as exc:  # the user always gets a reply
             log.exception("ops_agent_failed", channel=channel, ts=event.get("ts"))
             text = (
                 ":warning: Sorry, I couldn't answer that right now "
                 f"({type(exc).__name__}). Please try again in a minute."
             )
-        await client.chat_update(channel=channel, ts=placeholder["ts"], text=text)
+            blocks = text_blocks(text)
+        await client.chat_update(channel=channel, ts=placeholder["ts"], text=text, blocks=blocks)
 
     async def handle_mention(self, event: dict[str, Any], client: AsyncWebClient) -> None:
         """@silentctx in a channel: answer in the thread of the mention."""
@@ -108,12 +113,27 @@ class SlackOps:
         )
 
 
-def build_app(settings: Settings, answerer: Answerer | None = None) -> AsyncApp:
+def build_actions(settings: Settings, agent: OpsAgent) -> ops_actions.OpsActions:
+    return ops_actions.OpsActions(
+        agent,
+        agent,
+        network=ops_actions.SimNetwork(settings.sim_url) if settings.sim_url else None,
+        alarm_channel=settings.slack_alarm_channel,
+        gap_channel=settings.slack_gap_channel,
+        settle=timedelta(seconds=settings.bounce_settle_s),
+    )
+
+
+def build_app(settings: Settings, answerer: Answerer, actions: ops_actions.OpsActions) -> AsyncApp:
     assert settings.slack_bot_token is not None
     app = AsyncApp(token=settings.slack_bot_token.get_secret_value())
-    ops = SlackOps(answerer or OpsAgent(settings))
+    ops = SlackOps(answerer)
     app.event("app_mention")(ops.handle_mention)
     app.event("message")(ops.handle_message)
+    for action_id in (ops_actions.RUN_BOUNCE, ops_actions.DONE_MANUALLY, ops_actions.DIDNT_WORK):
+        app.action(action_id)(actions.on_outcome)
+    for action_id in (ops_actions.GAP_ASK, ops_actions.GAP_DONT_ASK):
+        app.action(action_id)(actions.on_gap)
     return app
 
 
@@ -135,10 +155,17 @@ async def run(settings: Settings) -> None:
         await asyncio.Event().wait()
         return
 
-    app = build_app(settings)
+    agent = OpsAgent(settings)
+    actions = build_actions(settings, agent)
+    app = build_app(settings, agent, actions)
     identity = await app.client.auth_test()
     handler = AsyncSocketModeHandler(app, settings.slack_app_token.get_secret_value())
     await handler.connect_async()
+    watcher = None
+    if actions.network is not None and actions.alarm_channel:
+        watcher = asyncio.create_task(actions.watch(app.client), name="fault-watch")
+    else:
+        log.info("fault_watch_off", reason="set SIM_URL and SLACK_ALARM_CHANNEL to enable")
     await asyncio.to_thread(_mark_ready, True)
     log.info(
         "slack_connected",
@@ -149,6 +176,8 @@ async def run(settings: Settings) -> None:
     try:
         await asyncio.Event().wait()
     finally:
+        if watcher is not None:
+            watcher.cancel()
         await asyncio.to_thread(_mark_ready, False)
         await handler.close_async()
 

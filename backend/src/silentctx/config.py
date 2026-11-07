@@ -75,6 +75,13 @@ class Settings(BaseSettings):
     slack_bot_token: SecretStr | None = None
     slack_app_token: SecretStr | None = None
     slack_capture_channels: Annotated[list[str], NoDecode] = Field(default_factory=list)
+    # Where simulator faults are posted with the agent's advice (SL-2), e.g. #noc-alarms.
+    # Unset: the bot doesn't watch the simulator.
+    slack_alarm_channel: str | None = None
+    # Where "Ask the expert" posts an undocumented question; unset: the asker's channel.
+    slack_gap_channel: str | None = None
+    # How long after a simulated bounce the network is checked for traffic.
+    bounce_settle_s: float = Field(default=40.0, ge=0)
 
     # --- MCP (required): agent_id -> bearer token, as JSON ------------------------------
     mcp_tokens: dict[str, SecretStr]

@@ -126,7 +126,7 @@ src/silentctx/
   seed/         mock_data loader, demo/full profiles (silentctx seed)
   llm/          chat-model factory, Featherless embedder
   mcp/          MCP server (auth, tools)
-  slack/        Bolt app (bot.py)
+  slack/        Bolt app (bot.py), fault thread and buttons (actions.py)
   sim/          network simulator (network.py state, app.py endpoints)
   ingest/ extraction/ validation/ agents/ telemetry/ eval/
 ```

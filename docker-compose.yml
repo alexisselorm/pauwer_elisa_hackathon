@@ -67,8 +67,11 @@ services:
     environment:
       <<: *backend-env
       MCP_URL: http://api:8000/mcp  # the ops agent uses MCP only, like any other agent
+      SIM_URL: http://sim:8100  # fault events for #noc-alarms, and the simulated bounce
     depends_on:
       api:
+        condition: service_healthy
+      sim:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "test", "-f", "/tmp/silentctx-slackbot.ready"]

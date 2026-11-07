@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from typing import Any
+
 from silentctx.agents.ops_agent import AnswerStatus, OpsAnswer
 
 _CONDITION_ICON = {"met": ":white_check_mark:", "not_met": ":x:", "unknown": ":grey_question:"}
@@ -42,7 +45,12 @@ def format_answer(answer: OpsAnswer) -> str:
             bits = [
                 b for b in (s.who, _pretty(s.where) if s.where else None, (s.when or "")[:10]) if b
             ]
-            lines.append(f"• {s.assertion_id}: {', '.join(bits)}")
+            ref = (
+                f"<{s.link}|{s.assertion_id}>"
+                if (s.link or "").startswith("https://")
+                else s.assertion_id
+            )
+            lines.append(f"• {ref}: {', '.join(bits)}")
     if answer.gap_id:
         lines.append("")
         lines.append(
@@ -53,3 +61,53 @@ def format_answer(answer: OpsAnswer) -> str:
         lines.append("_" + " · ".join(answer.review_notes[:4]) + "_")
     text = "\n".join(lines)
     return text if len(text) <= SLACK_TEXT_LIMIT else text[: SLACK_TEXT_LIMIT - 1] + "…"
+
+
+SECTION_LIMIT = 2900  # a section block's text is capped at 3000 characters
+
+
+def text_blocks(text: str) -> list[dict[str, Any]]:
+    """mrkdwn sections, split on line breaks to stay under the per-block limit."""
+    blocks: list[dict[str, Any]] = []
+    chunk: list[str] = []
+    for line in text.split("\n"):
+        if chunk and len("\n".join([*chunk, line])) > SECTION_LIMIT:
+            blocks.append(_section("\n".join(chunk)))
+            chunk = []
+        chunk.append(line[:SECTION_LIMIT])
+    if chunk:
+        blocks.append(_section("\n".join(chunk)))
+    return blocks
+
+
+def _section(text: str) -> dict[str, Any]:
+    return {"type": "section", "text": {"type": "mrkdwn", "text": text or " "}}
+
+
+def button(
+    text: str, action_id: str, value: dict[str, Any], style: str | None = None
+) -> dict[str, Any]:
+    b: dict[str, Any] = {
+        "type": "button",
+        "text": {"type": "plain_text", "text": text, "emoji": True},
+        "action_id": action_id,
+        "value": json.dumps(value, separators=(",", ":")),
+    }
+    if style:
+        b["style"] = style
+    return b
+
+
+def actions(block_id: str, *buttons: dict[str, Any]) -> dict[str, Any]:
+    return {"type": "actions", "block_id": block_id, "elements": list(buttons)}
+
+
+def context(text: str) -> dict[str, Any]:
+    return {"type": "context", "elements": [{"type": "mrkdwn", "text": text}]}
+
+
+def replace_actions(blocks: list[dict[str, Any]], block_id: str, note: str) -> list[dict[str, Any]]:
+    """The message's blocks with one actions block swapped for a context line, so a
+    button is clicked once and the thread shows what happened."""
+    out = [b for b in blocks if b.get("block_id") != block_id]
+    return [*out, context(note)]

@@ -144,7 +144,12 @@ def test_question_text_strips_mentions() -> None:
     assert bot.question_text(event) == "what about TRN-017?"
 
 
-def test_app_registers_both_handlers(make_settings: Callable[..., Settings]) -> None:
-    app = bot.build_app(make_settings(slack_bot_token="xoxb-test"), answerer=_Answerer())
-    names = {listener.ack_function.__name__ for listener in app._async_listeners}
-    assert names == {"handle_mention", "handle_message"}
+def test_app_registers_events_and_buttons(make_settings: Callable[..., Settings]) -> None:
+    from silentctx.slack.actions import OpsActions
+
+    answerer = _Answerer()
+    actions = OpsActions(answerer, tools=None)  # type: ignore[arg-type]  # never called here
+    app = bot.build_app(make_settings(slack_bot_token="xoxb-test"), answerer, actions)
+    names = [listener.ack_function.__name__ for listener in app._async_listeners]
+    assert sorted(set(names)) == ["handle_mention", "handle_message", "on_gap", "on_outcome"]
+    assert len(names) == 7  # 2 events, 3 outcome buttons, 2 gap buttons

@@ -536,24 +536,20 @@ class _SimClock:
 
 
 @contextlib.contextmanager
-def _sim_server(clock: _SimClock, settings: Settings) -> Iterator[str]:
-    """The simulator as a real HTTP server (the api pulls from it over the network)."""
+def _serve(app: Any) -> Iterator[str]:
+    """An ASGI app as a real HTTP server on a free port, in a thread."""
     import socket
     import threading
 
     import uvicorn
 
-    from silentctx.sim.app import create_app as create_sim_app
-    from silentctx.sim.network import Simulator
-
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
-    app = create_sim_app(Simulator(clock=clock), settings=settings)
     server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_config=None))
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
-    deadline = time.monotonic() + 10
+    deadline = time.monotonic() + 30
     while not server.started and time.monotonic() < deadline:
         time.sleep(0.05)
     try:
@@ -561,6 +557,16 @@ def _sim_server(clock: _SimClock, settings: Settings) -> Iterator[str]:
     finally:
         server.should_exit = True
         thread.join(timeout=10)
+
+
+@contextlib.contextmanager
+def _sim_server(clock: _SimClock, settings: Settings) -> Iterator[str]:
+    """The simulator as a real HTTP server (the api pulls from it over the network)."""
+    from silentctx.sim.app import create_app as create_sim_app
+    from silentctx.sim.network import Simulator
+
+    with _serve(create_sim_app(Simulator(clock=clock), settings=settings)) as url:
+        yield url
 
 
 def test_live_demo_fault_to_network_confirmed_outcome(
@@ -653,3 +659,86 @@ def test_live_demo_fault_to_network_confirmed_outcome(
             )
             history = mcp.call("get_history", assertion_id="ASR-0001")["structuredContent"]
             assert outcome["event_id"] in [e["event_id"] for e in history["evidence"]]
+
+
+def test_slack_run_bounce_button_reports_through_mcp(
+    neo4j_url: str, make_settings: Callable[..., Settings]
+) -> None:
+    """SL-2: [Run bounce (simulated)] on the proactive thread bounces the port in the sim,
+    checks the live counters, and reports the outcome through the real MCP server, as the
+    ops agent, on behalf of the clicking user."""
+    import asyncio
+    from datetime import timedelta
+
+    import httpx
+
+    from silentctx.agents.ops_agent import AnswerStatus, OpsAgent, OpsAnswer, Step
+    from silentctx.seed.profiles import Profile
+    from silentctx.seed.service import SeedRequest, seed
+    from silentctx.slack import actions as a
+
+    base = make_settings(neo4j_uri=neo4j_url, neo4j_password=PASSWORD, data_dir=MOCK_DATA)
+    report = asyncio.run(seed(base, SeedRequest(network=True, gold=True, profile=Profile.FULL)))
+    assert report.violations == 0
+    clock = _SimClock()
+
+    class FastSim(a.SimNetwork):
+        async def bounce(self, node: str, port: str) -> None:
+            await super().bounce(node, port)
+            clock.offset += timedelta(seconds=35)  # past the ~30 s recovery
+
+    with _sim_server(clock, base) as sim_url:
+        api_settings = make_settings(
+            neo4j_uri=neo4j_url, neo4j_password=PASSWORD, data_dir=MOCK_DATA, sim_url=sim_url
+        )
+        with _serve(create_app(api_settings)) as api_url:
+            deadline = time.monotonic() + 60
+            while httpx.get(f"{api_url}/readyz").status_code != 200:
+                assert time.monotonic() < deadline, "api never became ready"
+                time.sleep(0.2)
+            agent = OpsAgent(make_settings(mcp_url=f"{api_url}/mcp"))
+            sim = FastSim(sim_url)
+            ops = a.OpsActions(agent, agent, network=sim, settle=timedelta(0), clock=clock)
+            asyncio.run(
+                sim._request(
+                    "POST",
+                    "/sim/fault",
+                    json={"node": "TRN-017", "port": "1/1/2", "kind": "sfp_swap_stall"},
+                )
+            )
+            advice = OpsAnswer(
+                status=AnswerStatus.ANSWERED,
+                summary="bounce",
+                steps=[Step(action="bounce 1/1/2", assertion_ids=["ASR-0001"])],
+            )
+            fault = {"ne_id": "TRN-017", "port": "1/1/2"}
+            blocks = a.answer_blocks(advice, fault=fault)
+            [button] = [e for e in blocks[-1]["elements"] if e["action_id"] == a.RUN_BOUNCE]
+            body = {
+                "actions": [{"action_id": a.RUN_BOUNCE, "value": button["value"]}],
+                "channel": {"id": "CALARM"},
+                "message": {"ts": "1.000001", "blocks": blocks},
+                "user": {"id": "U5"},
+            }
+
+            class Client:
+                def __init__(self) -> None:
+                    self.updated: list[str] = []
+
+                async def chat_update(self, **kw: Any) -> None:
+                    self.updated.append(kw["text"])
+
+            async def ack() -> None:
+                return None
+
+            client = Client()
+            asyncio.run(ops.on_outcome(ack, body, client))  # type: ignore[arg-type]
+
+    assert "network-confirmed on TRN-017 1/1/2" in client.updated[-1], client.updated
+    rows = _query(
+        neo4j_url,
+        "MATCH (o:Outcome {on_behalf_of: 'U5'})-[r:SUPPORTS]->(:ContextAssertion "
+        "{assertion_id: 'ASR-0001'}) RETURN o.result AS result, o.agent_id AS agent, "
+        "r.conditions_met AS met",
+    )
+    assert rows == [{"result": "resolved", "agent": "ops-agent", "met": True}]
