@@ -99,10 +99,13 @@ class CaptureLoop:
 
     async def run(self) -> None:
         while True:
+            # Cleared before the sweep, not after: a resolution that arrives while a sweep
+            # runs (the fix lands mid-triage) must start the next sweep at once, not wait
+            # `every_s`.
+            self._kick.clear()
             try:
                 await self.sweep_once()
             except Exception:
                 log.exception("sweep_failed")
-            self._kick.clear()
             with contextlib.suppress(TimeoutError):
                 await asyncio.wait_for(self._kick.wait(), self.every_s)

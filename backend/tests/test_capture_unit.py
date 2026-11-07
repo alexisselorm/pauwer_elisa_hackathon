@@ -698,6 +698,35 @@ async def test_the_model_resolves_a_reply_the_word_list_missed() -> None:
     assert Loop.kicks == 2
 
 
+async def test_a_kick_during_a_sweep_starts_the_next_sweep_at_once() -> None:
+    """Live ST-01 miss: message 9's resolution kick landed while message 7's sweep ran and
+    was cleared with it, so the card waited a full sweep period."""
+    import asyncio
+
+    from kaiku.ingest.capture import CaptureLoop
+
+    sweeps: list[int] = []
+    loop: CaptureLoop
+
+    async def sweep_once() -> list[Any]:
+        sweeps.append(len(sweeps) + 1)
+        if len(sweeps) == 1:
+            loop.kick()  # the resolution arrives mid-sweep
+        return []
+
+    loop = CaptureLoop(store=None, extractor=None, every_s=3600)  # type: ignore[arg-type]
+    loop.sweep_once = sweep_once  # type: ignore[method-assign]
+    task = asyncio.create_task(loop.run())
+    try:
+        for _ in range(50):
+            if len(sweeps) >= 2:
+                break
+            await asyncio.sleep(0.01)
+    finally:
+        task.cancel()
+    assert len(sweeps) >= 2
+
+
 def test_a_year_dates_the_equipment_not_the_knowledge() -> None:
     """Live finding: the model passed "installed around 2019" as the rule's start."""
     draft = ELISA_RULE.model_copy(
