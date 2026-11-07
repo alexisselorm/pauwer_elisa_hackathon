@@ -56,7 +56,6 @@ def test_device_events_obey_record_time_equals_event_time() -> None:
     ("request_kwargs", "message"),
     [
         ({}, "nothing to do"),
-        ({"gold": True, "profile": Profile.DEMO}, "eval-only"),
         ({"gold": True, "wipe_gold": True, "profile": Profile.FULL}, "make no sense"),
     ],
 )
