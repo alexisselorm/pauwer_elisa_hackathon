@@ -190,12 +190,11 @@ def main() -> None:
     try:
         settings: Settings | None = get_settings()
     except ValidationError as exc:
-        # Telemetry and the endpoints still work; events just don't reach Neo4j.
-        log.warning("sim_without_neo4j", error=str(exc))
+        # Telemetry and the endpoints still work; events just don't reach Neo4j. The error
+        # is logged by field only: its message can echo a value (a password fragment).
+        log.warning("sim_without_neo4j", fields=[list(e["loc"]) for e in exc.errors()])
         settings = None
-    uvicorn.run(
-        create_app(settings=settings),
-        host=os.environ.get("SIM_HOST", "0.0.0.0"),  # noqa: S104  # served inside the container
-        port=int(os.environ.get("SIM_PORT", "8100")),
-        log_config=None,
-    )
+    # Without full settings (no Neo4j), the listen address still comes from the environment.
+    host = settings.sim_host if settings else os.environ.get("SIM_HOST", "0.0.0.0")  # noqa: S104
+    port = settings.sim_port if settings else int(os.environ.get("SIM_PORT", "8100"))
+    uvicorn.run(create_app(settings=settings), host=host, port=port, log_config=None)

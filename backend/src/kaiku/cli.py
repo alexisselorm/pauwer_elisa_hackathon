@@ -1,13 +1,17 @@
 """Command-line entry points.
 
-- `kaiku-api`: the API (FastAPI + MCP at /mcp) under uvicorn.
-- `kaiku seed ...`: load mock_data into Neo4j (BE-1.4).
+- `kaiku-api`: the API (FastAPI + MCP at /mcp) under uvicorn; `kaiku-slackbot` and
+  `kaiku-sim` are the other two processes (slack/bot.py, sim/app.py).
+- `kaiku mcp`: the MCP server over stdio, for local clients.
+- `kaiku seed`: load mock_data into Neo4j (BE-1.4); `kaiku backfill`: the historical
+  messages and documents as events with their original times.
+- `kaiku replay`: post Elisa's thread into Slack as personas, for the live demo.
+- `kaiku eval run|retrieval|time`: the eval (plan 003) and the temporal checks.
 """
 
 from __future__ import annotations
 
 import asyncio
-import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -24,12 +28,13 @@ app = typer.Typer(help="kaiku: the context layer for agentic network operations.
 
 
 def serve() -> None:
+    settings = get_settings()  # API_HOST / API_PORT / API_RELOAD come from .env too
     uvicorn.run(
         "kaiku.main:create_app",
         factory=True,
-        host=os.environ.get("API_HOST", "0.0.0.0"),  # noqa: S104  # served inside the container
-        port=int(os.environ.get("API_PORT", "8000")),
-        reload=os.environ.get("API_RELOAD", "false").lower() == "true",
+        host=settings.api_host,
+        port=settings.api_port,
+        reload=settings.api_reload,
         log_config=None,  # kaiku.logging owns the handlers
         proxy_headers=True,
     )
@@ -42,15 +47,16 @@ def _main() -> None:
 
 @app.command()
 def mcp(
-    stdio: Annotated[bool, typer.Option("--stdio", help="Serve MCP over stdin/stdout.")] = False,
+    stdio: Annotated[
+        bool, typer.Option("--stdio", help="Serve over stdin/stdout (the default, kept).")
+    ] = True,
     agent_id: Annotated[
         str, typer.Option(help="Who the writes are attributed to (stdio has no token).")
     ] = "local-stdio",
 ) -> None:
     """Run the MCP server over stdio, for local clients (Claude Desktop, MCP Inspector).
     Over HTTP the API serves it at /mcp with bearer tokens."""
-    if not stdio:
-        raise typer.BadParameter("only --stdio is supported here; HTTP is served by the API")
+    del stdio  # accepted for compatibility: stdio is the only transport here
     from kaiku.mcp.stdio import run_stdio
 
     settings = get_settings()
@@ -110,7 +116,7 @@ def backfill(
     ] = None,
     elisa_dir: Annotated[
         Path | None,
-        typer.Option(help="Elisa's example folder (teams_chat.json, email.txt); full only."),
+        typer.Option(help="Elisa's example folder (default: ELISA_DIR); full profile only."),
     ] = None,
 ) -> None:
     """Load historical Teams messages, the Outlook .msg export, the expert PDF notes,
@@ -124,14 +130,14 @@ def backfill(
     settings = get_settings()
     configure_logging(settings.log_level, json=settings.log_json, stream=sys.stderr)
     chosen = profile or (Profile.DEMO if settings.demo_profile else Profile.FULL)
+    # Elisa's example is part of the full backfill only (plan 001 §3.5).
+    elisa = (elisa_dir or settings.elisa_example_dir) if chosen is Profile.FULL else None
 
     async def go() -> str:
         driver = create_driver(settings)
         try:
             store = CaptureStore(driver, settings.neo4j_database)
-            report = await run_backfill(
-                store, MockData(settings.data_dir), chosen, elisa_dir=elisa_dir
-            )
+            report = await run_backfill(store, MockData(settings.data_dir), chosen, elisa_dir=elisa)
             return report.model_dump_json(indent=2)
         finally:
             await driver.close()
@@ -142,9 +148,9 @@ def backfill(
 @app.command()
 def replay(
     channel: Annotated[str, typer.Option(help="Channel id to post into (e.g. #noc-transport).")],
-    elisa_dir: Annotated[Path, typer.Option(help="Elisa's example folder.")] = Path(
-        "../Elisa_SinceAI2026/ELISA_HIDDEN_KNOWLEDGE_EXAMPLE_2026"
-    ),
+    elisa_dir: Annotated[
+        Path | None, typer.Option(help="Elisa's example folder (default: ELISA_DIR).")
+    ] = None,
     speed: Annotated[float, typer.Option(help="How much faster than the original.")] = 30.0,
 ) -> None:
     """Post Elisa's thread into Slack as personas (plan 002 §3.6), for the live demo."""
@@ -156,7 +162,8 @@ def replay(
     if settings.slack_bot_token is None:
         raise typer.BadParameter("SLACK_BOT_TOKEN is not set")
     client = AsyncWebClient(token=settings.slack_bot_token.get_secret_value())
-    for p in asyncio.run(replay_elisa(client, channel, elisa_dir, speed=speed)):
+    folder = elisa_dir or settings.elisa_example_dir
+    for p in asyncio.run(replay_elisa(client, channel, folder, speed=speed)):
         typer.echo(f"{p.seq:>2} {p.ts} {p.author}: {p.text.splitlines()[0][:60]}")
 
 
@@ -169,9 +176,9 @@ def eval_run(
     set_: Annotated[
         str, typer.Option("--set", help="elisa (T0) or all (T0 + T2 held-out).")
     ] = "all",
-    elisa_dir: Annotated[Path, typer.Option(help="Elisa's example folder.")] = Path(
-        "../Elisa_SinceAI2026/ELISA_HIDDEN_KNOWLEDGE_EXAMPLE_2026"
-    ),
+    elisa_dir: Annotated[
+        Path | None, typer.Option(help="Elisa's example folder (default: ELISA_DIR).")
+    ] = None,
     heldout_dir: Annotated[Path, typer.Option(help="The held-out set.")] = Path("../eval/heldout"),
     out_dir: Annotated[Path, typer.Option(help="Where results go.")] = Path("../eval/results"),
     neo4j_uri: Annotated[
@@ -193,7 +200,7 @@ def eval_run(
         run_eval(
             settings,
             sets=sets,
-            elisa_dir=elisa_dir,
+            elisa_dir=elisa_dir or settings.elisa_example_dir,
             heldout_dir=heldout_dir,
             neo4j_uri=neo4j_uri,
             neo4j_password=neo4j_password,

@@ -138,3 +138,32 @@ def test_env_example_has_no_inline_comments() -> None:
     for n, line in enumerate(example.read_text().splitlines(), 1):
         if "=" in line and not line.lstrip().startswith("#"):
             assert " #" not in line.split("=", 1)[1], f".env.example:{n}: {line}"
+
+
+def test_listen_addresses_and_elisa_dir_come_from_the_settings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """API_HOST and friends were read with os.environ by the CLI, so a value in .env was
+    ignored; ELISA_DIR is where compose mounts Elisa's example."""
+    _set_env(monkeypatch, REQUIRED)
+    s = Settings(_env_file=None)
+    assert (s.api_host, s.api_port, s.api_reload) == ("0.0.0.0", 8000, False)  # noqa: S104
+    assert (s.sim_host, s.sim_port) == ("0.0.0.0", 8100)  # noqa: S104
+    assert s.elisa_dir is None
+    assert s.elisa_example_dir == Path("../Elisa_SinceAI2026/ELISA_HIDDEN_KNOWLEDGE_EXAMPLE_2026")
+    assert s.console_url == "http://localhost:8080"
+    assert s.allowed_hosts == []
+    _set_env(
+        monkeypatch,
+        {
+            "API_PORT": "9000",
+            "API_RELOAD": "true",
+            "SIM_PORT": "9100",
+            "ELISA_DIR": "/data/elisa",
+            "ALLOWED_HOSTS": "demo.local, kaiku.lan",
+        },
+    )
+    s = Settings(_env_file=None)
+    assert (s.api_port, s.api_reload, s.sim_port) == (9000, True, 9100)
+    assert s.elisa_example_dir == Path("/data/elisa")
+    assert s.allowed_hosts == ["demo.local", "kaiku.lan"]

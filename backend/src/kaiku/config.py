@@ -13,6 +13,9 @@ from typing import Annotated, Literal
 from pydantic import Field, SecretStr, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
+# Elisa's example, as checked out next to this repo (ELISA_DIR overrides it).
+DEFAULT_ELISA_DIR = Path("../Elisa_SinceAI2026/ELISA_HIDDEN_KNOWLEDGE_EXAMPLE_2026")
+
 # Provider prefix of a `provider:model` string -> the settings field holding its key.
 _PROVIDER_KEY_FIELD: dict[str, str] = {
     "anthropic": "anthropic_api_key",
@@ -35,6 +38,18 @@ class Settings(BaseSettings):
     env: Literal["dev", "test", "prod"] = "dev"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     log_json: bool = True
+    # Where uvicorn listens (`kaiku-api`, `kaiku-sim`). 0.0.0.0 inside the containers; the
+    # compose file publishes them on 127.0.0.1 only.
+    api_host: str = "0.0.0.0"  # noqa: S104
+    api_port: int = Field(default=8000, ge=1, le=65535)
+    api_reload: bool = False
+    sim_host: str = "0.0.0.0"  # noqa: S104
+    sim_port: int = Field(default=8100, ge=1, le=65535)
+    # Hostnames a browser may address the state-changing routes with (POST /api/ui/reset,
+    # the simulator's /sim/fault and /sim/action): the Host header, and the Origin when
+    # one is sent, must be one of these (kaiku.localguard). Extends the built-in list of
+    # localhost, 127.0.0.1, [::1] and the compose service names.
+    allowed_hosts: Annotated[list[str], NoDecode] = Field(default_factory=list)
 
     # --- Neo4j (required) --------------------------------------------------------------
     neo4j_uri: str
@@ -65,6 +80,9 @@ class Settings(BaseSettings):
 
     # --- Data and state ------------------------------------------------------------------
     data_dir: Path = Path("../mock_data")
+    # Elisa's example folder (teams_chat.json, email.txt), for `kaiku replay` and the full
+    # backfill. Unset: the sibling checkout next to the repo.
+    elisa_dir: Path | None = None
     state_dir: Path = Path(".state")
     # True: the demo profile (plan 001 §3.5). False: the full backfill, used for the T1 eval.
     demo_profile: bool = True
@@ -109,6 +127,8 @@ class Settings(BaseSettings):
     phoenix_project_name: str = "kaiku"
     # Where a browser opens Phoenix, for the console's trace links.
     phoenix_public_url: str | None = None
+    # Where a browser opens the web console; the bot's Home tab links to it.
+    console_url: str = "http://localhost:8080"
     # `kaiku eval` output, read by the console's scorecard.
     eval_results_dir: Path = Path("../eval/results")
     # How often the console's live stream checks the graph for changes.
@@ -122,7 +142,7 @@ class Settings(BaseSettings):
             raise ValueError(f"NEO4J_URI must start with one of {', '.join(schemes)}")
         return v
 
-    @field_validator("slack_capture_channels", mode="before")
+    @field_validator("slack_capture_channels", "allowed_hosts", mode="before")
     @classmethod
     def _split_channels(cls, v: object) -> object:
         # Comma-separated in the environment: SLACK_CAPTURE_CHANNELS=C01,C02
@@ -175,6 +195,11 @@ class Settings(BaseSettings):
     @property
     def checkpoint_db(self) -> Path:
         return self.state_dir / "checkpoints.sqlite"
+
+    @property
+    def elisa_example_dir(self) -> Path:
+        """ELISA_DIR, else the sibling checkout next to the repo."""
+        return self.elisa_dir or DEFAULT_ELISA_DIR
 
     def missing_llm_keys(self) -> list[str]:
         """Env var names of keys the configured chat/embedding models need but don't have."""
