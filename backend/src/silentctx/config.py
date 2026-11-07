@@ -68,6 +68,8 @@ class Settings(BaseSettings):
     state_dir: Path = Path(".state")
     # True: the demo profile (plan 001 §3.5). False: the full backfill, used for the T1 eval.
     demo_profile: bool = True
+    # The network simulator (SIM-1); unset means telemetry is history only.
+    sim_url: str | None = None
 
     # --- Slack (optional for the API; required by the slackbot process) ---------------
     slack_bot_token: SecretStr | None = None

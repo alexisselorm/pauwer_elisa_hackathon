@@ -14,15 +14,19 @@ from __future__ import annotations
 import asyncio
 import threading
 from collections.abc import Sequence
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from pathlib import Path
 
+import aiohttp
 import duckdb
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter
 
 from silentctx.domain.models import UtcDatetime
 from silentctx.domain.time import PM_INTERVAL, ensure_utc, last_complete_pm_interval
+from silentctx.logging import get_logger
+
+log = get_logger(__name__)
 
 HISTORY_FILE = Path("telemetry") / "interface_counters_trn_15min.ndjson.gz"
 # "traffic zero" (telemetry spec): oper_status == UP and in_octets_mbps < 0.01 over 60 minutes.
@@ -31,6 +35,8 @@ TRAFFIC_ZERO_WINDOW = timedelta(minutes=60)
 # Normal received optical power for these ports. UP samples sit at -4.6..-3.3 dBm; LOS
 # reads -40 dBm. Anything inside this range counts as "optics fine".
 RX_NORMAL_DBM = (-10.0, 0.0)
+# How far back a refresh asks the simulator; it keeps about a day.
+LIVE_LOOKBACK = timedelta(days=2)
 
 
 class ConditionStatus(StrEnum):
@@ -58,6 +64,8 @@ class Sample(BaseModel):
     oper_status: str
 
 
+_SAMPLES: TypeAdapter[list[Sample]] = TypeAdapter(list[Sample])
+
 # Symptom names used in assertion qualifiers -> how to evaluate them.
 KNOWN_SYMPTOMS = ("oper_up", "rx_power_normal", "counters_zero")
 
@@ -65,7 +73,8 @@ KNOWN_SYMPTOMS = ("oper_up", "rx_power_normal", "counters_zero")
 class TelemetryStore:
     """Thread-safe wrapper around one in-memory DuckDB connection."""
 
-    def __init__(self, data_dir: Path | None) -> None:
+    def __init__(self, data_dir: Path | None, live_url: str | None = None) -> None:
+        self._live_url = live_url.rstrip("/") if live_url else None
         self._lock = threading.Lock()
         self._db = duckdb.connect(":memory:")
         self._db.execute("SET TimeZone = 'UTC'")
@@ -98,9 +107,11 @@ class TelemetryStore:
             ).fetchall()
         return [str(r[0]) for r in rows]
 
-    def add_live(self, samples: Sequence[Sample]) -> None:
-        """For the simulator: append samples at "now"."""
+    def add_live(self, samples: Sequence[Sample], replace: str | None = None) -> None:
+        """Append samples at "now"; with `replace`, that node's live samples go first."""
         with self._lock:
+            if replace is not None:
+                self._db.execute("DELETE FROM live WHERE ne_id = ?", [replace])
             self._db.executemany(
                 "INSERT INTO live VALUES (?, ?, ?, ?, ?, ?, ?)",
                 [
@@ -116,6 +127,33 @@ class TelemetryStore:
                     for s in samples
                 ],
             )
+
+    async def refresh(self, ne_id: str) -> None:
+        """Replace `ne_id`'s live samples with the simulator's current ones (SIM_URL). The
+        simulator being away is not an error: checks then see only history, so `unknown`."""
+        if self._live_url is None:
+            return
+        end = datetime.now(UTC)
+        try:
+            async with (
+                aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as http,
+                http.get(
+                    f"{self._live_url}/sim/samples",
+                    params={
+                        "ne_id": ne_id,
+                        "start": (end - LIVE_LOOKBACK).isoformat(),
+                        "end": end.isoformat(),
+                    },
+                ) as resp,
+            ):
+                resp.raise_for_status()
+                samples = _SAMPLES.validate_python(await resp.json())
+        except (aiohttp.ClientError, TimeoutError, ValueError) as exc:
+            log.warning(
+                "sim_samples_unavailable", ne_id=ne_id, error=f"{type(exc).__name__}: {exc}"
+            )
+            return
+        self.add_live(samples, replace=ne_id)
 
     def window(self, ne_id: str, port: str, start: datetime, end: datetime) -> list[Sample]:
         """Samples whose interval starts in [start, end)."""

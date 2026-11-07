@@ -486,3 +486,36 @@ async def test_mcp_tools_end_to_end(neo4j_url: str, make_settings: Callable[...,
         assert "get_context" in prompt["messages"][0]["content"]["text"]
         resource = mcp.rpc("resources/read", {"uri": "context://entity/TRN-017"})["result"]
         assert "ASR-0001" in resource["contents"][0]["text"]
+
+
+async def test_sim_events_reach_the_event_stream(neo4j_url: str, settings: Settings) -> None:
+    """SIM-1: fault events land as (:Event:Alarm)-[:ON]->(:Device), so get_events sees them;
+    publishing twice writes nothing new."""
+    from silentctx.graph.driver import create_driver
+    from silentctx.sim.app import publish
+    from silentctx.sim.network import Simulator
+
+    _query(neo4j_url, "MERGE (:Entity:Device {entity_id: 'TRN-017'})")
+    sim = Simulator()
+    events = sim.fault_sfp_swap_stall("TRN-017", "1/1/2") + sim.bounce("TRN-017", "1/1/2")
+    driver = create_driver(settings)
+    try:
+        await publish(driver, settings.neo4j_database, events)
+        await publish(driver, settings.neo4j_database, events)
+    finally:
+        await driver.close()
+    rows = _query(
+        neo4j_url,
+        "MATCH (e:Event {origin: 'sim'})-[:ON]->(:Device {entity_id: 'TRN-017'}) "
+        "RETURN e.type AS type, labels(e) AS labels, e.port AS port ORDER BY e.event_time",
+    )
+    assert [r["type"] for r in rows] == [
+        "MODULE_INSERTED",
+        "LINK_UP",
+        "OPTICAL_POWER_OK",
+        "IF_DISABLED",
+        "IF_ENABLED",
+    ]
+    assert "Alarm" in rows[0]["labels"]
+    assert "DeviceEvent" in rows[-1]["labels"]
+    assert {r["port"] for r in rows} == {"1/1/2"}

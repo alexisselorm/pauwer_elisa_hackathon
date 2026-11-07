@@ -72,7 +72,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         bootstrap = asyncio.create_task(graph.bootstrap(), name="neo4j-bootstrap")
         embeddings = EmbeddingState(embedder=FeatherlessEmbedder.from_settings(settings))
         probe = asyncio.create_task(embeddings.run_probe(), name="embedding-probe")
-        telemetry = await asyncio.to_thread(TelemetryStore, settings.data_dir)
+        telemetry = await asyncio.to_thread(TelemetryStore, settings.data_dir, settings.sim_url)
         holder.service = ContextService(
             ContextRepository(driver, settings.neo4j_database),
             telemetry,

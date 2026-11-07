@@ -39,6 +39,19 @@ Everything binds to 127.0.0.1. Neo4j's password defaults to `silentctx-local-dev
 URL `http://localhost:8000/mcp`, header `Authorization: Bearer <your inspector token>`.
 Call `ping` to see which agent you are.
 
+**Inject the demo fault** (simulator, SIM-1; nodes TRN-017 / TRN-019 / TRN-010, ports 1/1/2 and 1/1/3):
+
+```sh
+curl -XPOST localhost:8100/sim/fault -H 'content-type: application/json' \
+  -d '{"node":"TRN-017","port":"1/1/2","kind":"sfp_swap_stall"}'   # started 75 min ago by default
+curl -XPOST localhost:8100/sim/action -H 'content-type: application/json' \
+  -d '{"node":"TRN-017","port":"1/1/2","action":"bounce_interface"}'  # add "outcome":"fail" to refute
+```
+
+`check_conditions` pulls the simulator's 15-minute samples into the same DuckDB view as the
+history; `GET /sim/live?node=TRN-017&port=1/1/2` is the fine series and `GET /sim/events` the
+event feed. Restarting `sim` resets the network to healthy.
+
 **Reset:** `docker compose down -v` deletes the graph and the checkpoints.
 
 ### Time conventions

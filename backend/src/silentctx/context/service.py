@@ -195,6 +195,7 @@ class ContextService:
                 all_met=False,
                 note="this assertion states no checkable conditions",
             )
+        await self.telemetry.refresh(entity_id)
         ports = await self._ports(entity_id)
         chosen = port or (ports[0] if len(ports) == 1 else None)
         note = None

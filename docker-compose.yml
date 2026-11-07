@@ -41,6 +41,9 @@ services:
   api:
     <<: *backend
     command: ["silentctx-api"]
+    environment:
+      <<: *backend-env
+      SIM_URL: http://sim:8100  # live telemetry at "now" for check_conditions
     depends_on:
       neo4j:
         condition: service_healthy
@@ -77,6 +80,9 @@ services:
   sim:
     <<: *backend
     command: ["silentctx-sim"]
+    depends_on:
+      neo4j:
+        condition: service_healthy
     ports:
       - "127.0.0.1:8100:8100"
     healthcheck:

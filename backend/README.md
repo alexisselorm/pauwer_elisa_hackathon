@@ -127,7 +127,7 @@ src/silentctx/
   llm/          chat-model factory, Featherless embedder
   mcp/          MCP server (auth, tools)
   slack/        Bolt app (bot.py)
-  sim/          network simulator (app.py)
+  sim/          network simulator (network.py state, app.py endpoints)
   ingest/ extraction/ validation/ agents/ telemetry/ eval/
 ```
 
