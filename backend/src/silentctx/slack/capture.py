@@ -286,10 +286,15 @@ class CaptureCards:
                     (o.citations[0].source_type or "other") for o in others if o.citations
                 )
             text, blocks = card_blocks(views, thread, extra)
-            if thread.card_ts:
+            card_ts = thread.card_ts or await self._card_in_slack(
+                thread.slack_channel, thread.slack_thread_ts
+            )
+            if card_ts:
                 await self.client.chat_update(
-                    channel=thread.slack_channel, ts=thread.card_ts, text=text, blocks=blocks
+                    channel=thread.slack_channel, ts=card_ts, text=text, blocks=blocks
                 )
+                if not thread.card_ts:
+                    await self.store.set_card(thread_id, card_ts)
             else:
                 posted = await self.client.chat_postMessage(
                     channel=thread.slack_channel,
@@ -298,6 +303,23 @@ class CaptureCards:
                     blocks=blocks,
                 )
                 await self.store.set_card(thread_id, posted["ts"])
+
+    async def _card_in_slack(self, channel: str, thread_ts: str) -> str | None:
+        """The card this bot already posted in the thread, when the graph lost its ts
+        (a reset re-captures old threads): edit it rather than post a second one (ST-01)."""
+        assert self.client is not None
+        try:
+            r = await self.client.conversations_replies(channel=channel, ts=thread_ts, limit=200)
+        except Exception:
+            log.warning("card_lookup_failed", channel=channel, ts=thread_ts, exc_info=True)
+            return None
+        messages: list[dict[str, Any]] = r.get("messages", [])
+        for m in messages:
+            # Our cards: posted by a bot without a persona `username`, card text (card_blocks).
+            own = m.get("bot_id") and not m.get("username")
+            if own and (m.get("text") or "").startswith(("Captured", "Context card")):
+                return str(m["ts"])
+        return None
 
     # --- Buttons ---------------------------------------------------------------------------
 

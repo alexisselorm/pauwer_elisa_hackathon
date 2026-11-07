@@ -81,6 +81,14 @@ class FakeSlack:
         self.updated.append(kw)
         return {"ok": True}
 
+    async def conversations_replies(self, **kw: Any) -> dict[str, Any]:
+        mine = [
+            {"ts": f"1800000000.{i:06d}", "bot_id": "BSELF", "text": p["text"]}
+            for i, p in enumerate(self.posted, 1)
+            if p["channel"] == kw["channel"] and p.get("thread_ts") == kw["ts"]
+        ]
+        return {"messages": mine}
+
     async def views_open(self, **kw: Any) -> dict[str, Any]:
         self.views.append(kw)
         return {"ok": True}
@@ -173,6 +181,14 @@ async def test_elisas_thread_becomes_one_card_and_one_assertion(driver: AsyncDri
     await rig.loop.sweep_once()
     assert await rig.q("MATCH (a:ContextAssertion) RETURN count(a) AS n") == [{"n": 1}]
     assert len(rig.slack.in_channel(CHANNEL)) == 1  # ST-01: still ≤1 bot message
+
+    # The graph loses the card's ts (a reset re-captures the thread): the card in Slack is
+    # found and edited, never posted twice.
+    await rig.q("MATCH (t:Thread) REMOVE t.card_ts")
+    await rig.cards.refresh(thread.thread_id)
+    assert len(rig.slack.in_channel(CHANNEL)) == 1
+    assert rig.slack.updated[-1]["ts"] == "1800000000.000001"
+    assert (await rig.store.thread(thread.thread_id)).card_ts == "1800000000.000001"
     assert rig.slack.updated
     calls = list(rig.judge.calls)
     assert await rig.loop.sweep_once() == []  # nothing new: no LLM call at all
