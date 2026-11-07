@@ -180,6 +180,8 @@ def summarize(r: BaseModel) -> str:
         case EntityView():
             what = " ".join(x for x in (r.model, r.generation, r.firmware) if x)
             alive = "in service" if r.exists_at else "not in service"
+            if r.entity_type in ("hw_model", "generation"):
+                alive = f"{len(r.members)} device(s) in service"
             return f"{r.entity_id} ({r.entity_type}) {what} at {r.as_of.isoformat()}: {alive}"
         case ContextResult():
             note = f"; {r.note}" if r.note else ""
@@ -261,7 +263,8 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         entity_id: EntityId, as_of: When = None
     ) -> Annotated[CallToolResult, EntityView]:
         """As-built and as-running facts about an entity at a time: model, generation,
-        firmware, status, segments and links."""
+        firmware, status, segments and links. For a hardware model or generation, `members`
+        lists its devices in service then (e.g. how many nodes are Gen1)."""
         return await _call(lambda: holder.get().get_entity(entity_id, as_of))
 
     @server.tool()

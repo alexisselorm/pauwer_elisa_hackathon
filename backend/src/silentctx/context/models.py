@@ -78,6 +78,9 @@ class EntityView(BaseModel):
     location: str | None = None
     segments: list[SegmentRef] = []
     linked_devices: list[str] = []
+    members: list[str] = Field(
+        default=[], description="for a model or generation: its devices in service at as_of"
+    )
     properties: dict[str, Any] = {}
 
 

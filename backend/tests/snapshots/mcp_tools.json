@@ -782,7 +782,7 @@
     }
   },
   {
-    "description": "As-built and as-running facts about an entity at a time: model, generation,\n        firmware, status, segments and links.",
+    "description": "As-built and as-running facts about an entity at a time: model, generation,\n        firmware, status, segments and links. For a hardware model or generation, `members`\n        lists its devices in service then (e.g. how many nodes are Gen1).",
     "inputSchema": {
       "properties": {
         "as_of": {
@@ -931,6 +931,15 @@
           ],
           "default": null,
           "title": "Location"
+        },
+        "members": {
+          "default": [],
+          "description": "for a model or generation: its devices in service at as_of",
+          "items": {
+            "type": "string"
+          },
+          "title": "Members",
+          "type": "array"
         },
         "model": {
           "anyOf": [

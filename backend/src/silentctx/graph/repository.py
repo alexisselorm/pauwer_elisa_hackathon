@@ -270,6 +270,9 @@ class ContextRepository:
             and (e.get("valid_to") is None or t < e["valid_to"])
         )
         keep = {"vendor", "kind", "serial", "rack", "commissioned", "segment_type", "role"}
+        members: list[str] = []
+        if e.get("entity_type") in ("hw_model", "generation"):
+            members = await self.members(entity_id, t)
         return EntityView(
             entity_id=entity_id,
             entity_type=e.get("entity_type") or "unknown",
@@ -289,8 +292,23 @@ class ContextRepository:
             location=e.get("room") or e.get("city"),
             segments=[SegmentRef.model_validate(s) for s in r["segments"] if s.get("entity_id")],
             linked_devices=sorted(x for x in r["linked"] if x),
+            members=members,
             properties={k: v for k, v in e.items() if k in keep and v is not None},
         )
+
+    async def members(self, model_or_generation: str, t: datetime) -> list[str]:
+        """Devices in service at t whose model (as built at t) is this model or of this
+        generation."""
+        rows = await self._read(
+            "MATCH (d:Device)-[im:IS_MODEL]->(m:HwModel) "
+            "WHERE (m.entity_id = $id OR (m)-[:OF_GENERATION]->(:Generation {entity_id: $id})) "
+            "  AND im.valid_from <= $t AND $t < coalesce(im.valid_to, " + END_OF_TIME + ") "
+            "  AND d.valid_from <= $t AND $t < coalesce(d.valid_to, " + END_OF_TIME + ") "
+            "RETURN DISTINCT d.entity_id AS id ORDER BY id",
+            id=model_or_generation,
+            t=t,
+        )
+        return [row["id"] for row in rows]
 
     async def scope(self, entity_id: str, t: datetime) -> dict[str, Match]:
         """The entity, its model and generation, its site, and the segments connecting it,

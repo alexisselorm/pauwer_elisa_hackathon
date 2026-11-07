@@ -382,6 +382,13 @@ async def test_mcp_tools_end_to_end(neo4j_url: str, make_settings: Callable[...,
 
         r = mcp.call("get_entity", entity_id="TRN-017")["structuredContent"]
         assert (r["model"], r["generation"], r["exists_at"]) == ("TNC-1X", "Gen1", True)
+        # QA-001 from the network data: 9 Gen1 nodes until TRN-004/005/007 were retired
+        # (May-July 2026), 6 now. The answer key's static "9" counts the retired ones too.
+        gen1 = mcp.call("get_entity", entity_id="Gen1", as_of="2026-05-01T00:00:00Z")
+        assert len(gen1["structuredContent"]["members"]) == 9
+        gen1_now = mcp.call("get_entity", entity_id="Gen1")["structuredContent"]["members"]
+        assert len(gen1_now) == 6
+        assert "TRN-017" in gen1_now
 
         ctx = mcp.call("get_context", entity_id="TRN-017")["structuredContent"]
         top = ctx["assertions"][0]
