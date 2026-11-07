@@ -59,6 +59,9 @@ def format_answer(answer: OpsAnswer) -> str:
             lines.append(f"• {label}: {', '.join(bits)}{ref}")
             if s.detail:
                 lines.append(f"    ↳ _{_escape(' '.join(s.detail.split())[:200])}_")
+    if answer.records:
+        lines.append("")
+        lines.append("*From the network record:* " + ", ".join(answer.records[:6]))
     if answer.gap_id:
         lines.append("")
         lines.append(

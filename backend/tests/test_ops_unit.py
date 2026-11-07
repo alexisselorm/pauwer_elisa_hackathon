@@ -18,6 +18,7 @@ from silentctx.agents.ops_agent import (
     _from_plain_text,
     enforce_rules,
     seen_assertion_ids,
+    seen_records,
 )
 from silentctx.context.resolve import resolve
 from silentctx.seed.sources import MockData
@@ -84,6 +85,31 @@ def test_not_documented_has_no_steps_and_unsupported_answer_becomes_not_document
     assert enforce_rules(a, seen={"ASR-0001"}).steps == []
     b = _answer(steps=[Step(action="guess", assertion_ids=["ASR-0042"])])
     assert enforce_rules(b, seen=set()).status is AnswerStatus.NOT_DOCUMENTED
+
+
+def test_a_network_fact_stands_on_a_record_get_entity_returned() -> None:
+    a = _answer(records=["GEN-1"])
+    out = enforce_rules(a, seen=set(), records={"GEN-1"})
+    assert out.status is AnswerStatus.ANSWERED
+    assert out.records == ["GEN-1"]
+    # A record the tools never returned is dropped, and the answer with it.
+    out = enforce_rules(a, seen=set(), records=set())
+    assert (out.status, out.records) == (AnswerStatus.NOT_DOCUMENTED, [])
+    # A step still needs an assertion, record or not.
+    b = _answer(records=["GEN-1"], steps=[Step(action="reboot", assertion_ids=["ASR-0042"])])
+    assert enforce_rules(b, seen=set(), records={"GEN-1"}).steps == []
+
+
+def test_records_come_from_get_entity_results_only() -> None:
+    messages = [
+        ToolMessage(
+            content=json.dumps({"entity_id": "TRN-042"}), name="get_entity", tool_call_id="1"
+        ),
+        ToolMessage(
+            content=json.dumps({"entity_id": "TRN-001"}), name="resolve_entities", tool_call_id="2"
+        ),
+    ]
+    assert seen_records(messages) == {"TRN-042"}
 
 
 def test_seen_ids_come_from_tool_results_only() -> None:

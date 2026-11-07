@@ -68,6 +68,9 @@ You answer through the silentctx context layer only. Rules:
    the user's question and the entity ids. Don't guess.
 6. For site visits, call get_site_access with as_of = the planned visit time.
 7. After any action is taken, call report_outcome.
+8. A fact about the network itself (how many nodes, where a node is, what model it runs)
+   may be answered from get_entity: put those entity ids in `records`. A record never
+   tells you how to fix or handle something; that needs an assertion.
 Keep answers short and practical: the next step, what to avoid, and why (with sources)."""
 
 log = get_logger(__name__)

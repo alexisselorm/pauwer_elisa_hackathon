@@ -99,6 +99,11 @@ class OpsAnswer(BaseModel):
     avoid: list[str] = Field(default=[], description="things not to do, from the knowledge")
     conditions: list[ConditionReport] = []
     sources: list[Source] = []
+    records: list[str] = Field(
+        default=[],
+        description="entity ids whose get_entity record a network fact in the answer comes "
+        "from (a count, a location, a model); never for how to fix or handle something",
+    )
     gap_id: str | None = Field(default=None, description="set if a knowledge gap was opened")
     gap_routed_to: str | None = Field(
         default=None, description="the expert the gap was routed to (from open_knowledge_gap)"
@@ -140,6 +145,17 @@ def seen_assertion_ids(messages: Iterable[Any]) -> set[str]:
                 _collect_ids(text, ids)
         if m.artifact:
             _collect_ids(m.artifact, ids)
+    return ids
+
+
+def seen_records(messages: Iterable[Any]) -> set[str]:
+    """Entity ids that get_entity actually returned (the records the agent may cite)."""
+    ids: set[str] = set()
+    for m in messages:
+        if isinstance(m, ToolMessage) and m.name == "get_entity" and m.status != "error":
+            for payload in _payloads(m):
+                if isinstance(payload, dict) and isinstance(payload.get("entity_id"), str):
+                    ids.add(payload["entity_id"])
     return ids
 
 
@@ -226,8 +242,11 @@ def _gap_fields(value: Any, out: dict[str, Any]) -> None:
             _gap_fields(v, out)
 
 
-def enforce_rules(answer: OpsAnswer, seen: set[str]) -> OpsAnswer:
-    """Hard rules, applied whatever the model said."""
+def enforce_rules(
+    answer: OpsAnswer, seen: set[str], records: set[str] | frozenset[str] = frozenset()
+) -> OpsAnswer:
+    """Hard rules, applied whatever the model said. `records` are the entity ids get_entity
+    returned: a network fact may stand on one, a step never does."""
     notes = list(answer.review_notes)
     blocked = {c.assertion_id for c in answer.conditions if c.status == "not_met"}
     steps: list[Step] = []
@@ -240,13 +259,23 @@ def enforce_rules(answer: OpsAnswer, seen: set[str]) -> OpsAnswer:
         else:
             steps.append(step.model_copy(update={"assertion_ids": cited}))
     sources = [s for s in answer.sources if s.assertion_id in seen]
+    cited_records = [r for r in answer.records if r in records]
     status = answer.status
     if status is AnswerStatus.NOT_DOCUMENTED:
         steps = []
     elif not steps and status is AnswerStatus.ANSWERED and not sources:
-        status = AnswerStatus.NOT_DOCUMENTED
+        if cited_records:
+            notes.append("From the network inventory, not from expert knowledge.")
+        else:
+            status = AnswerStatus.NOT_DOCUMENTED
     return answer.model_copy(
-        update={"steps": steps, "sources": sources, "status": status, "review_notes": notes}
+        update={
+            "steps": steps,
+            "sources": sources,
+            "records": cited_records,
+            "status": status,
+            "review_notes": notes,
+        }
     )
 
 
@@ -355,7 +384,9 @@ class OpsAgent:
         if not isinstance(answer, OpsAnswer):
             answer = _from_plain_text(result.get("messages", []))
         messages = result.get("messages", [])
-        checked = ground_sources(enforce_rules(answer, seen_assertion_ids(messages)), messages)
+        checked = ground_sources(
+            enforce_rules(answer, seen_assertion_ids(messages), seen_records(messages)), messages
+        )
         gap = opened_gap(messages)
         if gap is not None:
             checked = checked.model_copy(
@@ -366,6 +397,7 @@ class OpsAgent:
             status=checked.status,
             steps=len(checked.steps),
             sources=[s.assertion_id for s in checked.sources],
+            records=checked.records,
             tool_calls=sum(1 for m in messages if isinstance(m, ToolMessage)),
         )
         return checked
