@@ -5,8 +5,6 @@ import { Empty, ErrorNote, Loading, Pill } from '../components/ui'
 import { pretty } from '../lib/format'
 import { ago, fmt } from '../lib/time'
 
-const WRITES = new Set(['report_outcome', 'open_knowledge_gap', 'propose_assertion', 'flag_assertion'])
-
 function outcome(r: AgentRun): { value: string; label: string } {
   if (r.writes.includes('open_knowledge_gap')) return { value: 'flag', label: 'gap opened' }
   if (r.writes.includes('report_outcome')) return { value: 'pass', label: 'outcome reported' }
@@ -17,7 +15,7 @@ function outcome(r: AgentRun): { value: string; label: string } {
 const fmtArgs = (args: Record<string, unknown>) =>
   Object.entries(args)
     .filter(([, v]) => v !== null && v !== '')
-    .map(([k, v]) => `${k}=${typeof v === 'string' ? JSON.stringify(v) : JSON.stringify(v)}`)
+    .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
     .join(', ')
 
 export function AgentRunsPage() {
@@ -75,7 +73,7 @@ function RunDetail({ run }: { run: AgentRun }) {
           <h3>MCP calls</h3>
           <div className="calls">
             {run.calls.map((c) => (
-              <div key={c.call_id} className={`call ${WRITES.has(c.tool) ? 'write' : ''} ${c.ok ? '' : 'fail'}`}>
+              <div key={c.call_id} className={`call ${run.writes.includes(c.tool) ? 'write' : ''} ${c.ok ? '' : 'fail'}`}>
                 <div className="fn">
                   <code>{c.tool}</code>
                   <span className="mono subtle">({fmtArgs(c.args)})</span>
