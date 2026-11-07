@@ -95,7 +95,7 @@ Every test is automated (pytest, against Neo4j in testcontainers, a fake Slack b
 
 ### 1.8 Temporal-aware retrieval (L, A): plan 004
 
-ST-70…ST-77 are specified in [plan 004 §6](004-temporal-aware-retrieval.md#6-tests-added-to-plan-003-18): a past `as_of` isn't missed, current isn't confused with superseded, disputed ranks below believed, the successor is always named, entities named in a query scope the search, no candidate is cut before ranking or left out for lack of an embedding, and the keyword fallback is ranked.
+ST-70…ST-78 are specified in [plan 004 §6](004-temporal-aware-retrieval.md#6-tests-added-to-plan-003-18): a past `as_of` isn't missed, current isn't confused with superseded, disputed ranks below believed, the successor is always named, entities named in a query scope the search, no candidate is cut before ranking or left out for lack of an embedding, the keyword fallback is ranked, and the retrieval eval set passes.
 
 ## 2. Eval (fixed)
 
@@ -144,4 +144,5 @@ ST-70…ST-77 are specified in [plan 004 §6](004-temporal-aware-retrieval.md#6-
 ```
 kaiku eval --set elisa|regression|heldout|all --graph extracted|gold|both --runs 3
 kaiku eval time      # no LLM needed for the R-rule checks on stored data
+kaiku eval retrieval # search_context alone on the gold graph: recall@k, MRR, nothing invalid at as_of
 ```

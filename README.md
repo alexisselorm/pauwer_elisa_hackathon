@@ -11,6 +11,7 @@ Built for Elisa's challenge in `Elisa_SinceAI2026/` (the only source of truth).
 | [`frontend/`](frontend/) | Read-only web console: live knowledge graph, capture traces, agent runs ([README](frontend/README.md)) |
 | [`mock_data/`](mock_data/) | Synthetic network, chat, email and gold answers ([README](mock_data/README.md)) |
 | [`eval/heldout/`](eval/heldout/) | Hand-written held-out threads for the eval |
+| [`eval/retrieval/`](eval/retrieval/) | Retrieval-only eval: search results scored against the gold assertions (`kaiku eval retrieval`) |
 
 ## Run the demo
 

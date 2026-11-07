@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -199,6 +199,48 @@ def eval_run(
     js, md = write(report, out_dir)
     typer.echo(to_markdown(report))
     typer.echo(f"results: {js} and {md}", err=True)
+
+
+@eval_app.command("retrieval")
+def eval_retrieval(
+    questions: Annotated[Path, typer.Option(help="The retrieval set.")] = Path(
+        "../eval/retrieval/questions.jsonl"
+    ),
+    k: Annotated[int, typer.Option(min=1, max=10, help="Recall is measured in the top k.")] = 5,
+    out_dir: Annotated[Path, typer.Option(help="Where results go.")] = Path("../eval/results"),
+    neo4j_uri: Annotated[
+        str | None,
+        typer.Option(help="An isolated Neo4j to use. Default: a throwaway container."),
+    ] = None,
+    neo4j_password: Annotated[str | None, typer.Option(help="Its password.")] = None,
+) -> None:
+    """Score search_context alone on the gold graph: recall@k, MRR, and that nothing
+    invalid at as_of is returned. Semantic with FEATHERLESS_API_KEY, else keyword."""
+    from kaiku.eval.retrieval import run_retrieval
+    from kaiku.eval.runner import EvalReport, to_markdown, write
+
+    settings = get_settings()
+    configure_logging(settings.log_level, json=settings.log_json, stream=sys.stderr)
+    report = EvalReport(
+        started_at=datetime.now(UTC),
+        graph="gold (mock_data/knowledge_graph), retrieval only",
+        caveat="Written against the gold assertions: a regression test, not evidence.",
+    )
+    result, report.models = asyncio.run(
+        run_retrieval(
+            settings,
+            questions=questions,
+            k=k,
+            neo4j_uri=neo4j_uri,
+            neo4j_password=neo4j_password,
+        )
+    )
+    report.sets = [result]
+    report.finished_at = datetime.now(UTC)
+    js, md = write(report, out_dir)
+    typer.echo(to_markdown(report))
+    typer.echo(f"results: {js} and {md}", err=True)
+    raise typer.Exit(0 if result.passed == result.scored else 1)
 
 
 @eval_app.command("time")

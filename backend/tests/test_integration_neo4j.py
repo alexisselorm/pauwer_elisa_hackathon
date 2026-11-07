@@ -1102,3 +1102,39 @@ def test_slack_run_bounce_button_reports_through_mcp(
             "verified": True,
         }
     ]
+
+
+async def test_retrieval_eval_set_passes_in_keyword_mode(
+    neo4j_url: str, make_settings: Callable[..., Settings]
+) -> None:
+    """The retrieval eval (eval/retrieval) on the gold graph without embeddings: the floor
+    every deployment gets, even when the embedding provider is down."""
+    from datetime import UTC, datetime
+
+    from neo4j import AsyncGraphDatabase
+
+    from kaiku.context.service import ContextService
+    from kaiku.eval.retrieval import evaluate, load_questions
+    from kaiku.eval.runner import to_markdown
+    from kaiku.graph.repository import ContextRepository
+    from kaiku.seed.profiles import Profile
+    from kaiku.seed.service import SeedRequest, seed
+    from kaiku.seed.sources import MockData
+    from kaiku.telemetry.store import TelemetryStore
+
+    settings = make_settings(neo4j_uri=neo4j_url, neo4j_password=PASSWORD, data_dir=MOCK_DATA)
+    await seed(settings, SeedRequest(network=True, gold=True, profile=Profile.FULL))
+    questions = load_questions(Path(__file__).parents[2] / "eval" / "retrieval" / "questions.jsonl")
+    async with AsyncGraphDatabase.driver(neo4j_url, auth=("neo4j", PASSWORD)) as driver:
+        svc = ContextService(
+            ContextRepository(driver, "neo4j"),
+            TelemetryStore(MOCK_DATA),
+            aliases=MockData(MOCK_DATA).model_aliases(),
+            clock=lambda: datetime(2026, 11, 7, tzinfo=UTC),
+        )
+        result = await evaluate(svc, questions)
+    from kaiku.eval.runner import EvalReport
+
+    report = EvalReport(started_at=datetime.now(UTC), sets=[result])
+    assert result.field_accuracy["mode"] == "keyword"
+    assert result.passed == result.scored, to_markdown(report)
