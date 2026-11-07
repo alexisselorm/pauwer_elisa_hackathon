@@ -128,7 +128,7 @@ def _questions() -> list[tuple[str, str]]:
 async def _ask_all(
     agent: OpsAgent, items: list[tuple[str, str]]
 ) -> dict[str, OpsAnswer | Exception]:
-    gate = asyncio.Semaphore(3)
+    gate = asyncio.Semaphore(1)  # one at a time: with 3 in parallel QA-034/035 timed out
 
     async def one(qid: str, text: str) -> tuple[str, OpsAnswer | Exception]:
         async with gate:
