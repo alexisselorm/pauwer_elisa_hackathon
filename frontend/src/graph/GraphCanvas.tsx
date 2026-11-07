@@ -1,8 +1,8 @@
 import cytoscape, { type Core, type ElementDefinition, type NodeSingular } from 'cytoscape'
 import fcose from 'cytoscape-fcose'
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import type { GraphOut } from '../api/client'
-import { isVisible, ms, stateAt } from '../lib/time'
+import { isVisible, ms, stateAt, type TimeState } from '../lib/time'
 
 cytoscape.use(fcose)
 
@@ -52,6 +52,23 @@ function toElements(data: GraphOut): ElementDefinition[] {
     data: { id: e.id, source: e.source, target: e.target, rel: e.rel, lbl: edgeLabel(e.rel, e.scope) },
   }))
   return [...nodes, ...edges]
+}
+
+/** For each source node, the assertions it is linked to by any edge. */
+function assertionsBySource(data: GraphOut): Map<string, string[]> {
+  const kind = new Map(data.nodes.map((n) => [n.id, n.kind]))
+  const out = new Map<string, string[]>()
+  const link = (source: string, other: string) => {
+    if (kind.get(source) !== 'source' || kind.get(other) !== 'assertion') return
+    const list = out.get(source)
+    if (list) list.push(other)
+    else out.set(source, [other])
+  }
+  for (const e of data.edges) {
+    link(e.source, e.target)
+    link(e.target, e.source)
+  }
+  return out
 }
 
 /** Run a layout with a fixed seed, so the same graph always lands the same way. */
@@ -195,38 +212,55 @@ export function GraphCanvas({ data, t, k, layers, selected, fresh, dark, drawerO
       .run()
   }, [data])
 
-  // Time and layers: which nodes exist at (t, k), and what state each is in.
+  // Time and layers: which nodes exist at (t, k), and what state each is in. The slider runs
+  // this every frame, so only what changed touches Cytoscape, and the edges are revisited only
+  // when some node appeared or disappeared.
+  const bySource = useMemo(() => (data ? assertionsBySource(data) : new Map<string, string[]>()), [data])
+  const shownFor = useRef<GraphOut | null>(null)
   useEffect(() => {
     const cy = cyRef.current
     if (!cy || !data) return
-    const byId = new Map(data.nodes.map((n) => [n.id, n]))
+    const show = new Map<string, boolean>()
+    const state = new Map<string, TimeState>()
+    for (const n of data.nodes) {
+      if (n.kind === 'source') continue
+      let on = layers[layerOf(n.kind)]
+      if (n.kind === 'assertion') {
+        const st = stateAt(n, t, k)
+        state.set(n.id, st)
+        on &&= isVisible(st)
+      } else {
+        const vf = ms(n.valid_from)
+        const vt = ms(n.valid_to)
+        on &&= (vf === null || vf <= t) && (vt === null || vt > t)
+      }
+      show.set(n.id, on)
+    }
+    // A source shows only with something it supports.
+    for (const n of data.nodes) {
+      if (n.kind !== 'source') continue
+      show.set(n.id, layers.source && (bySource.get(n.id) ?? []).some((id) => show.get(id) === true))
+    }
+    let changed = shownFor.current !== data
+    shownFor.current = data
     cy.batch(() => {
       cy.nodes().forEach((el) => {
-        const n = byId.get(el.id())
-        if (!n) return
-        let show = layers[layerOf(n.kind)]
-        if (n.kind === 'assertion') {
-          const st = stateAt(n, t, k)
-          el.data('tstate', st)
-          show &&= isVisible(st)
-        } else if (n.kind !== 'source') {
-          const vf = ms(n.valid_from)
-          const vt = ms(n.valid_to)
-          show &&= (vf === null || vf <= t) && (vt === null || vt > t)
+        const id = el.id()
+        const on = show.get(id)
+        if (on === undefined) return
+        const st = state.get(id)
+        if (st !== undefined && el.data('tstate') !== st) el.data('tstate', st)
+        if (el.hasClass('hidden') !== !on) {
+          el.toggleClass('hidden', !on)
+          changed = true
         }
-        el.toggleClass('hidden', !show)
       })
-      // A source shows only with something it supports.
-      cy.nodes("[kind='source']").forEach((el) => {
-        if (el.hasClass('hidden')) return
-        const any = el.neighborhood().nodes("[kind='assertion']").not('.hidden').nonempty()
-        el.toggleClass('hidden', !any)
-      })
+      if (!changed) return
       cy.edges().forEach((e) => {
         e.toggleClass('hidden', e.source().hasClass('hidden') || e.target().hasClass('hidden'))
       })
     })
-  }, [data, t, k, layers])
+  }, [data, bySource, t, k, layers])
 
   // Selection: dim the rest, bring the neighbourhood into view beside the drawer.
   useEffect(() => {

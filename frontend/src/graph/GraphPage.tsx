@@ -1,5 +1,5 @@
 import { Zap } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { useGraph } from '../api/hooks'
 import { ErrorNote, Loading } from '../components/ui'
@@ -18,6 +18,27 @@ function useNow(everyMs = 30_000) {
     return () => window.clearInterval(id)
   }, [everyMs])
   return now
+}
+
+/** Apply the latest of a burst of values once per animation frame: the slider and Play
+ *  report a time far more often than the canvas can restyle. */
+function useFrameCoalesced<T>(apply: (v: T) => void) {
+  const latest = useRef<{ v: T } | null>(null)
+  const frame = useRef(0)
+  useEffect(() => () => cancelAnimationFrame(frame.current), [])
+  return useCallback(
+    (v: T) => {
+      latest.current = { v }
+      if (frame.current) return
+      frame.current = requestAnimationFrame(() => {
+        frame.current = 0
+        const next = latest.current
+        latest.current = null
+        if (next) apply(next.v)
+      })
+    },
+    [apply],
+  )
 }
 
 export function GraphPage({ dark }: { dark: boolean }) {
@@ -62,7 +83,7 @@ export function GraphPage({ dark }: { dark: boolean }) {
   }
   const freshNode = assertions.find((a) => freshIds.includes(a.id))
 
-  const onTime = useCallback((v: number | null) => setAsOf(v), [])
+  const onTime = useFrameCoalesced<number | null>(setAsOf)
   const drawerOpen = selected !== null
 
   if (graph.isPending) return <Loading rows={6} />
