@@ -279,6 +279,9 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         port: str | None = None,
         observed_at: When = None,
         evidence_ref: str | None = None,
+        on_behalf_of: Annotated[
+            str | None, Field(description="the person the agent acted for, e.g. a Slack user")
+        ] = None,
     ) -> OutcomeRecorded:
         """Record what happened after an action. Becomes evidence for the assertion:
         resolved supports it; not_resolved refutes it only if its conditions were met."""
@@ -293,6 +296,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
                 assertion_id=assertion_id,
                 port=port,
                 evidence_ref=evidence_ref,
+                on_behalf_of=on_behalf_of,
             )
         )
 
