@@ -405,11 +405,13 @@ class OpsAgent:
         request_id: str,
         asker: str | None = None,
         trigger_event_id: str | None = None,
+        now: datetime | None = None,
     ) -> OpsAnswer:
+        """`now`: the agent's present (the eval asks each question at its own as_of)."""
         tools, rules = await self._setup()
-        now = datetime.now(UTC).replace(microsecond=0).isoformat()
+        current = (now or datetime.now(UTC)).astimezone(UTC).replace(microsecond=0).isoformat()
         system = (
-            f"{rules}\n\nCurrent time: {now} (UTC). Times you pass to tools are ISO-8601 UTC."
+            f"{rules}\n\nCurrent time: {current} (UTC). Times you pass to tools are ISO-8601 UTC."
             f"\nIf you open a knowledge gap, use idempotency_key={request_id!r}"
             + (f" and trigger_event_id={trigger_event_id!r}." if trigger_event_id else ".")
             + "\nFinish by returning the OpsAnswer."

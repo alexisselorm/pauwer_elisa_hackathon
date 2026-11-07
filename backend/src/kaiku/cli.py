@@ -154,3 +154,70 @@ def replay(
     client = AsyncWebClient(token=settings.slack_bot_token.get_secret_value())
     for p in asyncio.run(replay_elisa(client, channel, elisa_dir, speed=speed)):
         typer.echo(f"{p.seq:>2} {p.ts} {p.author}: {p.text.splitlines()[0][:60]}")
+
+
+eval_app = typer.Typer(help="The eval (plan 003 §2): T0 Elisa, T2 held-out, time checks.")
+app.add_typer(eval_app, name="eval")
+
+
+@eval_app.command("run")
+def eval_run(
+    set_: Annotated[
+        str, typer.Option("--set", help="elisa (T0) or all (T0 + T2 held-out).")
+    ] = "all",
+    elisa_dir: Annotated[Path, typer.Option(help="Elisa's example folder.")] = Path(
+        "../Elisa_SinceAI2026/ELISA_HIDDEN_KNOWLEDGE_EXAMPLE_2026"
+    ),
+    heldout_dir: Annotated[Path, typer.Option(help="The held-out set.")] = Path("../eval/heldout"),
+    out_dir: Annotated[Path, typer.Option(help="Where results go.")] = Path("../eval/results"),
+    neo4j_uri: Annotated[
+        str | None,
+        typer.Option(help="An isolated Neo4j to use. Default: a throwaway container."),
+    ] = None,
+    neo4j_password: Annotated[str | None, typer.Option(help="Its password.")] = None,
+) -> None:
+    """Capture Elisa's thread and the held-out threads with the real models on an isolated
+    graph (gold never loaded), ask the questions through MCP, and score them exactly."""
+    from kaiku.eval.runner import run_eval, to_markdown, write
+
+    if set_ not in ("elisa", "all"):
+        raise typer.BadParameter("--set must be elisa or all")
+    settings = get_settings()
+    configure_logging(settings.log_level, json=settings.log_json, stream=sys.stderr)
+    sets = {"elisa"} | ({"heldout"} if set_ == "all" else set())
+    report = asyncio.run(
+        run_eval(
+            settings,
+            sets=sets,
+            elisa_dir=elisa_dir,
+            heldout_dir=heldout_dir,
+            neo4j_uri=neo4j_uri,
+            neo4j_password=neo4j_password,
+        )
+    )
+    js, md = write(report, out_dir)
+    typer.echo(to_markdown(report))
+    typer.echo(f"results: {js} and {md}", err=True)
+
+
+@eval_app.command("time")
+def eval_time() -> None:
+    """The temporal checks (R-rules, V5 port) on the configured graph. Read-only, no LLM."""
+    from kaiku.graph.checks import run_checks
+    from kaiku.graph.driver import create_driver
+
+    settings = get_settings()
+
+    async def go() -> int:
+        driver = create_driver(settings)
+        try:
+            results = await run_checks(driver, settings.neo4j_database)
+        finally:
+            await driver.close()
+        for r in results:
+            mark = "ok  " if not r.violations else "FAIL"
+            typer.echo(f"{mark} {r.name}: {r.violations} {', '.join(r.examples)}")
+        return sum(r.violations for r in results)
+
+    if asyncio.run(go()):
+        raise typer.Exit(code=1)
