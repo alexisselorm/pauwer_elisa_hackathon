@@ -217,7 +217,11 @@ class Extractor:
             for b in linked.bindings:
                 if b.scope is not Scope.OBSERVED_ON or b.candidate:
                     continue
-                result = await self._check(b.entity_id, ports(thread.text()), claimed, g)
+                try:
+                    result = await self._check(b.entity_id, ports(thread.text()), claimed, g)
+                except Exception:  # V4 is evidence, not a gate: no check means "unknown"
+                    log.warning("telemetry_check_failed", entity_id=b.entity_id, exc_info=True)
+                    continue
                 if result is not None:
                     update = result
                     if result["telemetry"] == "agrees":

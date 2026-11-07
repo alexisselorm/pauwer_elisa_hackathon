@@ -112,6 +112,8 @@ class TelemetryStore:
         with self._lock:
             if replace is not None:
                 self._db.execute("DELETE FROM live WHERE ne_id = ?", [replace])
+            if not samples:  # a node the simulator doesn't run: nothing live to add
+                return
             self._db.executemany(
                 "INSERT INTO live VALUES (?, ?, ?, ?, ?, ?, ?)",
                 [

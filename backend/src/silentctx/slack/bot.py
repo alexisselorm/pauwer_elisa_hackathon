@@ -149,7 +149,11 @@ def build_app(
     cards: cap.CaptureCards | None = None,
 ) -> AsyncApp:
     assert settings.slack_bot_token is not None
-    app = AsyncApp(token=settings.slack_bot_token.get_secret_value())
+    # Self events stay on: the demo replay posts people's words as personas through this
+    # bot. Every handler still ignores the bot's own posts (capture takes personas only).
+    app = AsyncApp(
+        token=settings.slack_bot_token.get_secret_value(), ignoring_self_events_enabled=False
+    )
     ops = SlackOps(answerer, capture)
     app.event("app_mention")(ops.handle_mention)
     app.event("message")(ops.handle_message)

@@ -51,8 +51,11 @@ async def test_live_slack_one_card_within_60s_of_message_9() -> None:
     blocks = json.dumps(card.get("blocks", []), ensure_ascii=False)
     print(f"\nthread {root}: card {latency:.1f} s after message 9\n{card.get('text')}")
     assert latency <= 60  # ST-01
-    for part in ("Captured for", "TRN-042", "Correct", "Not knowledge"):
+    for part in ("Captured for", "TRN-042", "Fix", "Not knowledge"):
         assert part in blocks
+    # ✅ is offered on an unverified rule. On a graph with gold loaded the capture also
+    # contradicts gold ASR-0020/0018 (as gold itself does), so it is disputed and has no ✅.
+    assert ("Correct" in blocks) == ("unverified" in blocks)
 
     await asyncio.sleep(15)  # messages 10-12 have arrived; any second post would show now
     replies = (await client.conversations_replies(channel=channel, ts=root))["messages"]

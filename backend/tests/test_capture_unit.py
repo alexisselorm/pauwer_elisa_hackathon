@@ -721,3 +721,13 @@ def test_same_action_from_the_same_thread_is_the_rule_already_captured() -> None
         action="bounce_interface",
     )
     assert fixed.correct == "A"
+
+
+def test_a_node_the_simulator_does_not_run_adds_no_live_samples() -> None:
+    """Live finding: TRN-042 isn't simulated, so the sim returns [] for it, and DuckDB
+    rejected the empty insert, failing the whole capture."""
+    from silentctx.telemetry.store import TelemetryStore
+
+    store = TelemetryStore(None)
+    store.add_live([], replace="TRN-042")
+    assert store.ports("TRN-042") == []
