@@ -109,8 +109,9 @@ def backfill(
         typer.Option(help="Elisa's example folder (teams_chat.json, email.txt); full only."),
     ] = None,
 ) -> None:
-    """Load historical Teams messages (and Elisa's example) as events with their original
-    times. The capture loop in the slackbot then triages them. Idempotent."""
+    """Load historical Teams messages, the Outlook .msg export (and Elisa's example) as
+    events with their original times. The capture loop in the slackbot then triages them.
+    Idempotent."""
     from silentctx.graph.driver import create_driver
     from silentctx.ingest.backfill import backfill as run_backfill
     from silentctx.ingest.store import CaptureStore

@@ -60,6 +60,12 @@ through MCP; Run bounce also checks the live counters first, so the thread ends 
 "network-confirmed on TRN-017 1/1/2 · support 1". When the agent finds nothing documented,
 its answer offers [Ask <expert>], which posts the question in `SLACK_GAP_CHANNEL`.
 
+**Capture an email** (BE-2.2): drop a `.eml` (or Outlook `.msg`) into `email_drop/`. The
+slackbot polls it every `EMAIL_POLL_SECONDS`, stores it with its `Date` header as event time,
+and triages it at the next sweep. Email captures are posted to `#context-log`, never to work
+channels; a Slack card the email corroborates shows "+1 source (email)". The 145 `.msg` files
+in `mock_data/email_outlook/` come in with `silentctx backfill`.
+
 **Reset:** `docker compose down -v` deletes the graph and the checkpoints.
 
 ### Time conventions

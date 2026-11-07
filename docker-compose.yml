@@ -68,6 +68,9 @@ services:
       <<: *backend-env
       MCP_URL: http://api:8000/mcp  # the ops agent uses MCP only, like any other agent
       SIM_URL: http://sim:8100  # fault events for #noc-alarms, and the simulated bounce
+      EMAIL_DROP_DIR: /data/email_drop  # drop a .eml here to capture it (BE-2.2)
+    volumes:
+      - ./email_drop:/data/email_drop:ro
     depends_on:
       api:
         condition: service_healthy

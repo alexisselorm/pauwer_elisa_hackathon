@@ -27,6 +27,7 @@ from silentctx.extraction.llm import LlmJudge
 from silentctx.graph.driver import create_driver
 from silentctx.graph.repository import ContextRepository
 from silentctx.ingest.capture import CaptureLoop
+from silentctx.ingest.email import EmailDrop
 from silentctx.ingest.slack_events import SlackIngest
 from silentctx.ingest.store import CaptureStore
 from silentctx.llm.embeddings import FeatherlessEmbedder, embed_query_or_none
@@ -229,6 +230,12 @@ async def run(settings: Settings) -> None:
     await handler.connect_async()
     await ingest.catch_up(app.client)  # Socket Mode does not replay what was missed (ST-08)
     sweeper = asyncio.create_task(loop.run(), name="capture-loop")
+    mail = None
+    if settings.email_drop_dir is not None:
+        drop = EmailDrop(
+            store, settings.email_drop_dir, on_new=loop.kick, every_s=settings.email_poll_seconds
+        )
+        mail = asyncio.create_task(drop.run(), name="email-drop")
     watcher = None
     if actions.network is not None:
         watcher = asyncio.create_task(actions.watch(app.client), name="fault-watch")
@@ -245,6 +252,8 @@ async def run(settings: Settings) -> None:
         await asyncio.Event().wait()
     finally:
         sweeper.cancel()
+        if mail is not None:
+            mail.cancel()
         if watcher is not None:
             watcher.cancel()
         await driver.close()

@@ -90,6 +90,10 @@ class Settings(BaseSettings):
     # Where capture decisions that must not go to work channels are posted (ignored threads,
     # email and backfill captures). Unset: a channel named #context-log, else the log only.
     slack_context_log_channel: str | None = None
+    # Email (BE-2.2): a folder the slackbot polls for .eml/.msg files (a forwarded recap
+    # lands here). Unset: no live email capture; the .msg export still comes in by backfill.
+    email_drop_dir: Path | None = None
+    email_poll_seconds: float = Field(default=10.0, gt=0)
 
     # --- MCP (required): agent_id -> bearer token, as JSON ------------------------------
     mcp_tokens: dict[str, SecretStr]

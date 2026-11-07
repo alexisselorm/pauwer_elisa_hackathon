@@ -1,0 +1,3 @@
+# Drop .eml or .msg files here; the slackbot captures them (BE-2.2).
+*
+!.gitignore
