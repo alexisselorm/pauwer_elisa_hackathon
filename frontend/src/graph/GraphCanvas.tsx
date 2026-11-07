@@ -150,6 +150,37 @@ function style(): cytoscape.StylesheetJson {
   ]
 }
 
+const LAYOUT_SETTLE_MS = 700
+// Screen space the overlays take: the layer panel on the left (16 px + 236 px, app.css
+// .panel-left), the KPI strip on top, the timeline at the bottom.
+const LEFT_PANEL_W = 252
+const TOP_H = 70
+const TIMELINE_H = 120
+
+/** Ease the view onto new knowledge and what it is about (its entities and sources), framed
+ * in the part of the canvas no panel covers. Reduced motion: jump instead of gliding. */
+function focusOn(cy: Core, nodes: cytoscape.NodeCollection, drawerOpen: boolean) {
+  const eles = nodes.union(nodes.neighborhood().nodes()).not('.hidden')
+  if (eles.empty()) return
+  const bb = eles.boundingBox()
+  const pad = 80
+  const left = LEFT_PANEL_W
+  const w = cy.width() - left - (drawerOpen ? DRAWER_W : 0)
+  const h = cy.height() - TOP_H - TIMELINE_H
+  const fit = Math.min((w - 2 * pad) / Math.max(bb.w, 1), (h - 2 * pad) / Math.max(bb.h, 1))
+  const zoom = Math.min(1.6, Math.max(cy.minZoom(), fit))
+  const cx = bb.x1 + bb.w / 2
+  const cyy = bb.y1 + bb.h / 2
+  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  cy.stop(true)
+  cy.animate({
+    zoom,
+    pan: { x: left + w / 2 - cx * zoom, y: TOP_H + h / 2 - cyy * zoom },
+    duration: reduce ? 0 : 1200,
+    easing: 'ease-in-out-cubic',
+  })
+}
+
 export function GraphCanvas({ data, t, k, layers, selected, fresh, dark, drawerOpen, onSelect }: Props) {
   const box = useRef<HTMLDivElement>(null)
   const cyRef = useRef<Core | null>(null)
@@ -284,8 +315,13 @@ export function GraphCanvas({ data, t, k, layers, selected, fresh, dark, drawerO
     })
   }, [selected, drawerOpen])
 
-  // New knowledge: pulse it once, as soon as its node exists (the refetch may land later).
+  // New knowledge: glide the camera to it, then pulse it once, as soon as its node exists
+  // (the refetch may land later).
   const pulsed = useRef<string>('')
+  const drawerRef = useRef(drawerOpen)
+  useEffect(() => {
+    drawerRef.current = drawerOpen
+  }, [drawerOpen])
   useEffect(() => {
     const cy = cyRef.current
     const key = fresh.join(',')
@@ -293,6 +329,8 @@ export function GraphCanvas({ data, t, k, layers, selected, fresh, dark, drawerO
     const nodes = fresh.reduce((acc, id) => acc.union(cy.getElementById(id)), cy.collection())
     if (nodes.empty()) return
     pulsed.current = key
+    // After the new nodes' layout (600 ms) has settled, so the camera aims where they end up.
+    const zoomIn = window.setTimeout(() => focusOn(cy, nodes, drawerRef.current), LAYOUT_SETTLE_MS)
     let i = 0
     const timer = window.setInterval(() => {
       nodes.toggleClass('pulse')
@@ -301,6 +339,7 @@ export function GraphCanvas({ data, t, k, layers, selected, fresh, dark, drawerO
         nodes.removeClass('pulse')
       }
     }, 350)
+    return () => window.clearTimeout(zoomIn)
   }, [fresh, data])
 
   return <div ref={box} className="cy" role="img" aria-label="Knowledge graph" />
