@@ -154,3 +154,26 @@ async def rank_candidates(
         query, ids=list(ids), vector=list(vector), k=k, database_=database
     )
     return [VectorHit.model_validate(dict(r)) for r in records]
+
+
+async def similarities(
+    driver: AsyncDriver,
+    database: str,
+    spec: VectorIndexSpec,
+    ids: Sequence[str],
+    vector: Sequence[float],
+) -> list[VectorHit]:
+    """Exact cosine for every candidate that has an embedding, with no top-k cut: the
+    caller combines it with other weights before choosing what to keep (R12, plan 004)."""
+    if not ids:
+        return []
+    query: LiteralString = (
+        "MATCH (n:" + spec.label + ") WHERE n." + spec.id_property + " IN $ids "
+        "AND n.embedding IS NOT NULL "
+        "RETURN n." + spec.id_property + " AS id, "
+        "vector.similarity.cosine(n.embedding, $vector) AS score"
+    )
+    records, _, _ = await driver.execute_query(
+        query, ids=list(ids), vector=list(vector), database_=database
+    )
+    return [VectorHit.model_validate(dict(r)) for r in records]

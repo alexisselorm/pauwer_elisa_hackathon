@@ -147,7 +147,12 @@ class SearchResult(BaseModel):
     query: str
     as_of: UtcDatetime
     mode: str = Field(description="'semantic' or 'keyword' (when embeddings are unavailable)")
+    resolved_entities: list[str] = Field(
+        default=[],
+        description="entities read from the query; knowledge in their scope carries its match",
+    )
     assertions: list[AssertionView]
+    note: str | None = None
 
 
 class ConditionsResult(BaseModel):

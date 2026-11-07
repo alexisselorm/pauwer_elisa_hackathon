@@ -374,7 +374,8 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         limit: Annotated[int, Field(ge=1, le=50)] = 10,
     ) -> Annotated[CallToolResult, SearchResult]:
         """Semantic search over knowledge valid at a time (keyword search if embeddings are
-        unavailable)."""
+        unavailable). Without entity_id, entities named in the query are resolved and their
+        knowledge is ranked as get_context would scope it; `resolved_entities` lists them."""
         return await _call(lambda: holder.get().search_context(query, as_of, entity_id, limit))
 
     @tool()

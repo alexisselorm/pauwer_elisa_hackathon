@@ -4,6 +4,7 @@ Status: **v2, 2026-11-07.** v1 (same day) adopted the whole of an external artic
 "temporal-aware retrieval" design. Rechecked against `Elisa_SinceAI2026/` (the only source of
 truth), most of it did not serve Elisa's criteria, so v2 keeps only the parts that do (§4).
 Plan 001's time model (R1–R10) is unchanged. This plan adds R11 and R12.
+**v3, 2026-11-07:** a review of the shipped R12 found four more gaps (P5–P8), fixed in §2–§3.
 
 Companion plans: [`001`](001-backend-setup.md) (time model, graph), [`002`](002-slack-and-mcp.md)
 (MCP tools), [`003`](003-acceptance-and-eval.md) (tests ST-70…ST-73 added here).
@@ -32,6 +33,10 @@ to trust it. It must never rank a valid fact down for its age.
 | P1 | `context/service.py:156-157` (`search_context` with no `entity_id`) | It takes the top `limit×3` by approximate vector search, then filters by validity at t. If many similar versions exist (an access chain, a superseded rule), an assertion that *was* valid at a past `as_of` can fall outside the candidate set and never be returned. | Right time validity |
 | P2 | `context/service.py:155,161` | Semantic mode **overwrites** the structural score (match × status × confidence, `repository.py:193`) with raw cosine. A `disputed` or `review_due` assertion then ranks level with a `believed_true` one. | Relevance |
 | P4 | `repository.py` `STATUS_WEIGHT` (found while testing ST-70) | `superseded` and `expired` weighed 0.3, but a status is today's state. Everything ranked has already passed the validity filter at t, so at a past `as_of` the superseded padlock *is* the fact in force, and the penalty pushed it below unrelated assertions. This affected `get_context` too. | Right time validity |
+| P5 | `search_context` with no `entity_id` | R12.1 says candidates come from the graph when entities are resolved from the query, but the query was never resolved: "TRN-003 zero traffic after an SFP swap" ranked the Gen1 rule (TNC-1X only) like any other, with no match weight and no qualifier filter. | Right entity |
+| P6 | `rank_assertions` | Exact cosine kept only the 100 closest candidates, and the structural score was applied after that cut. Past 100 valid assertions, a direct, believed one just outside it was lost. | Relevance |
+| P7 | semantic search | An assertion without an embedding (captured less than a minute ago, before the backfill) was left out of semantic search. | Relevance |
+| P8 | keyword fallback | Scoped keyword search returned anything containing any term as a substring, unranked; the global one ranked by term count only, ignoring status and confidence. | Relevance |
 | P3 | ops agent / tool output | A superseded assertion (returned by `get_history`, or by an `as_of` in the past) can reach an answer without its successor being named. Elisa's "superseded timestamp" is in the data but not visible in the answer. | Right time validity, suitability for agents |
 
 ## 3. Rules
@@ -46,12 +51,21 @@ timestamp" made visible.
    entities resolved from the query. They are the assertions valid at t (R9, with R10 `known_at`),
    with scope expanding node → model → generation → site → segment. This is Elisa's
    assertion → BINDING → entity.
-2. **With no entity**, the candidates are all assertions valid at t. Validity is applied **before**
-   any vector ranking, never after.
+2. **With no entity_id**, the query is resolved (`resolve`, confidence ≥ 0.8). Each resolved
+   entity's scope comes in as `get_context` sees it, with its match weight and qualifier
+   filter. All other assertions valid at t are ranked alongside with the unscoped weight 0.7,
+   so a misread query hides nothing, except what `get_context` would itself leave out for a
+   named device: knowledge bound to its scope but filtered out, and knowledge whose models,
+   generation or firmware match none of the named devices (P5). `resolved_entities` in the
+   result lists them. Validity is applied **before** any vector ranking, never after.
 3. **Ranking:** `score = max(0, cosine(q, a)) × structural(a)` when there is query text, otherwise
    `structural(a)`. `structural` is the existing `repository.score()`.
-   - Cosine is computed exactly over the candidates (`rank_candidates`), not by approximate
-     top-k search.
+   - Cosine is computed exactly over **all** candidates (`similarities`), not by approximate
+     top-k search, and nothing is cut before the structural score is applied (P6).
+   - A candidate with no embedding yet is embedded on the spot. If the provider fails, it is
+     ranked by keyword overlap and the result's `note` says so (P7).
+   - Without embeddings at all, similarity is keyword overlap (share of query terms found
+     as words of the statement or topic), and the same formula applies (P8).
    - Neo4j's cosine is already scaled to [0, 1]; the clamp guards any other source.
    - `superseded` and `expired` weigh 1.0 in `structural`. Candidates are valid at t, so
      those statuses only describe what happened after t (P4).
@@ -86,6 +100,7 @@ These stay in the Trello **Stretch** list in case the judges ask for them.
 |---|---|
 | **TAR-5** Retrieval at t (R12) | Fix P1, P2 and P4 in `search_context` and `get_context` ranking; ST-70, ST-71, ST-72 |
 | **TAR-3** Successor always shown (R11) | Fix P3 in the tool summaries and the ops-agent prompt; ST-73 |
+| Retrieval gaps (v3) | Fix P5–P8 in `search_context`; ST-74 to ST-77 |
 
 ## 6. Tests (added to plan 003 §1.8)
 
@@ -95,3 +110,7 @@ These stay in the Trello **Stretch** list in case the judges ask for them.
 | ST-71 | `search_context("Kemi gate access")`, no `as_of` | The code lock. The padlock is not presented as current. |
 | ST-72 | Disputed ASR-0020 (TRN-003 counter-report) given closer wording than Erkki's rule ASR-0001, in semantic search | ASR-0001 ranks above ASR-0020 (P2). |
 | ST-73 | Any result containing a superseded assertion | It carries `superseded_by`, and the ops agent's answer names the successor and when it took over (R11). |
+| ST-74 | `search_context("TRN-003 zero traffic after the SFP swap")`, all vectors equal | `resolved_entities = [TRN-003]`; the Gen1 rule ASR-0001 is absent; ASR-0020 is `direct`. For TRN-017 (Gen1), ASR-0001 ranks first as `model` (P5). |
+| ST-75 | `similarities` over 120 embedded candidates | 120 scores, no top-100 cut (P6). |
+| ST-76 | ASR-0021 with no embedding | Embedded during the search and returned; if the provider fails, returned with a keyword score and a `note` (P7). |
+| ST-77 | Keyword mode | A believed rule ranks above a disputed report with the same terms; assertions sharing no term are left out (P8). |

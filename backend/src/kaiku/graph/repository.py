@@ -465,24 +465,6 @@ class ContextRepository:
         )
         return [str(r["id"]) for r in rows]
 
-    async def keyword_search(
-        self, terms: Sequence[str], t: datetime, k: datetime, limit: int
-    ) -> list[AssertionView]:
-        """Fallback when embeddings are unavailable: assertions whose statement or topic
-        contains the most query terms."""
-        rows = await self._read(
-            "MATCH (a:ContextAssertion) WHERE " + _VALID + " AND " + _KNOWN + " "
-            "WITH a, size([w IN $terms WHERE toLower(a.statement) CONTAINS w "
-            "  OR toLower(coalesce(a.topic, '')) CONTAINS w]) AS hits WHERE hits > 0 "
-            "WITH a, hits ORDER BY hits DESC LIMIT $limit "
-            "RETURN " + _ASSERTION_FIELDS,
-            terms=[w.lower() for w in terms],
-            t=t,
-            k=k,
-            limit=limit,
-        )
-        return [assertion_view(r, None, k) for r in rows]
-
     async def search_assertions(self, vec: Sequence[float], k: int) -> list[vector.VectorHit]:
         """Global semantic top-k over assertions that are not superseded or expired."""
         return await vector.search(
@@ -494,17 +476,22 @@ class ContextRepository:
             status_in=["believed_true", "unverified", "disputed"],
         )
 
-    async def rank_assertions(
-        self, ids: Sequence[str], vec: Sequence[float], k: int
+    async def similarities(
+        self, ids: Sequence[str], vec: Sequence[float]
     ) -> list[vector.VectorHit]:
-        """Exact ranking of an already-scoped candidate set (spike BE-1.2)."""
-        return await vector.rank_candidates(self._driver, self._db, vector.ASSERTIONS, ids, vec, k)
+        """Exact cosine for every candidate in an already-scoped set (spike BE-1.2)."""
+        return await vector.similarities(self._driver, self._db, vector.ASSERTIONS, ids, vec)
 
-    async def assertions_missing_embeddings(self, limit: int = 500) -> list[dict[str, str]]:
+    async def assertions_missing_embeddings(
+        self, limit: int = 500, *, ids: Sequence[str] | None = None
+    ) -> list[dict[str, str]]:
+        """Assertions with a statement but no vector yet; with `ids`, only among those."""
         return await self._read(
             "MATCH (a:ContextAssertion) WHERE a.embedding IS NULL AND a.statement IS NOT NULL "
+            "AND ($ids IS NULL OR a.assertion_id IN $ids) "
             "RETURN a.assertion_id AS id, a.statement AS statement LIMIT $limit",
             limit=limit,
+            ids=None if ids is None else list(ids),
         )
 
     async def set_embeddings(self, rows: Sequence[Mapping[str, Any]]) -> None:

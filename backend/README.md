@@ -65,7 +65,7 @@ default to now.
 | `resolve_entities(text)` | "the Pori node" → TRN-017; aliases are fuzzy-matched |
 | `get_entity(id, as_of)` | model, generation, firmware at t, segments, links |
 | `get_context(id, as_of, known_at, topic, symptoms, statuses)` | knowledge in scope at t: the node, its model and generation, its segments, plus observations on same-model devices; ranked, with citations |
-| `search_context(query, as_of, entity_id)` | semantic (Featherless embeddings), keyword fallback |
+| `search_context(query, as_of, entity_id)` | semantic (Featherless embeddings), keyword fallback; entities named in the query are resolved and scoped as in `get_context` |
 | `check_conditions(assertion_id, entity_id, port, at)` | each symptom met / not_met / unknown from telemetry (last complete 15-min interval) |
 | `get_site_access(entity_or_site, as_of, known_at)` | access knowledge + register at the visit time; `known_at` shows what was believed then |
 | `get_events(id, start, end, types)` | alarms, device events, outcomes |

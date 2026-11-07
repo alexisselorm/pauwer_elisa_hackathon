@@ -95,7 +95,7 @@ Every test is automated (pytest, against Neo4j in testcontainers, a fake Slack b
 
 ### 1.8 Temporal-aware retrieval (L, A): plan 004
 
-ST-70…ST-73 are specified in [plan 004 §6](004-temporal-aware-retrieval.md#6-tests-added-to-plan-003-18): a past `as_of` isn't missed, current isn't confused with superseded, disputed ranks below believed, and the successor is always named.
+ST-70…ST-77 are specified in [plan 004 §6](004-temporal-aware-retrieval.md#6-tests-added-to-plan-003-18): a past `as_of` isn't missed, current isn't confused with superseded, disputed ranks below believed, the successor is always named, entities named in a query scope the search, no candidate is cut before ranking or left out for lack of an embedding, and the keyword fallback is ranked.
 
 ## 2. Eval (fixed)
 

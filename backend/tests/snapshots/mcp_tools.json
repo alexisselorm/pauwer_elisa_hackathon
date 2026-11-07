@@ -3097,7 +3097,7 @@
     }
   },
   {
-    "description": "Semantic search over knowledge valid at a time (keyword search if embeddings are\n        unavailable).",
+    "description": "Semantic search over knowledge valid at a time (keyword search if embeddings are\n        unavailable). Without entity_id, entities named in the query are resolved and their\n        knowledge is ranked as get_context would scope it; `resolved_entities` lists them.",
     "inputSchema": {
       "properties": {
         "as_of": {
@@ -3500,9 +3500,30 @@
           "title": "Mode",
           "type": "string"
         },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
         "query": {
           "title": "Query",
           "type": "string"
+        },
+        "resolved_entities": {
+          "default": [],
+          "description": "entities read from the query; knowledge in their scope carries its match",
+          "items": {
+            "type": "string"
+          },
+          "title": "Resolved Entities",
+          "type": "array"
         }
       },
       "required": [

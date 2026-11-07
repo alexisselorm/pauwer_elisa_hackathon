@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import re
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
@@ -35,14 +36,18 @@ from kaiku.context.models import (
 from kaiku.context.resolve import resolve
 from kaiku.domain.models import AssertionStatus
 from kaiku.domain.time import ensure_utc, qualifiers_match
-from kaiku.graph.cypher.vector import MAX_K
 from kaiku.graph.repository import (
     SCOPE_BY_ENTITY_TYPE,
     ContextRepository,
     NotFoundError,
     score,
 )
-from kaiku.llm.embeddings import Embedder, embed_query_or_none
+from kaiku.llm.embeddings import (
+    Embedder,
+    EmbeddingDimensionError,
+    EmbeddingUnavailableError,
+    embed_query_or_none,
+)
 from kaiku.logging import get_logger
 from kaiku.telemetry.store import ConditionStatus, TelemetryStore
 from kaiku.validation.outcomes import OutcomeVerifier
@@ -60,18 +65,47 @@ _STOPWORDS = frozenset(
 )  # fmt: skip
 
 
-def rank_semantic(
-    candidates: Sequence[AssertionView], cosine: Mapping[str, float]
+# search_context reads entities from the query when no entity_id is given. Below this
+# confidence a match is a guess (a city alone, a loose fuzzy alias), so it doesn't scope.
+RESOLVE_MIN_CONFIDENCE = 0.8
+_WORD = re.compile(r"[\w-]+")
+_PREFIX_MIN = 4  # "replac" matches "replacement"; "up" doesn't match "upgrade"
+
+
+def query_terms(query: str) -> list[str]:
+    return list(dict.fromkeys(w for w in _WORD.findall(query.casefold()) if w not in _STOPWORDS))
+
+
+def lexical_similarity(terms: Sequence[str], assertion: AssertionView) -> float:
+    """Share of the query terms found as words of the statement or topic, in [0, 1]. A term
+    of `_PREFIX_MIN`+ letters also matches a longer word it starts ("swap" -> "swapped")."""
+    if not terms:
+        return 0.0
+    text = f"{assertion.statement} {(assertion.topic or '').replace('_', ' ')}".casefold()
+    words = set(_WORD.findall(text))
+    hits = sum(
+        1
+        for w in terms
+        if w in words or (len(w) >= _PREFIX_MIN and any(x.startswith(w) for x in words))
+    )
+    return hits / len(terms)
+
+
+def rank_by_similarity(
+    candidates: Sequence[AssertionView],
+    similarity: Mapping[str, float],
+    *,
+    keep_unmatched: bool,
 ) -> list[AssertionView]:
-    """R12: score = max(0, cosine) * the structural score (match * status * confidence), so
-    a disputed or review_due assertion never ranks level with a believed one just because
+    """R12: score = max(0, similarity) * the structural score (match * status * confidence),
+    so a disputed or review_due assertion never ranks level with a believed one just because
     its wording is closer. Neo4j's cosine is already in [0, 1]; the clamp guards any other
-    source. Candidates without an embedding have no cosine and are left out, as before;
-    they are still reachable through get_context."""
+    source. With `keep_unmatched` false (keyword mode), candidates sharing no term with the
+    query are left out; in semantic mode every candidate is ranked."""
     ranked = [
-        a.model_copy(update={"score": round(max(0.0, cosine[a.assertion_id]) * score(a), 3)})
+        a.model_copy(update={"score": round(max(0.0, sim) * score(a), 3)})
         for a in candidates
-        if a.assertion_id in cosine
+        if (sim := similarity.get(a.assertion_id, 0.0)) > 0 or keep_unmatched
     ]
     return sorted(ranked, key=lambda a: (-(a.score or 0.0), a.assertion_id))
 
@@ -104,6 +138,19 @@ def _running_snapshot(entity: EntityView) -> dict[str, str]:
 
 def _now() -> datetime:
     return datetime.now(UTC)
+
+
+@dataclass
+class _Scope:
+    assertions: list[AssertionView] = field(default_factory=list)
+    entity_ids: set[str] = field(default_factory=set)
+    devices: list[dict[str, str]] = field(default_factory=list)  # running snapshots at t
+
+
+def _fits_any(assertion: AssertionView, devices: Sequence[Mapping[str, str]]) -> bool:
+    """R9 against the devices a query names: true when none were named."""
+    required = _required(assertion.qualifiers)
+    return not devices or any(qualifiers_match(required, d) for d in devices)
 
 
 class ContextService:
@@ -191,37 +238,108 @@ class ContextService:
         entity_id: str | None = None,
         limit: int = 10,
     ) -> SearchResult:
+        """R12 (plan 004): validity at t first, then rank. Ranking an index top-k and
+        filtering afterwards can miss what was valid at a past `as_of`.
+
+        With `entity_id`, only that entity's scope is searched. Without it, entities read
+        from the query (`resolve`, confidence >= RESOLVE_MIN_CONFIDENCE) bring their scope
+        in as get_context sees it: with its match weight (direct 1.0, model 0.9, ...) and
+        its qualifier filter. The rest of the valid knowledge is ranked alongside with the
+        unscoped weight (0.7), so a wrong reading of the query lowers nothing below what an
+        unscoped search would give, and hides nothing. What get_context leaves out for a
+        resolved device is not brought back: knowledge bound to its scope but filtered out,
+        and knowledge whose models, generation or firmware match none of the devices named
+        (R9), such as a Gen1 rule when the question is about a Gen3 node."""
         t = self._t(as_of)
         k = self.clock()
         limit = max(1, min(limit, 50))
-        scoped: list[AssertionView] | None = None
+        resolved: list[str] = []
         if entity_id:
-            scoped = (await self.get_context(entity_id, as_of=t)).assertions
-        vec = await embed_query_or_none(self.embedder, query)
-        if vec is not None:
-            # R12 (plan 004): validity at t first, then rank. Ranking an index top-k and
-            # filtering afterwards can miss what was valid at a past `as_of`.
-            if scoped is not None:
-                candidates = scoped
-            else:
-                candidates = await self.repo.assertions(
-                    await self.repo.valid_assertion_ids(t, k), t, k
-                )
-            hits = await self.repo.rank_assertions(
-                [a.assertion_id for a in candidates], vec, max(1, min(len(candidates), MAX_K))
-            )
-            found = rank_semantic(candidates, {h.id: h.score for h in hits})[:limit]
-            return SearchResult(query=query, as_of=t, mode="semantic", assertions=found)
-        terms = [w for w in re.findall(r"[\w-]+", query.casefold()) if w not in _STOPWORDS]
-        if scoped is not None:
-            found = [
-                a
-                for a in scoped
-                if any(w in a.statement.casefold() or w in (a.topic or "") for w in terms)
-            ][:limit]
+            first = (await self._in_scope([entity_id], t)).assertions
+            rest: list[AssertionView] = []
         else:
-            found = await self.repo.keyword_search(terms, t, k, limit)
-        return SearchResult(query=query, as_of=t, mode="keyword", assertions=found)
+            resolved = [
+                c.entity_id
+                for c in resolve(query, await self.repo.all_entities(), self.aliases, t)
+                if c.confidence >= RESOLVE_MIN_CONFIDENCE
+            ]
+            scope = await self._in_scope(resolved, t)
+            first = scope.assertions
+            taken = {a.assertion_id for a in first}
+            rest = [
+                a
+                for a in await self.repo.assertions(await self.repo.valid_assertion_ids(t, k), t, k)
+                if a.assertion_id not in taken
+                and not any(b.entity_id in scope.entity_ids for b in a.bindings)
+                and _fits_any(a, scope.devices)
+            ]
+        terms = query_terms(query)
+        candidates = first + rest
+        lexical = {a.assertion_id: lexical_similarity(terms, a) for a in candidates}
+        vec = await embed_query_or_none(self.embedder, query)
+        note = None
+        if vec is None:
+            similarity, mode = lexical, "keyword"
+        else:
+            ids = list(lexical)
+            unembedded = await self._embed_now(ids)
+            cosine = {h.id: h.score for h in await self.repo.similarities(ids, vec)}
+            similarity, mode = {i: cosine.get(i, lexical[i]) for i in ids}, "semantic"
+            if missing := [i for i in ids if i not in cosine]:
+                note = (
+                    f"{len(missing)} assertion(s) have no embedding yet"
+                    + (f" ({unembedded})" if unembedded else "")
+                    + "; they were ranked by keyword overlap"
+                )
+        found = rank_by_similarity(candidates, similarity, keep_unmatched=mode == "semantic")[
+            :limit
+        ]
+        return SearchResult(
+            query=query,
+            as_of=t,
+            mode=mode,
+            resolved_entities=resolved,
+            assertions=found,
+            note=note,
+        )
+
+    async def _in_scope(self, entity_ids: Sequence[str], t: datetime) -> _Scope:
+        """What get_context returns for each entity at t, merged (an assertion reached from
+        two entities keeps its best match), every entity id those scopes cover, and what
+        each device among them runs at t."""
+        scope = _Scope()
+        best: dict[str, AssertionView] = {}
+        for entity_id in entity_ids:
+            entity = await self.get_entity(entity_id, t)
+            if entity.entity_type == "device":
+                scope.devices.append(_running_snapshot(entity))
+            ctx = await self.get_context(entity_id, as_of=t)
+            scope.entity_ids.update(ctx.scope_entities)
+            for a in ctx.assertions:
+                current = best.get(a.assertion_id)
+                if current is None or score(a) > score(current):
+                    best[a.assertion_id] = a
+        scope.assertions = list(best.values())
+        return scope
+
+    async def _embed_now(self, ids: Sequence[str]) -> str | None:
+        """Embed the candidates the minute-by-minute backfill hasn't reached yet, so a fresh
+        capture is searchable at once. Returns why that failed, or None."""
+        if self.embedder is None:
+            return "no embedder"
+        rows = await self.repo.assertions_missing_embeddings(len(ids), ids=ids)
+        if not rows:
+            return None
+        try:
+            vectors = await self.embedder.embed_documents([r["statement"] for r in rows])
+        except (EmbeddingUnavailableError, EmbeddingDimensionError) as exc:
+            log.warning("search_embedding_failed", count=len(rows), error=str(exc))
+            return "embedding failed"
+        await self.repo.set_embeddings(
+            [{"id": r["id"], "vector": v} for r, v in zip(rows, vectors, strict=True)]
+        )
+        log.info("assertions_embedded_on_search", count=len(rows))
+        return None
 
     async def check_conditions(
         self,

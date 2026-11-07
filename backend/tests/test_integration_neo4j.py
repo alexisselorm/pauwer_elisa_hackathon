@@ -203,6 +203,35 @@ async def test_vector_search_and_scoped_ranking(neo4j_url: str, settings: Settin
             )
 
 
+async def test_similarities_score_every_candidate_beyond_max_k(
+    neo4j_url: str, settings: Settings
+) -> None:
+    """Plan 004 R12: the exact cosine has no top-k cut, so the structural weight applied
+    afterwards can still lift a candidate that is not among the 100 closest."""
+    from neo4j import AsyncGraphDatabase
+
+    await schema.apply_migrations(settings)
+    n = vector.MAX_K + 20
+    rows = [{"id": f"SIM-{i:03d}", "e": _unit(0, mix=(1, i / n))} for i in range(n)]
+    rows.append({"id": "SIM-none", "e": None})
+    async with AsyncGraphDatabase.driver(neo4j_url, auth=("neo4j", PASSWORD)) as driver:
+        await driver.execute_query(
+            "UNWIND $rows AS r CREATE (:ContextAssertion {assertion_id: r.id, embedding: r.e})",
+            rows=rows,
+        )
+        try:
+            hits = await vector.similarities(
+                driver, "neo4j", vector.ASSERTIONS, [r["id"] for r in rows], _unit(0)
+            )
+            assert len(hits) == n  # every embedded candidate; the one without a vector is not
+            assert "SIM-none" not in {h.id for h in hits}
+            assert await vector.similarities(driver, "neo4j", vector.ASSERTIONS, [], _unit(0)) == []
+        finally:
+            await driver.execute_query(
+                "MATCH (n:ContextAssertion) WHERE n.assertion_id STARTS WITH 'SIM-' DETACH DELETE n"
+            )
+
+
 async def test_vector_search_rejects_bad_arguments(settings: Settings) -> None:
     from neo4j import AsyncGraphDatabase
 
@@ -688,6 +717,107 @@ async def test_search_filters_by_time_first_then_ranks(
             res = await svc.search_context("traffic zero after SFP swap, what to do")
             got = [a.assertion_id for a in res.assertions]
             assert got.index("ASR-0001") < got.index("ASR-0020")
+        finally:
+            await driver.execute_query("MATCH (a:ContextAssertion) REMOVE a.embedding")
+
+
+class _NoDocumentEmbedder(_FixedEmbedder):
+    """Embeds queries but fails on documents, like a provider that runs out mid-request."""
+
+    async def embed_documents(self, texts: Any) -> list[list[float]]:
+        from kaiku.llm.embeddings import EmbeddingUnavailableError
+
+        raise EmbeddingUnavailableError("out of credit")
+
+
+async def test_search_scopes_by_query_entities_and_embeds_on_demand(
+    neo4j_url: str, make_settings: Callable[..., Settings]
+) -> None:
+    """Plan 004 R12 on the gold graph: entities named in the query scope the search like
+    get_context does, and an assertion the backfill hasn't embedded yet is still ranked."""
+    from datetime import UTC, datetime
+
+    from neo4j import AsyncGraphDatabase
+
+    from kaiku.context.service import ContextService
+    from kaiku.graph.repository import ContextRepository
+    from kaiku.seed.profiles import Profile
+    from kaiku.seed.service import SeedRequest, seed
+    from kaiku.telemetry.store import TelemetryStore
+
+    settings = make_settings(neo4j_uri=neo4j_url, neo4j_password=PASSWORD, data_dir=MOCK_DATA)
+    seeded = await seed(settings, SeedRequest(network=True, gold=True, profile=Profile.FULL))
+    assert seeded.violations == 0
+
+    async with AsyncGraphDatabase.driver(neo4j_url, auth=("neo4j", PASSWORD)) as driver:
+        repo = ContextRepository(driver, "neo4j")
+        ids = [
+            r["id"]
+            for r in await repo._read("MATCH (a:ContextAssertion) RETURN a.assertion_id AS id")
+        ]
+        # Every vector the same: wording can't decide, only scope, status and confidence.
+        await repo.set_embeddings([{"id": i, "vector": _unit(0)} for i in ids])
+
+        def service(embedder: _FixedEmbedder) -> ContextService:
+            return ContextService(
+                repo,
+                TelemetryStore(MOCK_DATA),
+                embedder=embedder,
+                clock=lambda: datetime(2026, 11, 1, tzinfo=UTC),
+            )
+
+        async def has_vector(aid: str) -> bool:
+            rows = await repo._read(
+                "MATCH (a:ContextAssertion {assertion_id: $id}) "
+                "RETURN a.embedding IS NOT NULL AS has",
+                id=aid,
+            )
+            return bool(rows[0]["has"])
+
+        try:
+            svc = service(_FixedEmbedder())
+            # TRN-003 is a Gen3 (TNC-3X) node: the Gen1 rule doesn't apply to it, so it is
+            # left out exactly as get_context leaves it out; its own report is direct.
+            res = await svc.search_context("TRN-003 zero traffic after the SFP swap", limit=50)
+            assert res.resolved_entities == ["TRN-003"]
+            by_id = {a.assertion_id: a for a in res.assertions}
+            assert "ASR-0001" not in by_id
+            assert by_id["ASR-0020"].match == "direct"
+
+            # TRN-017 is Gen1: the rule comes in through its hardware model, weighted 0.9
+            # instead of the unscoped 0.7, and ranks first.
+            res = await svc.search_context("TRN-017 zero traffic after the SFP swap")
+            assert res.resolved_entities == ["TRN-017"]
+            assert res.assertions[0].assertion_id == "ASR-0001"
+            assert res.assertions[0].match == "model"
+
+            # No entity named: nothing is scoped and nothing is filtered.
+            res = await svc.search_context("zero traffic after the SFP swap", limit=50)
+            assert res.resolved_entities == []
+            assert {"ASR-0001", "ASR-0020"} <= {a.assertion_id for a in res.assertions}
+
+            # A capture the minute-by-minute backfill hasn't reached is embedded on the spot.
+            await driver.execute_query(
+                "MATCH (a:ContextAssertion {assertion_id: 'ASR-0021'}) REMOVE a.embedding"
+            )
+            res = await svc.search_context("counters zero after SFP swap on TRN-042", limit=50)
+            assert res.note is None
+            assert await has_vector("ASR-0021")
+            assert "ASR-0021" in {a.assertion_id for a in res.assertions}
+
+            # If that fails, it is ranked by keyword overlap and the result says so.
+            await driver.execute_query(
+                "MATCH (a:ContextAssertion {assertion_id: 'ASR-0021'}) REMOVE a.embedding"
+            )
+            res = await service(_NoDocumentEmbedder()).search_context(
+                "counters zero after SFP swap on TRN-042", limit=50
+            )
+            assert res.mode == "semantic"
+            assert res.note is not None
+            assert "embedding failed" in res.note
+            hit = next(a for a in res.assertions if a.assertion_id == "ASR-0021")
+            assert (hit.score or 0) > 0
+            assert not await has_vector("ASR-0021")
         finally:
             await driver.execute_query("MATCH (a:ContextAssertion) REMOVE a.embedding")
 
