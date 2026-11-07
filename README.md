@@ -6,8 +6,9 @@ Built for Elisa's challenge in `Elisa_SinceAI2026/` (the only source of truth).
 
 | Where | What |
 |---|---|
-| [`docs/plans/`](docs/plans/) | 001 backend and time model, 002 Slack and MCP, 003 acceptance tests and eval, 004 retrieval at time t |
+| [`docs/plans/`](docs/plans/) | 001 backend and time model, 002 Slack and MCP, 003 acceptance tests and eval, 004 retrieval at time t, 005 console |
 | [`backend/`](backend/) | FastAPI + MCP server, Slack bot, network simulator ([README](backend/README.md)) |
+| [`frontend/`](frontend/) | Read-only web console: live knowledge graph, capture traces, agent runs ([README](frontend/README.md)) |
 | [`mock_data/`](mock_data/) | Synthetic network, chat, email and gold answers ([README](mock_data/README.md)) |
 | [`eval/heldout/`](eval/heldout/) | Hand-written held-out threads for the eval |
 
@@ -32,6 +33,8 @@ Needs Docker with Compose v2.24+.
 | `api` | http://localhost:8000 — MCP at `/mcp` | `/readyz` is 200: Neo4j answers and the schema is applied |
 | `slackbot` | Socket Mode, no public URL | connected to Slack (without tokens it idles and says so in its log) |
 | `sim` | http://localhost:8100 | `/healthz` is 200 |
+| `web` | http://localhost:8080 | the console loads; the header says **Live** |
+| `phoenix` | http://localhost:6006 | traces appear under project `silentctx` |
 
 Everything binds to 127.0.0.1. Neo4j's password defaults to `silentctx-local-dev`; set
 `NEO4J_PASSWORD` in your shell to change it (compose passes it to both Neo4j and the API).
@@ -39,6 +42,11 @@ Everything binds to 127.0.0.1. Neo4j's password defaults to `silentctx-local-dev
 **Connect MCP Inspector:** `npx @modelcontextprotocol/inspector`, transport *Streamable HTTP*,
 URL `http://localhost:8000/mcp`, header `Authorization: Bearer <your inspector token>`.
 Call `ping` to see which agent you are.
+
+**Open the console** at http://localhost:8080. The graph updates live as threads are
+captured. Drag the *As of* slider to see what was valid at any moment. Click an assertion to see
+its scope, validity, quotes and history. *Captures* shows each thread's gates (V1–V6), and
+*Agent runs* shows every MCP call. *Trace ↗* opens the same run in Phoenix.
 
 **Inject the demo fault** (simulator, SIM-1; nodes TRN-017 / TRN-019 / TRN-010, ports 1/1/2 and 1/1/3):
 

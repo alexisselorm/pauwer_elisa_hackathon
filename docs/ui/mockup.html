@@ -1,0 +1,1016 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>silentctx Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"></script>
+<style>
+/* Tokens: Elisa Design System (storybook.elisa.fi main.css), same names minus the prefix. */
+:root {
+  --blue-01:#f3f5fd; --blue-02:#e4eafc; --blue-03:#ccd9ff; --blue-04:#a7bdff; --blue-05:#7a9bff;
+  --blue-06:#4060ff; --brand-blue:#2323ff; --blue-08:#212185; --dark-blue:#101064; --blue-10:#090933;
+  --n-01:#ffffff; --n-02:#fdfdfd; --n-03:#f6f7f8; --n-04:#eceef0; --n-05:#e6eaed; --n-06:#dbe1e6;
+  --n-07:#c7d1d8; --n-08:#b7c3cc; --n-09:#909da5; --n-10:#60686e; --n-11:#494f54; --n-12:#353b40;
+  --n-13:#202426; --n-14:#131517;
+  --success-01:#e9f9f2; --success-04:#00ac6d; --success-05:#008253;
+  --danger-01:#fff3f3; --danger-03:#ff8086; --danger-05:#da0a30;
+  --warning-01:#fff7e9; --warning-04:#ffbe33; --warning-06:#ae7a1f;
+  --orange-02:#ffdec4; --orange-05:#f27513; --brand-green:#e2e770;
+
+  --bg: var(--n-02); --bg-2: var(--n-03); --surface: var(--n-01); --hover: var(--n-04);
+  --border: var(--n-06); --border-strong: var(--n-07);
+  --text: var(--blue-10); --text-subtle: var(--n-10); --text-strong: #000;
+  --accent: var(--brand-blue); --accent-soft: var(--blue-02);
+  --ok: var(--success-05); --ok-soft: var(--success-01);
+  --bad: var(--danger-05); --bad-soft: var(--danger-01);
+  --warn: var(--warning-06); --warn-soft: var(--warning-01);
+  --shadow: 0 4px 13px rgba(0,0,0,.10);
+  --r-base: 4px; --r-double: 8px; --r-4x: 16px;
+  --font-title: "Jost", sans-serif; --font-body: "Open Sans", sans-serif;
+  --g-device: var(--n-05); --g-device-b: var(--n-08); --g-model: var(--n-07);
+  --g-topic: var(--blue-02); --g-topic-b: var(--blue-04);
+  --g-believed: var(--success-04); --g-unverified: var(--n-09); --g-disputed: var(--danger-05);
+  --g-superseded: var(--n-06); --g-expired: var(--n-05);
+  --g-slack: var(--blue-05); --g-email: var(--orange-05); --g-kb: var(--n-09);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: var(--n-14); --bg-2: var(--n-13); --surface: #1a1d20; --hover: var(--n-12);
+    --border: var(--n-12); --border-strong: var(--n-11);
+    --text: var(--blue-01); --text-subtle: var(--n-08); --text-strong: #fff;
+    --accent: var(--blue-05); --accent-soft: rgba(64,96,255,.18);
+    --ok: var(--success-04); --ok-soft: rgba(0,172,109,.15);
+    --bad: var(--danger-03); --bad-soft: rgba(218,10,48,.18);
+    --warn: var(--warning-04); --warn-soft: rgba(255,190,51,.14);
+    --shadow: 0 4px 13px rgba(0,0,0,.4);
+    --g-device: var(--n-12); --g-device-b: var(--n-10); --g-model: var(--n-11);
+    --g-topic: rgba(64,96,255,.25); --g-topic-b: var(--blue-06);
+    --g-superseded: var(--n-11); --g-expired: var(--n-12);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: var(--n-14); --bg-2: var(--n-13); --surface: #1a1d20; --hover: var(--n-12);
+  --border: var(--n-12); --border-strong: var(--n-11);
+  --text: var(--blue-01); --text-subtle: var(--n-08); --text-strong: #fff;
+  --accent: var(--blue-05); --accent-soft: rgba(64,96,255,.18);
+  --ok: var(--success-04); --ok-soft: rgba(0,172,109,.15);
+  --bad: var(--danger-03); --bad-soft: rgba(218,10,48,.18);
+  --warn: var(--warning-04); --warn-soft: rgba(255,190,51,.14);
+  --shadow: 0 4px 13px rgba(0,0,0,.4);
+  --g-device: var(--n-12); --g-device-b: var(--n-10); --g-model: var(--n-11);
+  --g-topic: rgba(64,96,255,.25); --g-topic-b: var(--blue-06);
+  --g-superseded: var(--n-11); --g-expired: var(--n-12);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--text); font: 14px/1.5 var(--font-body); -webkit-font-smoothing: antialiased; }
+h1,h2,h3 { font-family: var(--font-title); font-weight: 500; margin: 0; color: var(--text); }
+button { font: inherit; color: inherit; cursor: pointer; }
+.mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }
+.subtle { color: var(--text-subtle); }
+
+/* App shell */
+.app { display: grid; grid-template-rows: 56px 1fr; height: 100vh; }
+header { display: flex; align-items: center; gap: 24px; padding: 0 24px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-mark { width: 28px; height: 28px; border-radius: var(--r-double); background: var(--accent); display: grid; place-items: center; }
+.brand-mark svg { width: 16px; height: 16px; }
+.brand b { font-family: var(--font-title); font-weight: 600; font-size: 18px; letter-spacing: .2px; }
+.brand span { color: var(--text-subtle); font-size: 13px; }
+nav.tabs { display: flex; height: 100%; gap: 4px; }
+nav.tabs button { background: none; border: 0; padding: 0 14px; height: 100%; font-weight: 600; font-size: 14px; color: var(--text-subtle); border-bottom: 3px solid transparent; }
+nav.tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+nav.tabs button:hover { color: var(--text); }
+.hdr-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.live { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 999px; background: var(--ok-soft); color: var(--ok); font-weight: 600; font-size: 12px; }
+.live i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); animation: blink 1.6s infinite; }
+@keyframes blink { 50% { opacity: .3; } }
+.icon-btn { background: none; border: 1px solid var(--border); border-radius: var(--r-double); width: 32px; height: 32px; display: grid; place-items: center; }
+.icon-btn:hover { background: var(--hover); }
+
+main { position: relative; overflow: hidden; }
+.view { position: absolute; inset: 0; display: none; }
+.view.active { display: block; }
+
+/* Cards and chips */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-double); }
+.float { position: absolute; z-index: 5; box-shadow: var(--shadow); }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.mute { background: var(--hover); color: var(--text-subtle); }
+.pill.acc { background: var(--accent-soft); color: var(--accent); }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 1px solid var(--border-strong); border-radius: var(--r-base); font-size: 12px; background: var(--surface); }
+.chip small { color: var(--text-subtle); }
+.chip.link { cursor: pointer; }
+.chip.link:hover { border-color: var(--accent); color: var(--accent); }
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--text-subtle); margin: 0 0 8px; }
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: var(--r-double); padding: 6px 14px; font-weight: 600; font-size: 13px; }
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { filter: brightness(1.1); }
+a { color: var(--accent); text-decoration: none; font-weight: 600; }
+a:hover { text-decoration: underline; }
+
+/* Graph view */
+#cy { position: absolute; inset: 0; background:
+  radial-gradient(circle, var(--border) 1px, transparent 1px) 0 0 / 24px 24px, var(--bg); }
+.panel-left { top: 16px; left: 16px; width: 232px; padding: 16px; }
+.panel-left .row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+.panel-left label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.panel-left input { accent-color: var(--accent); }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+.sq { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: none; }
+.count { font-variant-numeric: tabular-nums; color: var(--text-subtle); font-size: 12px; }
+.sep { height: 1px; background: var(--border); margin: 12px 0; }
+.kpis { top: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 0; padding: 0; }
+.kpi { padding: 8px 18px; border-right: 1px solid var(--border); text-align: center; }
+.kpi:last-child { border-right: 0; }
+.kpi b { display: block; font-family: var(--font-title); font-size: 20px; font-weight: 500; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.kpi span { font-size: 11px; color: var(--text-subtle); }
+
+.timeline { left: 16px; right: 16px; bottom: 16px; padding: 12px 16px 10px; transition: right .25s; }
+.drawer-open .timeline { right: 432px; }
+.tl-head { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+.tl-head h3 { font-size: 16px; }
+.tl-head .when { font-variant-numeric: tabular-nums; font-weight: 600; }
+.tl-track { position: relative; height: 34px; }
+.tl-ticks { position: absolute; left: 0; right: 0; top: 2px; height: 16px; }
+.tl-ticks i { position: absolute; width: 3px; height: 14px; border-radius: 2px; transform: translateX(-1px); opacity: .85; }
+.tl-track input[type=range] { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; margin: 0; accent-color: var(--accent); }
+.tl-axis { position: relative; height: 16px; font-size: 11px; color: var(--text-subtle); margin-top: 2px; }
+.tl-axis span { position: absolute; transform: translateX(-50%); }
+.tl-marks { display: flex; gap: 6px; flex-wrap: wrap; }
+.tl-marks button { border: 1px solid var(--border); background: var(--surface); border-radius: 999px; font-size: 12px; padding: 2px 10px; }
+.tl-marks button:hover { border-color: var(--accent); color: var(--accent); }
+
+.drawer { top: 0; right: 0; bottom: 0; width: 416px; border-radius: 0; border-width: 0 0 0 1px; transform: translateX(100%); transition: transform .25s; overflow-y: auto; z-index: 10; }
+.drawer-open .drawer { transform: none; }
+.drawer-head { position: sticky; top: 0; background: var(--surface); padding: 16px 20px 12px; border-bottom: 1px solid var(--border); z-index: 1; }
+.drawer-head .top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.drawer-head h2 { font-size: 20px; line-height: 1.3; }
+.drawer-body { padding: 16px 20px 32px; display: grid; gap: 20px; }
+.statement { font-size: 14px; }
+.vbar { position: relative; height: 8px; background: var(--hover); border-radius: 4px; margin: 10px 0 6px; }
+.vbar .fill { position: absolute; top: 0; bottom: 0; border-radius: 4px; background: var(--g-believed); }
+.vbar .fill.open::after { content: ""; position: absolute; right: -10px; top: 0; bottom: 0; width: 10px; background: linear-gradient(90deg, var(--g-believed), transparent); }
+.vbar .now { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--accent); }
+.vlabels { display: flex; justify-content: space-between; font-size: 12px; }
+.cond { display: grid; grid-template-columns: 20px 1fr auto; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.cond:last-child { border-bottom: 0; }
+.ico-ok { color: var(--ok); font-weight: 700; } .ico-bad { color: var(--bad); font-weight: 700; } .ico-unk { color: var(--text-subtle); font-weight: 700; }
+.steps { display: grid; gap: 6px; }
+.step { display: flex; gap: 10px; align-items: flex-start; padding: 8px 12px; border-radius: var(--r-double); font-size: 13px; }
+.step.do { background: var(--ok-soft); }
+.step.avoid { background: var(--bad-soft); }
+.step b { min-width: 42px; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; padding-top: 1px; }
+.step.do b { color: var(--ok); } .step.avoid b { color: var(--bad); }
+.quote { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 0 0 12px; }
+.quote q { display: block; font-size: 13px; quotes: "“" "”"; }
+.quote .src { font-size: 12px; color: var(--text-subtle); margin-top: 4px; display: flex; align-items: center; gap: 6px; }
+.quote.email { border-left-color: var(--orange-05); }
+.quote.kb { border-left-color: var(--n-09); }
+.rel { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; }
+.rel .kind { min-width: 104px; font-size: 12px; color: var(--text-subtle); }
+.rel .tgt { cursor: pointer; border-bottom: 1px dashed var(--border-strong); }
+.rel .tgt:hover { color: var(--accent); border-color: var(--accent); }
+.conf { display: flex; align-items: center; gap: 12px; }
+.conf .meter { flex: 1; height: 6px; border-radius: 3px; background: var(--hover); overflow: hidden; }
+.conf .meter i { display: block; height: 100%; background: var(--accent); }
+.drawer-foot { display: flex; gap: 8px; flex-wrap: wrap; }
+.mcp { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r-double); padding: 10px 12px; white-space: pre-wrap; word-break: break-word; }
+
+.toast { position: absolute; top: 76px; right: 24px; z-index: 20; width: 340px; padding: 14px 16px; display: flex; gap: 12px; transform: translateY(-12px); opacity: 0; pointer-events: none; transition: all .3s; border-left: 4px solid var(--accent); }
+.toast.show { transform: none; opacity: 1; pointer-events: auto; }
+.drawer-open .toast { right: 440px; }
+.toast .t1 { font-weight: 600; font-size: 13px; }
+.toast .t2 { font-size: 12px; color: var(--text-subtle); }
+
+/* Captures and Agent views */
+.split { display: grid; grid-template-columns: 320px 1fr; height: 100%; }
+.list { border-right: 1px solid var(--border); overflow-y: auto; background: var(--surface); }
+.list h3 { font-size: 16px; padding: 16px 16px 8px; }
+.li { padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; display: grid; gap: 4px; border-left: 3px solid transparent; }
+.li:hover { background: var(--hover); }
+.li.sel { background: var(--accent-soft); border-left-color: var(--accent); }
+.li .l1 { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 600; font-size: 13px; }
+.li .l2 { font-size: 12px; color: var(--text-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.li.new { animation: flash 2s; }
+@keyframes flash { 0%,40% { background: var(--accent-soft); } }
+.detail { overflow-y: auto; padding: 24px 32px 48px; }
+.detail-head { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.detail-head h2 { font-size: 24px; }
+.detail-head .right { margin-left: auto; display: flex; gap: 8px; }
+.pipe { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0; margin-bottom: 24px; }
+.ps { position: relative; padding: 0 8px; text-align: center; }
+.ps::before { content: ""; position: absolute; top: 15px; left: -50%; right: 50%; height: 2px; background: var(--border-strong); z-index: 0; }
+.ps:first-child::before { display: none; }
+.ps.done::before { background: var(--accent); }
+.ps .node { position: relative; z-index: 1; width: 32px; height: 32px; margin: 0 auto 6px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; background: var(--surface); border: 2px solid var(--border-strong); color: var(--text-subtle); }
+.ps.done .node { background: var(--accent); border-color: var(--accent); color: #fff; }
+.ps.stop .node { background: var(--surface); border-color: var(--n-09); color: var(--n-09); }
+.ps.flag .node { background: var(--warn); border-color: var(--warn); color: #fff; }
+.ps .nm { font-weight: 600; font-size: 13px; }
+.ps .meta { font-size: 11px; color: var(--text-subtle); }
+.ps .out { font-size: 12px; margin-top: 2px; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.sect { padding: 16px 18px; }
+.sect + .sect { margin-top: 20px; }
+.grid2 > .sect + .sect { margin-top: 0; }
+.sect h3 { font-size: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.msg { display: grid; grid-template-columns: 32px 1fr; gap: 10px; padding: 8px 0; }
+.avatar { width: 32px; height: 32px; border-radius: var(--r-double); display: grid; place-items: center; font-weight: 700; font-size: 12px; color: #fff; }
+.msg .who { font-weight: 700; font-size: 13px; }
+.msg .who span { font-weight: 400; color: var(--text-subtle); font-size: 12px; margin-left: 6px; }
+.msg .txt { font-size: 13px; }
+.msg .tag { margin-top: 4px; }
+mark { border-radius: 3px; padding: 0 2px; color: inherit; }
+mark.c { background: rgba(122,155,255,.28); box-shadow: inset 0 -2px 0 var(--blue-05); }
+mark.a { background: rgba(0,172,109,.2); box-shadow: inset 0 -2px 0 var(--success-04); }
+mark.v { background: rgba(218,10,48,.14); box-shadow: inset 0 -2px 0 var(--danger-05); }
+mark.s { background: rgba(255,211,0,.28); box-shadow: inset 0 -2px 0 #eac200; }
+mark.e { background: rgba(242,117,19,.18); box-shadow: inset 0 -2px 0 var(--orange-05); }
+.legend-row { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--text-subtle); }
+.legend-row mark { font-size: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-subtle); font-weight: 700; padding: 0 8px 8px 0; border-bottom: 1px solid var(--border); }
+td { padding: 9px 8px 9px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+.kv { display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; font-size: 13px; }
+.kv dt { color: var(--text-subtle); }
+.kv dd { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+
+.calls { position: relative; padding-left: 24px; }
+.calls::before { content: ""; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; background: var(--border); }
+.call { position: relative; padding: 0 0 16px; }
+.call::before { content: ""; position: absolute; left: -22px; top: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); }
+.call.final::before { background: var(--accent); }
+.call .fn { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.call .fn code { font-weight: 700; font-size: 13px; color: var(--accent); }
+.call .fn .args { color: var(--text-subtle); }
+.call .fn .ms { margin-left: auto; color: var(--text-subtle); font-size: 12px; }
+.call .res { font-size: 13px; margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+.score { padding: 24px 32px; overflow-y: auto; height: 100%; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin: 16px 0 24px; }
+.tile { padding: 16px 18px; }
+.tile .v { font-family: var(--font-title); font-size: 36px; font-weight: 500; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile .v small { font-size: 16px; color: var(--text-subtle); }
+.tile .k { font-weight: 600; font-size: 13px; margin-top: 4px; }
+.tile .n { font-size: 12px; color: var(--text-subtle); }
+.tile.good .v { color: var(--ok); }
+.bar { height: 8px; background: var(--hover); border-radius: 4px; overflow: hidden; min-width: 120px; }
+.bar i { display: block; height: 100%; background: var(--accent); }
+
+@media (max-width: 900px) {
+  header { gap: 12px; padding: 0 16px; overflow-x: auto; }
+  .brand span, .hdr-right .subtle { display: none; }
+  .panel-left, .kpis { display: none; }
+  .drawer { width: 100%; }
+  .drawer-open .timeline { right: 16px; }
+  .split { grid-template-columns: 1fr; grid-template-rows: 200px 1fr; }
+  .grid2 { grid-template-columns: 1fr; }
+  .pipe { grid-template-columns: repeat(3, 1fr); row-gap: 16px; }
+  .detail, .score { padding: 16px; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="4" cy="4" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="6" cy="12" r="2"/><path d="M5.8 4.6 10.2 5.4M4.6 5.9 5.4 10.1M7.6 11 10.6 7.4"/></svg></div>
+      <b>silentctx</b><span>Context layer</span>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-view="graph">Graph</button>
+      <button role="tab" aria-selected="false" data-view="captures">Captures</button>
+      <button role="tab" aria-selected="false" data-view="agent">Agent runs</button>
+      <button role="tab" aria-selected="false" data-view="score">Scorecard</button>
+    </nav>
+    <div class="hdr-right">
+      <span class="subtle" style="font-size:12px">Slack · Email · MCP</span>
+      <span class="live"><i></i>Live</span>
+      <button class="icon-btn" id="theme" title="Toggle theme" aria-label="Toggle theme">◐</button>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- GRAPH -->
+    <section class="view active" id="view-graph">
+      <div id="cy"></div>
+
+      <div class="card float panel-left">
+        <p class="eyebrow">Layers</p>
+        <div class="row"><label><input type="checkbox" data-layer="network" checked> Network</label><span class="count" id="c-network"></span></div>
+        <div class="row"><label><input type="checkbox" data-layer="knowledge" checked> Knowledge</label><span class="count" id="c-knowledge"></span></div>
+        <div class="row"><label><input type="checkbox" data-layer="source" checked> Sources</label><span class="count" id="c-source"></span></div>
+        <div class="sep"></div>
+        <p class="eyebrow">Status at time</p>
+        <div class="row"><span><span class="dot" style="background:var(--g-believed)"></span>&nbsp; Believed true</span><span class="count" id="s-believed_true"></span></div>
+        <div class="row"><span><span class="dot" style="background:var(--g-unverified)"></span>&nbsp; Unverified</span><span class="count" id="s-unverified"></span></div>
+        <div class="row"><span><span class="dot" style="background:var(--g-disputed)"></span>&nbsp; Disputed</span><span class="count" id="s-disputed"></span></div>
+        <div class="row"><span><span class="dot" style="background:var(--surface);border:2px dashed var(--n-09)"></span>&nbsp; Ended</span><span class="count" id="s-ended"></span></div>
+        <div class="sep"></div>
+        <p class="eyebrow">Links</p>
+        <div class="row"><span><span class="sq" style="background:var(--dark-blue)"></span>&nbsp; Supersedes</span></div>
+        <div class="row"><span><span class="sq" style="background:var(--g-believed)"></span>&nbsp; Corroborates</span></div>
+        <div class="row"><span><span class="sq" style="background:var(--g-disputed)"></span>&nbsp; Contradicts</span></div>
+        <div class="sep"></div>
+        <button class="btn" id="simulate" style="width:100%">Simulate a capture</button>
+      </div>
+
+      <div class="card float kpis">
+        <div class="kpi"><b id="k-assert">0</b><span>assertions</span></div>
+        <div class="kpi"><b id="k-today">0</b><span>captured today</span></div>
+        <div class="kpi"><b>0</b><span>human actions</span></div>
+        <div class="kpi"><b>9.8<small style="font-size:12px"> s</small></b><span>p50 capture</span></div>
+      </div>
+
+      <div class="card float timeline">
+        <div class="tl-head">
+          <h3>As of</h3>
+          <span class="when" id="when"></span>
+          <span class="pill acc" id="when-rel"></span>
+          <div class="tl-marks" style="margin-left:auto">
+            <button data-jump="2025-10-14T06:30:00Z">Elisa case</button>
+            <button data-jump="2026-03-10T08:00:00Z">Gen2 confirmed</button>
+            <button data-jump="2026-08-03T06:00:00Z">Kemi code lock</button>
+            <button data-jump="now">Now</button>
+            <button id="play" aria-label="Play">▶ Play</button>
+          </div>
+        </div>
+        <div class="tl-track">
+          <div class="tl-ticks" id="ticks"></div>
+          <input type="range" id="slider" min="0" max="1000" value="1000" aria-label="As of time">
+        </div>
+        <div class="tl-axis" id="axis"></div>
+      </div>
+
+      <aside class="card float drawer" id="drawer" aria-label="Details"></aside>
+
+      <div class="card float toast" id="toast" role="status">
+        <div style="font-size:20px">⚡</div>
+        <div style="flex:1">
+          <div class="t1" id="toast-1"></div>
+          <div class="t2" id="toast-2"></div>
+        </div>
+        <button class="btn" id="toast-open" style="align-self:center">Open</button>
+      </div>
+    </section>
+
+    <!-- CAPTURES -->
+    <section class="view" id="view-captures">
+      <div class="split">
+        <div class="list" id="cap-list"><h3>Threads</h3></div>
+        <div class="detail" id="cap-detail"></div>
+      </div>
+    </section>
+
+    <!-- AGENT -->
+    <section class="view" id="view-agent">
+      <div class="split">
+        <div class="list" id="run-list"><h3>Agent runs</h3></div>
+        <div class="detail" id="run-detail"></div>
+      </div>
+    </section>
+
+    <!-- SCORECARD -->
+    <section class="view" id="view-score">
+      <div class="score">
+        <div class="detail-head" style="margin-bottom:0">
+          <h2>Scorecard</h2>
+          <span class="pill mute">Sample values</span>
+          <div class="right"><span class="mono subtle">silentctx eval --set all --graph both --runs 3</span></div>
+        </div>
+        <div class="tiles">
+          <div class="card tile good"><div class="v">0</div><div class="k">Extra work per capture</div><div class="n">human actions · 17 threads</div></div>
+          <div class="card tile"><div class="v">0.92</div><div class="k">Extraction precision</div><div class="n">vs gold · n = 24</div></div>
+          <div class="card tile"><div class="v">0.88</div><div class="k">Entity linking F1</div><div class="n">observed_on + applies_to</div></div>
+          <div class="card tile"><div class="v">100<small>%</small></div><div class="k">Validity times exact</div><div class="n">to the second · T0</div></div>
+          <div class="card tile good"><div class="v">0</div><div class="k">False-confident answers</div><div class="n">on undocumented questions</div></div>
+        </div>
+        <div class="grid2">
+          <div class="card sect">
+            <h3>By criterion</h3>
+            <table>
+              <thead><tr><th>Metric</th><th>Extracted</th><th>Gold</th><th></th></tr></thead>
+              <tbody id="metric-rows"></tbody>
+            </table>
+          </div>
+          <div class="card sect">
+            <h3>Time model checks</h3>
+            <table>
+              <thead><tr><th>Rule</th><th>Check</th><th></th></tr></thead>
+              <tbody>
+                <tr><td class="mono">R1</td><td>Events are immutable</td><td><span class="pill ok">pass</span></td></tr>
+                <tr><td class="mono">R2</td><td>valid_from ≤ valid_to</td><td><span class="pill ok">pass</span></td></tr>
+                <tr><td class="mono">R4</td><td>Supersede closes predecessor</td><td><span class="pill ok">pass</span></td></tr>
+                <tr><td class="mono">R8</td><td>Stated dates = 00:00 Helsinki</td><td><span class="pill ok">pass</span></td></tr>
+                <tr><td class="mono">R9</td><td>Entity exists at valid_from</td><td><span class="pill ok">pass</span></td></tr>
+                <tr><td class="mono">R11</td><td>Superseded names successor</td><td><span class="pill ok">pass</span></td></tr>
+                <tr><td class="mono">HQ</td><td>As-of probes (n = 12)</td><td><span class="pill ok">12 / 12</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ---------- Data: a slice of the demo graph (Neo4j, 2026-11-07) ---------- */
+const NOW = new Date("2026-11-07T10:30:00Z");
+const T0 = new Date("2019-06-01T00:00:00Z");
+
+const ENTITIES = [
+  { id: "TRN-042", kind: "device", label: "TRN-042", sub: "Kemi", model: "TNC-1X", alarms: 31 },
+  { id: "TRN-019", kind: "device", label: "TRN-019", sub: "Lappeenranta", model: "TNC-1X", alarms: 12 },
+  { id: "TRN-014", kind: "device", label: "TRN-014", sub: "Seinäjoki", model: "TNC-1X", alarms: 9 },
+  { id: "TRN-017", kind: "device", label: "TRN-017", sub: "Pori", model: "TNC-1X", alarms: 18 },
+  { id: "TRN-016", kind: "device", label: "TRN-016", sub: "Mikkeli", model: "TNC-2X", alarms: 7 },
+  { id: "TRN-011", kind: "device", label: "TRN-011", sub: "Ivalo", model: "TNC-2X", alarms: 5 },
+  { id: "TRN-003", kind: "device", label: "TRN-003", sub: "Tampere", model: "TNC-3X", alarms: 14 },
+  { id: "TRN-006", kind: "device", label: "TRN-006", sub: "Rovaniemi", model: "TNC-3X", alarms: 6 },
+  { id: "CR-001", kind: "device", label: "CR-001", sub: "Core", model: null, alarms: 22 },
+  { id: "TNC-1X", kind: "model", label: "TNC-1X", gen: "Gen1" },
+  { id: "TNC-2X", kind: "model", label: "TNC-2X", gen: "Gen2" },
+  { id: "TNC-3X", kind: "model", label: "TNC-3X", gen: "Gen3" },
+  { id: "KMAX-4K", kind: "model", label: "KMAX-4K", gen: null },
+  { id: "Gen1", kind: "gen", label: "Gen1 · 2019" },
+  { id: "Gen2", kind: "gen", label: "Gen2" },
+  { id: "Gen3", kind: "gen", label: "Gen3" },
+  { id: "SEG-042", kind: "segment", label: "SEG-042", sub: "Kemi access" },
+  { id: "SEG-011", kind: "segment", label: "SEG-011", sub: "Ivalo access" },
+  { id: "T-sfp", kind: "topic", label: "SFP replacement" },
+  { id: "T-access", kind: "topic", label: "Site access" },
+  { id: "T-mtu", kind: "topic", label: "MTU change" },
+  { id: "T-mw", kind: "topic", label: "Microwave" },
+];
+const SEG_LINKS = [["SEG-042", "TRN-042"], ["SEG-011", "TRN-011"]];
+
+// status = stored status now; vf/vt = validity. origin: extracted (captured) | seeded (history).
+const ASSERTIONS = [
+  { id: "ASR-0030", short: "Reboot whole node", topic: "T-sfp", status: "superseded", origin: "kb", vf: "2024-03-02T00:00:00Z", vt: "2025-10-14T06:22:08Z",
+    statement: "ITSM KB: TRN-042-only known issue; workaround is to reboot the whole node.", about: [["observed_on", "TRN-042"]] },
+  { id: "ASR-0001", short: "Bounce port, not SFP", topic: "T-sfp", status: "believed_true", origin: "slack", vf: "2025-10-14T06:22:08Z", vt: null,
+    statement: "On Gen1 (2019) transmission units, after an SFP replacement the interface can be UP with normal optical power and zero traffic counters; the forwarding state did not recover. Disable and re-enable the interface before replacing hardware or rebooting.",
+    about: [["observed_on", "TRN-042"], ["applies_to", "TNC-1X"], ["activity", "T-sfp"]], support: 5, refute: 1, rich: true },
+  { id: "ASR-0002", short: "Counters zero → bounce once", topic: "T-sfp", status: "disputed", origin: "email", vf: "2025-10-14T08:40:00Z", vt: null,
+    statement: "If the interface is UP but traffic counters remain at zero after an SFP replacement, disable and enable the interface once before replacing the SFP again or rebooting.", about: [["observed_on", "TRN-042"]], support: 2, refute: 1 },
+  { id: "ASR-0005", short: "Gen1 only", topic: "T-sfp", status: "superseded", origin: "slack", vf: "2025-10-14T06:25:39Z", vt: "2026-03-10T07:39:42Z",
+    statement: "Forwarding-state stall after SFP swap applies only to Gen1 (2019 TNC-1X) units.", about: [["applies_to", "TNC-1X"]] },
+  { id: "ASR-0006", short: "Also Gen2", topic: "T-sfp", status: "believed_true", origin: "slack", vf: "2026-03-10T07:39:42Z", vt: null,
+    statement: "The forwarding-state stall after SFP swap also occurs on Gen2 (TNC-2X) units. The port bounce still applies; the 'old units only' scope is obsolete.", about: [["applies_to", "TNC-2X"]], support: 2, refute: 0 },
+  { id: "ASR-0019", short: "Bounce fixed TRN-019", topic: "T-sfp", status: "believed_true", origin: "slack", vf: "2025-11-19T08:05:24Z", vt: null,
+    statement: "Interface UP + optics normal + counters zero after SFP swap on TRN-019; port bounce fixed it.", about: [["observed_on", "TRN-019"]], support: 1, refute: 0 },
+  { id: "ASR-0017", short: "Bounce fixed TRN-014", topic: "T-sfp", status: "believed_true", origin: "slack", vf: "2025-12-03T06:40:05Z", vt: null,
+    statement: "Interface UP + optics normal + counters zero after SFP swap on TRN-014; port bounce fixed it.", about: [["observed_on", "TRN-014"]], support: 1, refute: 0 },
+  { id: "ASR-0016", short: "Bounce fixed TRN-016", topic: "T-sfp", status: "believed_true", origin: "slack", vf: "2026-03-10T07:10:27Z", vt: null,
+    statement: "Interface UP + optics normal + counters zero after SFP swap on TRN-016; port bounce fixed it.", about: [["observed_on", "TRN-016"]], support: 1, refute: 0 },
+  { id: "ASR-0018", short: "Re-seat fixed TRN-006", topic: "T-sfp", status: "unverified", origin: "slack", vf: "2026-01-22T11:20:13Z", vt: null,
+    statement: "SFP re-seat fixed the counters-zero symptom on TRN-006 (loose module), no bounce needed.", about: [["observed_on", "TRN-006"]] },
+  { id: "ASR-0020", short: "Bounce failed on 3X", topic: "T-sfp", status: "disputed", origin: "slack", vf: "2026-07-14T09:30:23Z", vt: null,
+    statement: "On TRN-003 (TNC-3X) the 'bounce the port' recipe failed; replacing the SFP fixed it.", about: [["observed_on", "TRN-003"], ["applies_to", "TNC-3X"]], support: 1, refute: 0 },
+
+  { id: "ASR-0032", short: "Ask Pekka for key", topic: "T-access", status: "superseded", origin: "kb", vf: "2023-06-30T00:00:00Z", vt: "2026-08-02T21:00:00Z",
+    statement: "ITSM KB: Kemi site is behind a private-road gate; ask Pekka for the key.", about: [["observed_on", "SEG-042"]] },
+  { id: "ASR-0023", short: "Key on Pekka's ring", topic: "T-access", status: "superseded", origin: "email", vf: "2025-10-20T09:19:38Z", vt: "2026-08-02T21:00:00Z",
+    statement: "Kemi transport room gate is locked with a padlock; the key is on Pekka Hämäläinen's keyring (not in the key box at the office).", about: [["observed_on", "SEG-042"]] },
+  { id: "ASR-0024", short: "Code lock, no key", topic: "T-access", status: "believed_true", origin: "email", vf: "2026-08-02T21:00:00Z", vt: null,
+    statement: "Kemi transport room gate is a code lock (installed 2026-08-03). There is no physical key. The code is held by site security / Heikki Lehtonen.", about: [["observed_on", "SEG-042"]], support: 1, refute: 0 },
+  { id: "ASR-0025", short: "Ivalo road snowed in", topic: "T-access", status: "believed_true", origin: "slack", vf: "2024-06-11T21:00:00Z", vt: null,
+    statement: "Ivalo gate is unlocked; the 1.4 km gravel road is snowed in Oct–May and must be cleared by the local contractor.", about: [["observed_on", "SEG-011"]] },
+  { id: "ASR-2521", short: "Below −20 °C: fire station", topic: "T-access", status: "unverified", origin: "slack", vf: "2026-11-07T10:04:33Z", vt: "2026-12-14T22:00:00Z",
+    statement: "When mains fails at Ivalo (TRN-011) and temperature is below −20 °C, call the Ivalo fire station for the mobile generator.", about: [["observed_on", "TRN-011"], ["applies_to", "TNC-2X"]] },
+
+  { id: "ASR-0014", short: "Core MTU 9114", topic: "T-mtu", status: "superseded", origin: "slack", vf: "2025-12-15T09:00:29Z", vt: "2026-04-20T14:00:27Z",
+    statement: "Core links are MTU 9114; do not change it, old TNC only handles 9114.", about: [["observed_on", "CR-001"]] },
+  { id: "ASR-0015", short: "Core MTU 9216", topic: "T-mtu", status: "believed_true", origin: "slack", vf: "2026-04-20T14:00:27Z", vt: null,
+    statement: "Core links are MTU 9216 since the 2026 firmware; TNC-1X handles it. Earlier 9114 guidance is obsolete.", about: [["observed_on", "CR-001"]] },
+
+  { id: "ASR-0012", short: "Power-cycle radio", topic: "T-mw", status: "disputed", origin: "slack", vf: "2026-06-02T11:00:25Z", vt: null,
+    statement: "For an RF alarm on a KMAX-4K microwave hop, power-cycle the radio (works 9/10).", about: [["applies_to", "KMAX-4K"]] },
+  { id: "ASR-0013", short: "Never power-cycle", topic: "T-mw", status: "disputed", origin: "slack", vf: "2026-06-02T11:12:17Z", vt: null,
+    statement: "Do not power-cycle a KMAX-4K: it reboots into config-recovery and loses the channel plan unless the config was exported first.", about: [["applies_to", "KMAX-4K"]] },
+];
+
+const RELATIONS = [
+  ["ASR-0001", "SUPERSEDES", "ASR-0030"], ["ASR-0001", "CORROBORATES", "ASR-0002"],
+  ["ASR-0006", "SUPERSEDES", "ASR-0005"], ["ASR-0001", "CORROBORATES", "ASR-0019"],
+  ["ASR-0001", "CORROBORATES", "ASR-0017"], ["ASR-0001", "CORROBORATES", "ASR-0016"],
+  ["ASR-0001", "CONTRADICTS", "ASR-0020"], ["ASR-0024", "SUPERSEDES", "ASR-0023"],
+  ["ASR-0024", "SUPERSEDES", "ASR-0032"], ["ASR-0023", "CORROBORATES", "ASR-0032"],
+  ["ASR-2521", "CORROBORATES", "ASR-0025"], ["ASR-0015", "SUPERSEDES", "ASR-0014"],
+  ["ASR-0012", "CONTRADICTS", "ASR-0013"],
+];
+
+const SOURCES = [
+  { id: "SRC-slack-1", kind: "slack", label: "#noc-transport", t: "2025-10-14T06:22:08Z", for: ["ASR-0001", "ASR-0005"] },
+  { id: "SRC-email-1", kind: "email", label: "RE: TRN-042", t: "2025-10-14T08:40:00Z", for: ["ASR-0001", "ASR-0002"] },
+  { id: "SRC-kb-1", kind: "kb", label: "ITSM KB", t: "2023-06-30T00:00:00Z", for: ["ASR-0030", "ASR-0032"] },
+  { id: "SRC-email-2", kind: "email", label: "Kemi gate", t: "2026-08-02T09:00:00Z", for: ["ASR-0024"] },
+  { id: "SRC-slack-2", kind: "slack", label: "#noc-transport", t: "2026-03-10T07:39:42Z", for: ["ASR-0006"] },
+];
+
+const LIVE = {
+  a: { id: "ASR-7F1C", short: "Bounce fixed TRN-017", topic: "T-sfp", status: "unverified", origin: "slack", vf: null, vt: null,
+       statement: "Interface UP + optics normal + counters zero after SFP swap on TRN-017 1/1/2; port bounce restored traffic.", about: [["observed_on", "TRN-017"]], support: 1, refute: 0 },
+  rel: ["ASR-7F1C", "CORROBORATES", "ASR-0001"],
+  src: { id: "SRC-slack-live", kind: "slack", label: "#noc-alarms", t: null, for: ["ASR-7F1C"] },
+};
+
+/* ---------- Helpers ---------- */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Helsinki", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const fmtDay = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Helsinki", day: "numeric", month: "short", year: "numeric" });
+const fmtTime = d => fmt.format(d) + " Helsinki";
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const byId = id => ASSERTIONS.find(a => a.id === id);
+const STATUS_LABEL = { believed_true: "Believed true", unverified: "Unverified", disputed: "Disputed", superseded: "Superseded", expired: "Expired" };
+const STATUS_PILL = { believed_true: "ok", unverified: "mute", disputed: "bad", superseded: "mute", expired: "mute" };
+const ORIGIN = { slack: "Captured from Slack", email: "Captured from email", kb: "Seeded from KB" };
+
+let asOf = new Date(NOW);
+let liveAdded = false;
+
+/* ---------- Graph ---------- */
+function elements() {
+  const els = [];
+  for (const e of ENTITIES) els.push({ group: "nodes", data: { id: e.id, label: e.sub ? `${e.label}\n${e.sub}` : e.label, kind: e.kind, layer: e.kind === "topic" ? "knowledge" : "network", alarms: e.alarms || 0 } });
+  for (const e of ENTITIES) {
+    if (e.kind === "device" && e.model) els.push({ group: "edges", data: { id: `m-${e.id}`, source: e.id, target: e.model, rel: "IS_MODEL", layer: "network" } });
+    if (e.kind === "model" && e.gen) els.push({ group: "edges", data: { id: `g-${e.id}`, source: e.id, target: e.gen, rel: "OF_GENERATION", layer: "network" } });
+  }
+  for (const [s, d] of SEG_LINKS) els.push({ group: "edges", data: { id: `s-${s}`, source: s, target: d, rel: "LINKED", layer: "network" } });
+  for (const a of ASSERTIONS) els.push(...assertionEls(a));
+  for (const [s, r, t] of RELATIONS) els.push(relEl(s, r, t));
+  for (const s of SOURCES) els.push(...sourceEls(s));
+  return els;
+}
+function assertionEls(a) {
+  const out = [{ group: "nodes", data: { id: a.id, label: a.short, kind: "assertion", layer: "knowledge", status: a.status, origin: a.origin } }];
+  out.push({ group: "edges", data: { id: `t-${a.id}`, source: a.id, target: a.topic, rel: "ABOUT", scope: "activity", layer: "knowledge" } });
+  for (const [scope, ent] of a.about) if (ent !== a.topic) out.push({ group: "edges", data: { id: `a-${a.id}-${ent}`, source: a.id, target: ent, rel: "ABOUT", scope, layer: "knowledge" } });
+  return out;
+}
+const relEl = (s, r, t) => ({ group: "edges", data: { id: `r-${s}-${t}`, source: s, target: t, rel: r, layer: "knowledge" } });
+function sourceEls(s) {
+  const out = [{ group: "nodes", data: { id: s.id, label: s.label, kind: s.kind, layer: "source" } }];
+  for (const a of s.for) out.push({ group: "edges", data: { id: `d-${a}-${s.id}`, source: a, target: s.id, rel: "DERIVED_FROM", layer: "source" } });
+  return out;
+}
+
+function graphStyle() {
+  return [
+    { selector: "node", style: { "font-family": "Open Sans", "font-size": 10, color: css("--text"), "text-wrap": "wrap", "text-max-width": 96, "text-valign": "bottom", "text-margin-y": 5, label: "data(label)", "min-zoomed-font-size": 7, "transition-property": "opacity, background-color, border-color", "transition-duration": "300ms" } },
+    { selector: "node[kind='device']", style: { shape: "round-rectangle", width: 40, height: 26, "background-color": css("--g-device"), "border-width": 1.5, "border-color": css("--g-device-b"), "font-weight": 600 } },
+    { selector: "node[kind='device'][alarms > 0]", style: { "background-image": "none" } },
+    { selector: "node[kind='model']", style: { shape: "hexagon", width: 36, height: 32, "background-color": css("--g-model"), "font-weight": 600 } },
+    { selector: "node[kind='gen']", style: { shape: "diamond", width: 22, height: 22, "background-color": css("--g-model") } },
+    { selector: "node[kind='segment']", style: { shape: "barrel", width: 34, height: 20, "background-color": css("--g-device"), "border-width": 1.5, "border-color": css("--g-device-b"), "border-style": "dashed" } },
+    { selector: "node[kind='topic']", style: { shape: "round-tag", width: 30, height: 30, "background-color": css("--g-topic"), "border-width": 1.5, "border-color": css("--g-topic-b"), "font-weight": 700, color: css("--accent"), "font-size": 11 } },
+    { selector: "node[kind='assertion']", style: { shape: "ellipse", width: 24, height: 24, "border-width": 0, "font-size": 10 } },
+    { selector: "node[status='believed_true']", style: { "background-color": css("--g-believed") } },
+    { selector: "node[status='unverified']", style: { "background-color": css("--g-unverified") } },
+    { selector: "node[status='disputed']", style: { "background-color": css("--g-disputed") } },
+    { selector: "node[status='superseded'], node[status='expired']", style: { "background-color": css("--g-superseded") } },
+    { selector: "node[kind='assertion'][origin!='kb']", style: { "border-width": 3, "border-color": css("--surface") } },
+    { selector: "node.ended", style: { "background-color": css("--surface"), "border-width": 2, "border-style": "dashed", "border-color": css("--n-09"), color: css("--text-subtle"), opacity: .55 } },
+    { selector: "node[kind='slack'], node[kind='email'], node[kind='kb']", style: { shape: "round-rectangle", width: 14, height: 14, "font-size": 9, color: css("--text-subtle") } },
+    { selector: "node[kind='slack']", style: { "background-color": css("--g-slack") } },
+    { selector: "node[kind='email']", style: { "background-color": css("--g-email") } },
+    { selector: "node[kind='kb']", style: { "background-color": css("--g-kb") } },
+    { selector: "edge", style: { width: 1, "line-color": css("--border-strong"), "curve-style": "bezier", "target-arrow-shape": "none", opacity: .9, "font-size": 9, "font-family": "Open Sans", color: css("--text-subtle"), "text-background-color": css("--bg"), "text-background-opacity": 1, "text-background-padding": 2 } },
+    { selector: "edge[rel='DERIVED_FROM']", style: { "line-style": "dotted", "line-color": css("--n-08") } },
+    { selector: "edge[rel='ABOUT']", style: { "line-color": css("--n-07") } },
+    { selector: "edge[rel='SUPERSEDES']", style: { width: 2.5, "line-color": css("--dark-blue"), "target-arrow-shape": "triangle", "target-arrow-color": css("--dark-blue"), "line-style": "dashed" } },
+    { selector: "edge[rel='CORROBORATES']", style: { width: 2, "line-color": css("--g-believed") } },
+    { selector: "edge[rel='CONTRADICTS']", style: { width: 2.5, "line-color": css("--g-disputed") } },
+    { selector: ".hidden", style: { display: "none" } },
+    { selector: ".dim", style: { opacity: .12 } },
+    { selector: "node.hl", style: { "font-weight": 700, "z-index": 10 } },
+    { selector: "edge.hl", style: { opacity: 1, "z-index": 10, label: "data(lbl)" } },
+    { selector: "node:selected", style: { "overlay-color": css("--accent"), "overlay-opacity": .12, "overlay-padding": 8 } },
+    { selector: "node.pulse", style: { "overlay-color": css("--accent"), "overlay-opacity": .25, "overlay-padding": 14 } },
+  ];
+}
+
+const cy = cytoscape({ container: $("#cy"), elements: elements(), style: graphStyle(), wheelSensitivity: .2, minZoom: .3, maxZoom: 2.5 });
+cy.edges().forEach(e => e.data("lbl", e.data("scope") ? e.data("scope").replace("_", " ") : e.data("rel").toLowerCase().replace("_", " ")));
+const layoutOpts = { name: "cose", animate: false, randomize: true, nodeRepulsion: () => 9000, idealEdgeLength: e => e.data("rel") === "DERIVED_FROM" ? 40 : 70, edgeElasticity: () => 80, gravity: 0.35, numIter: 2500, padding: 60, componentSpacing: 80 };
+const SEED = +(new URLSearchParams(location.search).get("seed") || 14);
+function runLayout(seed) {
+  let x = seed >>> 0; const rnd = Math.random;
+  Math.random = () => { x = (x + 0x6D2B79F5) >>> 0; let t = x; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  try { cy.layout(layoutOpts).run(); } finally { Math.random = rnd; }
+}
+runLayout(SEED);
+fitGraph();
+function fitGraph() { cy.fit(cy.elements(":visible"), 150); cy.panBy({ x: 110, y: -45 }); }
+
+/* ---------- Time filter ---------- */
+function stateAt(a, t) {
+  const vf = a.vf ? new Date(a.vf) : NOW, vt = a.vt ? new Date(a.vt) : null;
+  if (vf > t) return "future";
+  if (vt && vt <= t) return "ended";
+  return "active";
+}
+function statusAt(a, t) {
+  const s = stateAt(a, t);
+  if (s !== "active") return s;
+  return (a.status === "superseded" || a.status === "expired") ? "believed_true" : a.status;
+}
+function applyTime() {
+  const layers = Object.fromEntries($$("[data-layer]").map(i => [i.dataset.layer, i.checked]));
+  const counts = { believed_true: 0, unverified: 0, disputed: 0, ended: 0 };
+  cy.batch(() => {
+    for (const a of allAssertions()) {
+      const n = cy.getElementById(a.id); if (!n.nonempty()) continue;
+      const st = statusAt(a, asOf);
+      n.toggleClass("hidden", st === "future" || !layers.knowledge);
+      n.toggleClass("ended", st === "ended");
+      if (st !== "future" && st !== "ended") n.data("status", st);
+      if (st !== "future") counts[st === "ended" ? "ended" : st]++;
+    }
+    for (const s of allSources()) {
+      const n = cy.getElementById(s.id); if (!n.nonempty()) continue;
+      n.toggleClass("hidden", !layers.source || new Date(s.t || NOW) > asOf);
+    }
+    cy.nodes().filter(n => n.data("layer") === "network").toggleClass("hidden", !layers.network);
+    cy.nodes("[kind='topic']").toggleClass("hidden", !layers.knowledge);
+    cy.edges().forEach(e => e.toggleClass("hidden", e.source().hasClass("hidden") || e.target().hasClass("hidden")));
+  });
+  for (const k in counts) $("#s-" + k).textContent = counts[k];
+  $("#c-network").textContent = cy.nodes().filter(n => n.data("layer") === "network").length;
+  $("#c-knowledge").textContent = allAssertions().length;
+  $("#c-source").textContent = allSources().length;
+  $("#when").textContent = fmtTime(asOf);
+  const days = Math.round((NOW - asOf) / 864e5);
+  $("#when-rel").textContent = days < 1 ? "now" : days < 60 ? `${days} days ago` : `${(days / 365).toFixed(1)} years ago`;
+  if (current) openDrawer(current, true);
+}
+const allAssertions = () => liveAdded ? [...ASSERTIONS, LIVE.a] : ASSERTIONS;
+const allSources = () => liveAdded ? [...SOURCES, LIVE.src] : SOURCES;
+
+const slider = $("#slider");
+const tToV = t => Math.round(1000 * (t - T0) / (NOW - T0));
+const vToT = v => new Date(T0.getTime() + (NOW - T0) * v / 1000);
+slider.addEventListener("input", () => { asOf = vToT(+slider.value); if (+slider.value === 1000) asOf = new Date(NOW); applyTime(); });
+function setAsOf(t) { asOf = t; slider.value = tToV(t); applyTime(); }
+$$("[data-jump]").forEach(b => b.addEventListener("click", () => setAsOf(b.dataset.jump === "now" ? new Date(NOW) : new Date(b.dataset.jump))));
+$$("[data-layer]").forEach(i => i.addEventListener("change", applyTime));
+
+function drawTicks() {
+  const host = $("#ticks"); host.innerHTML = "";
+  for (const a of allAssertions()) {
+    const t = a.vf ? new Date(a.vf) : NOW;
+    const i = document.createElement("i");
+    i.style.left = (100 * (t - T0) / (NOW - T0)) + "%";
+    i.style.background = css(a.status === "disputed" ? "--g-disputed" : a.status === "believed_true" ? "--g-believed" : "--n-09");
+    i.title = `${a.id} · ${fmtDay.format(t)}`;
+    host.appendChild(i);
+  }
+  const ax = $("#axis"); ax.innerHTML = "";
+  for (let y = 2020; y <= 2026; y++) { const s = document.createElement("span"); s.textContent = y; s.style.left = (100 * (new Date(`${y}-01-01T00:00:00Z`) - T0) / (NOW - T0)) + "%"; ax.appendChild(s); }
+}
+
+let playing = null;
+$("#play").addEventListener("click", () => {
+  if (playing) { clearInterval(playing); playing = null; $("#play").textContent = "▶ Play"; return; }
+  if (+slider.value >= 1000) slider.value = 0;
+  $("#play").textContent = "❚❚ Pause";
+  playing = setInterval(() => {
+    const v = Math.min(1000, +slider.value + 6); slider.value = v;
+    asOf = v === 1000 ? new Date(NOW) : vToT(v); applyTime();
+    if (v === 1000) { clearInterval(playing); playing = null; $("#play").textContent = "▶ Play"; }
+  }, 40);
+});
+
+/* ---------- Focus and drawer ---------- */
+let current = null;
+cy.on("tap", "node", e => openDrawer(e.target.id()));
+cy.on("tap", e => { if (e.target === cy) closeDrawer(); });
+
+function focus(id) {
+  cy.elements().removeClass("dim hl");
+  if (!id) return;
+  const n = cy.getElementById(id);
+  const hood = n.closedNeighborhood();
+  cy.elements().not(hood).addClass("dim");
+  hood.addClass("hl");
+  const z = Math.min(1.6, Math.max(cy.zoom(), .9));
+  cy.animate({ zoom: { level: z, position: n.position() }, duration: 350, complete: () => cy.animate({ panBy: { x: (cy.width() - 416) / 2 + 125 - n.renderedPosition().x, y: (cy.height() - 120) / 2 - n.renderedPosition().y }, duration: 300 }) });
+}
+function closeDrawer() { current = null; $("#app").classList.remove("drawer-open"); focus(null); cy.$(":selected").unselect(); fitGraph(); }
+
+function openDrawer(id, silent) {
+  current = id;
+  const a = allAssertions().find(x => x.id === id);
+  const ent = ENTITIES.find(x => x.id === id);
+  $("#drawer").innerHTML = a ? assertionPanel(a) : ent ? entityPanel(ent) : sourcePanel(allSources().find(x => x.id === id));
+  $("#app").classList.add("drawer-open");
+  if (!silent) focus(id);
+  $$("[data-goto]", $("#drawer")).forEach(el => el.addEventListener("click", () => { const t = el.dataset.goto; const n = cy.getElementById(t); if (n.nonempty()) { cy.animate({ center: { eles: n }, duration: 300 }); n.select(); } openDrawer(t); }));
+  $("#drawer .close")?.addEventListener("click", closeDrawer);
+}
+
+function relationsOf(id) {
+  const rels = liveAdded ? [...RELATIONS, LIVE.rel] : RELATIONS;
+  const out = [];
+  for (const [s, r, t] of rels) {
+    if (s === id) out.push([{ SUPERSEDES: "Supersedes", CORROBORATES: "Corroborates", CONTRADICTS: "Contradicts" }[r], t, r]);
+    if (t === id) out.push([{ SUPERSEDES: "Superseded by", CORROBORATES: "Corroborated by", CONTRADICTS: "Contradicted by" }[r], s, r]);
+  }
+  return out;
+}
+
+function validityBar(a) {
+  const vf = new Date(a.vf || NOW), vt = a.vt ? new Date(a.vt) : null;
+  const span = NOW - T0, L = 100 * (vf - T0) / span, R = 100 * ((vt || NOW) - T0) / span;
+  const st = stateAt(a, asOf);
+  const color = st === "ended" ? css("--n-08") : css(a.status === "disputed" ? "--g-disputed" : a.status === "unverified" ? "--g-unverified" : "--g-believed");
+  return `<div class="vbar"><div class="fill ${vt ? "" : "open"}" style="left:${L}%;width:${Math.max(R - L, .8)}%;background:${color}"></div><div class="now" style="left:${100 * (asOf - T0) / span}%" title="As of"></div></div>
+  <div class="vlabels"><span><span class="subtle">From</span> ${fmtTime(vf)}</span><span><span class="subtle">To</span> ${vt ? fmtTime(vt) : "still believed true"}</span></div>`;
+}
+
+function assertionPanel(a) {
+  const st = statusAt(a, asOf);
+  const shown = st === "ended" ? a.status : st;
+  const scopes = a.about.map(([s, e]) => `<span class="chip link" data-goto="${e}"><small>${s.replace("_", " ")}</small>${esc(ENTITIES.find(x => x.id === e)?.label || e)}</span>`).join(" ");
+  const rels = relationsOf(a.id).map(([k, t, r]) => `<div class="rel"><span class="kind">${k}</span><span class="dot" style="background:${css(r === "CONTRADICTS" ? "--g-disputed" : r === "SUPERSEDES" ? "--dark-blue" : "--g-believed")}"></span><span class="tgt" data-goto="${t}">${esc(allAssertions().find(x => x.id === t)?.short || t)}</span><span class="mono subtle" style="margin-left:auto">${t}</span></div>`).join("") || `<div class="subtle" style="font-size:13px">None</div>`;
+  const conf = a.support != null ? (1 + a.support) / (2 + a.support + a.refute) : null;
+  return `
+  <div class="drawer-head">
+    <div class="top"><span class="pill ${STATUS_PILL[shown]}">${STATUS_LABEL[shown]}</span>${st === "ended" ? `<span class="pill mute">Ended at this time</span>` : ""}<span class="mono subtle">${a.id}</span><button class="icon-btn close" style="margin-left:auto" aria-label="Close">✕</button></div>
+    <h2>${esc(a.short)}</h2>
+  </div>
+  <div class="drawer-body">
+    <div><p class="statement">${esc(a.statement)}</p><span class="pill acc">${ORIGIN[a.origin]}</span></div>
+    <div><p class="eyebrow">Bound to</p><div style="display:flex;gap:6px;flex-wrap:wrap">${scopes}</div></div>
+    <div><p class="eyebrow">Validity</p>${validityBar(a)}</div>
+    ${a.rich ? richPart() : ""}
+    ${conf != null ? `<div><p class="eyebrow">Confidence</p><div class="conf"><div class="meter"><i style="width:${conf * 100}%"></i></div><b>${conf.toFixed(2)}</b></div><div class="subtle" style="font-size:12px;margin-top:4px">${a.support} supports · ${a.refute} refutes · Beta(1+s, 1+r)</div></div>` : ""}
+    <div><p class="eyebrow">History</p>${rels}</div>
+    <div><p class="eyebrow">Agents see it via MCP</p><div class="mcp mono">get_context("${a.about[0][1]}", as_of="${asOf.toISOString().slice(0, 19)}Z")</div></div>
+    <div class="drawer-foot"><button class="btn" data-capture="T1">Capture trace</button><a class="btn" href="#" onclick="return false">Phoenix trace ↗</a></div>
+  </div>`;
+}
+
+function richPart() {
+  return `
+    <div><p class="eyebrow">When</p>
+      <div class="cond"><span class="ico-ok">✓</span><span>Interface oper UP</span><span class="pill ok">telemetry agrees</span></div>
+      <div class="cond"><span class="ico-ok">✓</span><span>RX optical power normal</span><span class="pill ok">−4.1 dBm</span></div>
+      <div class="cond"><span class="ico-ok">✓</span><span>Traffic counters at zero</span><span class="pill ok">0 pps</span></div>
+      <div class="cond"><span class="ico-unk">·</span><span>After SFP replacement</span><span class="subtle" style="font-size:12px">activity</span></div>
+      <div class="subtle" style="font-size:12px;margin-top:6px">V4 · TRN-042 1/1/3 · bin 06:00–06:15 UTC</div>
+    </div>
+    <div><p class="eyebrow">Then</p><div class="steps">
+      <div class="step do"><b>Do</b><span>Disable the interface, wait, enable it again</span></div>
+      <div class="step avoid"><b>Avoid</b><span>Replacing the SFP again</span></div>
+      <div class="step avoid"><b>Avoid</b><span>Rebooting the whole unit</span></div>
+    </div></div>
+    <div><p class="eyebrow">Evidence</p>
+      <div class="quote"><q>Disable the interface, wait a little, then enable it again. Don't reboot the whole unit unless that fails.</q><div class="src">Erkki Expert · #noc-transport · 14 Oct 2025, 09:22</div></div>
+      <div class="quote"><q>Yes. Link UP. RX power looks normal. Counters basically zero.</q><div class="src">Veikko Vikkelä · #noc-transport · 09:21</div></div>
+      <div class="quote email"><q>If the interface is UP but the counters remain at zero, try disabling and enabling the interface once.</q><div class="src">Email · RE: TRN-042 traffic not recovering · +1 source</div></div>
+    </div>`;
+}
+
+function entityPanel(e) {
+  const linked = allAssertions().filter(a => a.about.some(([, x]) => x === e.id) || a.topic === e.id);
+  const active = linked.filter(a => { const s = statusAt(a, asOf); return s !== "future" && s !== "ended"; });
+  const model = e.model ? ENTITIES.find(x => x.id === e.model) : null;
+  return `
+  <div class="drawer-head">
+    <div class="top"><span class="pill mute">${{ device: "Device", model: "Hardware model", gen: "Generation", segment: "Segment", topic: "Activity" }[e.kind]}</span><button class="icon-btn close" style="margin-left:auto" aria-label="Close">✕</button></div>
+    <h2>${esc(e.label)}${e.sub ? ` <span class="subtle" style="font-size:16px">${esc(e.sub)}</span>` : ""}</h2>
+  </div>
+  <div class="drawer-body">
+    ${e.kind === "device" ? `<dl class="kv"><dt>Model</dt><dd>${model ? `<span class="chip link" data-goto="${model.id}">${model.id}</span> <span class="chip link" data-goto="${model.gen}">${model.gen}</span>` : "—"}</dd><dt>Alarms</dt><dd>${e.alarms} in history</dd><dt>Firmware</dt><dd>${e.model === "TNC-1X" ? "v1.8.2" : "v3.1.0"} <span class="subtle">at this time</span></dd></dl>` : ""}
+    <div><p class="eyebrow">Knowledge in scope at this time · ${active.length}</p>
+      ${active.map(a => `<div class="rel"><span class="dot" style="background:${css(statusAt(a, asOf) === "disputed" ? "--g-disputed" : statusAt(a, asOf) === "unverified" ? "--g-unverified" : "--g-believed")}"></span><span class="tgt" data-goto="${a.id}">${esc(a.short)}</span><span class="mono subtle" style="margin-left:auto">${a.id}</span></div>`).join("") || `<div class="subtle" style="font-size:13px">Nothing yet</div>`}
+    </div>
+    ${linked.length > active.length ? `<div><p class="eyebrow">Ended or not yet known · ${linked.length - active.length}</p>${linked.filter(a => !active.includes(a)).map(a => `<div class="rel subtle"><span class="tgt" data-goto="${a.id}">${esc(a.short)}</span><span class="mono" style="margin-left:auto">${a.id}</span></div>`).join("")}</div>` : ""}
+    <div><p class="eyebrow">MCP</p><div class="mcp mono">get_context("${e.id}", as_of="${asOf.toISOString().slice(0, 19)}Z")</div></div>
+  </div>`;
+}
+function sourcePanel(s) {
+  return `<div class="drawer-head"><div class="top"><span class="pill mute">${{ slack: "Slack thread", email: "Email", kb: "Knowledge base" }[s.kind]}</span><button class="icon-btn close" style="margin-left:auto" aria-label="Close">✕</button></div><h2>${esc(s.label)}</h2></div>
+  <div class="drawer-body"><dl class="kv"><dt>Event time</dt><dd>${fmtTime(new Date(s.t || NOW))}</dd><dt>Produced</dt><dd>${s.for.map(a => `<span class="chip link" data-goto="${a}">${a}</span>`).join(" ")}</dd></dl>
+  <div class="drawer-foot"><button class="btn" data-capture="T1">Capture trace</button></div></div>`;
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-capture]"); if (b) { showView("captures"); selectThread(b.dataset.capture); } });
+
+/* ---------- Live capture simulation (SSE in the real app) ---------- */
+function simulateCapture() {
+  if (liveAdded) { pulse(LIVE.a.id); toast(); return; }
+  const now = new Date(NOW.getTime() - 30e3);
+  LIVE.a.vf = now.toISOString(); LIVE.src.t = now.toISOString();
+  liveAdded = true;
+  const anchor = cy.getElementById("TRN-017").position();
+  const add = cy.add([...assertionEls(LIVE.a), relEl(...LIVE.rel), ...sourceEls(LIVE.src)]);
+  add.nodes().forEach((n, i) => n.position({ x: anchor.x + 60 + i * 30, y: anchor.y - 50 - i * 30 }));
+  add.edges().forEach(e => e.data("lbl", e.data("scope") ? e.data("scope").replace("_", " ") : e.data("rel").toLowerCase()));
+  setAsOf(new Date(NOW));
+  drawTicks();
+  $("#k-assert").textContent = allAssertions().length;
+  $("#k-today").textContent = +$("#k-today").textContent + 1;
+  pulse(LIVE.a.id);
+  toast();
+  addThread(LIVE_THREAD, true);
+}
+function pulse(id) {
+  const n = cy.getElementById(id);
+  let k = 0; const iv = setInterval(() => { n.toggleClass("pulse"); if (++k > 7) { clearInterval(iv); n.removeClass("pulse"); } }, 350);
+}
+function toast() {
+  $("#toast-1").textContent = "New knowledge · TRN-017";
+  $("#toast-2").textContent = "#noc-alarms · corroborates ASR-0001 · 9.4 s";
+  $("#toast").classList.add("show");
+  clearTimeout(toast.t); toast.t = setTimeout(() => $("#toast").classList.remove("show"), 6000);
+}
+$("#simulate").addEventListener("click", simulateCapture);
+$("#toast-open").addEventListener("click", () => { $("#toast").classList.remove("show"); openDrawer(LIVE.a.id); });
+
+/* ---------- Captures ---------- */
+const P = (who, time, html, tag) => ({ who, time, html, tag });
+const PEOPLE = { Veikko: ["VV", "#7a9bff", "Field Engineer"], Erkki: ["EE", "#101064", "Network Expert"], Mika: ["MK", "#f27513", "Transport"], Sanna: ["SL", "#008253", "NOC"], Bot: ["⚡", "#2323ff", "silentctx"] };
+const THREADS = [
+  { id: "T1", title: "TRN-042 traffic not back after SFP swap", where: "#noc-transport", when: "14 Oct 2025, 09:14", status: "captured", outcome: "1 rule · supersedes KB",
+    pipe: [["Triage", "0.4 s", "rule", "done"], ["Extract", "3.1 s", "1 rule · 7 quotes", "done"], ["Link", "0.2 s", "3 entities", "done"], ["Validate", "0.3 s", "telemetry agrees", "done"], ["Reconcile", "0.1 s", "supersedes 1", "done"], ["Persist", "0.1 s", "1 tx · V5 ok", "done"]],
+    msgs: [
+      P("Veikko", "09:14", `Hi Erkki, I'm at the site now. Changed the SFP on transmission node <mark class="e">TRN-042</mark>. <mark class="c">Link is up</mark> and <mark class="c">alarms cleared</mark>, but <mark class="c">traffic is still not coming back</mark>.`),
+      P("Erkki", "09:16", `Yes. Is this one of the older units?`),
+      P("Veikko", "09:16", `Yes, <mark class="s">installed around 2019</mark> I think.`, `<span class="pill acc">scope → TNC-1X · Gen1</span>`),
+      P("Erkki", "09:18", `Ok. Don't trust the green link status on those. Sometimes <mark class="c">after changing the SFP</mark> the interface comes up normally, but the forwarding state doesn't recover correctly.`),
+      P("Veikko", "09:18", `<mark class="v">So another SFP?</mark>`, `<span class="pill warn">V2 · question → avoid</span>`),
+      P("Erkki", "09:19", `No. <mark class="v">Usually the SFP is fine.</mark> Check whether the traffic counters are actually increasing.`),
+      P("Veikko", "09:21", `Yes. <mark class="c">Link UP</mark>. <mark class="c">RX power looks normal</mark>. <mark class="c">Counters basically zero</mark>.`, `<span class="pill ok">V4 · telemetry agrees</span>`),
+      P("Erkki", "09:22", `That's it. <mark class="a">Disable the interface, wait a little, then enable it again.</mark> <mark class="v">Don't reboot the whole unit</mark> unless that fails.`, `<span class="pill acc">valid_from = this message</span>`),
+      P("Veikko", "09:25", `Did that. Traffic is back 👍`, `<span class="pill ok">resolution signal → capture</span>`),
+      P("Bot", "09:25", `<b>Context card</b> · Bounce port, not SFP · TNC-1X · <span class="subtle">✅ ✏️ 🚫 optional</span>`),
+    ],
+    gates: [["V1", "Grounding", "pass", "7 / 7 fields quoted verbatim"], ["V2", "Speaker", "pass", "Hypothesis moved to avoid"], ["V3", "Entity at time", "pass", "TRN-042 exists on 14 Oct 2025"], ["V4", "Telemetry", "agrees", "1/1/3 · 06:00–06:15 UTC · 0 pps"], ["V5", "Temporal rules", "pass", "R2–R7 in the write tx"], ["V6", "Reconcile", "supersedes", "ASR-0030 · +1 email source"]],
+    out: { id: "ASR-0001", kind: "rule", when: ["oper_up", "rx_power_normal", "counters_zero"], action: "bounce_interface", avoid: ["replace_sfp", "reboot_unit"], scope: [["observed on", "TRN-042"], ["applies to", "TNC-1X"], ["activity", "SFP replacement"]], vf: "14 Oct 2025, 09:22:08", vt: "open" },
+    trace: "7f3a9c21e04b" },
+  { id: "T2", title: "Bounce failed on TRN-003", where: "#noc-transport", when: "14 Jul 2026, 12:30", status: "captured", outcome: "contradicts ASR-0001 → disputed",
+    pipe: [["Triage", "0.3 s", "rule", "done"], ["Extract", "2.7 s", "1 rule · 4 quotes", "done"], ["Link", "0.2 s", "TRN-003 · TNC-3X", "done"], ["Validate", "0.4 s", "unknown", "flag"], ["Reconcile", "0.1 s", "contradicts 1", "done"], ["Persist", "0.1 s", "1 tx", "done"]],
+    msgs: [
+      P("Mika", "12:22", `<mark class="e">TRN-003</mark> after SFP swap: <mark class="c">port up, counters flat</mark>. Did the bounce from the wiki, no change.`),
+      P("Sanna", "12:27", `On the 3X boxes that never worked for us. <mark class="a">Swap the SFP again, different batch.</mark>`),
+      P("Mika", "12:30", `New SFP, traffic is back ✅`, `<span class="pill ok">resolution signal → capture</span>`),
+    ],
+    gates: [["V1", "Grounding", "pass", "4 / 4 fields quoted"], ["V2", "Speaker", "pass", "Answer, not a guess"], ["V3", "Entity at time", "pass", "TRN-003 · TNC-3X"], ["V4", "Telemetry", "unknown", "No PM samples for the port"], ["V5", "Temporal rules", "pass", ""], ["V6", "Reconcile", "contradicts", "ASR-0001 → both disputed"]],
+    out: { id: "ASR-0020", kind: "rule", when: ["oper_up", "counters_zero"], action: "replace_sfp", avoid: ["bounce_interface"], scope: [["observed on", "TRN-003"], ["applies to", "TNC-3X"]], vf: "14 Jul 2026, 12:30:23", vt: "open" },
+    trace: "c08e11d2a9f5" },
+  { id: "T3", title: "Lunch on Friday?", where: "#noc-transport", when: "6 Nov 2026, 11:02", status: "ignored", outcome: "social chatter",
+    pipe: [["Triage", "0.3 s", "ignore", "done"], ["Extract", "", "skipped", "stop"], ["Link", "", "", "stop"], ["Validate", "", "", "stop"], ["Reconcile", "", "", "stop"], ["Persist", "", "", "stop"]],
+    msgs: [P("Sanna", "11:02", `Lunch on Friday? Pizza place by the station?`), P("Mika", "11:04", `I'm in 🍕`)],
+    gates: [], out: null, reason: "No operational knowledge. Logged in #context-log, nothing posted in the channel.", trace: "51b0e7a3c2d4" },
+];
+const LIVE_THREAD = { id: "T4", title: "TRN-017 1/1/2 traffic down", where: "#noc-alarms", when: "just now", status: "captured", outcome: "corroborates ASR-0001",
+  pipe: [["Triage", "0.3 s", "rule", "done"], ["Extract", "2.9 s", "1 rule · 3 quotes", "done"], ["Link", "0.2 s", "TRN-017", "done"], ["Validate", "0.5 s", "telemetry agrees", "done"], ["Reconcile", "0.1 s", "corroborates 1", "done"], ["Persist", "0.1 s", "1 tx", "done"]],
+  msgs: [P("Bot", "10:24", `🚨 <mark class="e">TRN-017 1/1/2</mark> · traffic down after SFP swap`), P("Veikko", "10:28", `Ran the bounce from the card. Traffic is back.`, `<span class="pill ok">network-confirmed</span>`)],
+  gates: [["V1", "Grounding", "pass", "3 / 3"], ["V2", "Speaker", "pass", ""], ["V3", "Entity at time", "pass", "TRN-017"], ["V4", "Telemetry", "agrees", "counters 0 → 1.2 Gbps"], ["V5", "Temporal rules", "pass", ""], ["V6", "Reconcile", "corroborates", "ASR-0001"]],
+  out: { id: "ASR-7F1C", kind: "observation", when: ["oper_up", "rx_power_normal", "counters_zero"], action: "bounce_interface", avoid: [], scope: [["observed on", "TRN-017"]], vf: "now", vt: "open" }, trace: "e92f00b17a6c" };
+
+function addThread(t, isNew) {
+  const el = document.createElement("div");
+  el.className = "li" + (isNew ? " new" : ""); el.dataset.id = t.id;
+  el.innerHTML = `<div class="l1"><span>${esc(t.title)}</span><span class="pill ${t.status === "captured" ? "ok" : "mute"}">${t.status}</span></div><div class="l2">${t.where} · ${t.when} · ${esc(t.outcome)}</div>`;
+  el.addEventListener("click", () => selectThread(t.id));
+  const list = $("#cap-list");
+  isNew ? list.insertBefore(el, list.children[1]) : list.appendChild(el);
+  if (isNew) THREADS.unshift(t);
+}
+THREADS.forEach(t => addThread(t));
+
+function selectThread(id) {
+  const t = THREADS.find(x => x.id === id);
+  $$("#cap-list .li").forEach(li => li.classList.toggle("sel", li.dataset.id === id));
+  const gatePill = r => ({ pass: "ok", agrees: "ok", supersedes: "acc", corroborates: "ok", contradicts: "bad", unknown: "warn", disagrees: "bad" }[r] || "mute");
+  $("#cap-detail").innerHTML = `
+    <div class="detail-head"><h2>${esc(t.title)}</h2><span class="pill ${t.status === "captured" ? "ok" : "mute"}">${t.status}</span><span class="subtle">${t.where} · ${t.when}</span>
+      <div class="right"><a class="btn" href="#" onclick="return false">Phoenix · <span class="mono">${t.trace}</span> ↗</a></div></div>
+    <div class="pipe">${t.pipe.map(([n, ms, out, st], i) => `<div class="ps ${st}"><div class="node">${st === "done" ? "✓" : st === "flag" ? "!" : i + 1}</div><div class="nm">${n}</div><div class="out">${esc(out)}</div><div class="meta">${ms}</div></div>`).join("")}</div>
+    <div class="grid2">
+      <div>
+        <div class="card sect"><h3>Source</h3>
+          <div class="legend-row" style="margin-bottom:8px"><mark class="c">condition</mark><mark class="a">action</mark><mark class="v">avoid</mark><mark class="s">scope</mark><mark class="e">entity</mark></div>
+          ${t.msgs.map(m => { const p = PEOPLE[m.who]; return `<div class="msg"><div class="avatar" style="background:${p[1]}">${p[0]}</div><div><div class="who">${m.who === "Bot" ? "silentctx" : m.who}<span>${p[2]} · ${m.time}</span></div><div class="txt">${m.html}</div>${m.tag ? `<div class="tag">${m.tag}</div>` : ""}</div></div>`; }).join("")}
+        </div>
+      </div>
+      <div>
+        ${t.gates.length ? `<div class="card sect"><h3>Gates</h3><table><tbody>${t.gates.map(([g, n, r, d]) => `<tr><td class="mono" style="width:32px">${g}</td><td><b>${n}</b><div class="subtle" style="font-size:12px">${esc(d)}</div></td><td style="text-align:right"><span class="pill ${gatePill(r)}">${r}</span></td></tr>`).join("")}</tbody></table></div>` : `<div class="card sect"><h3>Decision</h3><p style="margin:0">${esc(t.reason)}</p></div>`}
+        ${t.out ? `<div class="card sect"><h3>Stored <span class="mono subtle" style="font-weight:400;font-size:12px">${t.out.id}</span></h3>
+          <dl class="kv">
+            <dt>Kind</dt><dd>${t.out.kind}</dd>
+            <dt>When</dt><dd>${t.out.when.map(c => `<span class="chip">${c}</span>`).join("")}</dd>
+            <dt>Do</dt><dd><span class="chip" style="border-color:var(--ok);color:var(--ok)">${t.out.action}</span></dd>
+            ${t.out.avoid.length ? `<dt>Avoid</dt><dd>${t.out.avoid.map(c => `<span class="chip" style="border-color:var(--bad);color:var(--bad)">${c}</span>`).join("")}</dd>` : ""}
+            <dt>Bound to</dt><dd>${t.out.scope.map(([s, e]) => `<span class="chip"><small>${s}</small>${e}</span>`).join("")}</dd>
+            <dt>Valid from</dt><dd>${t.out.vf} <span class="subtle">· message time</span></dd>
+            <dt>Valid to</dt><dd>${t.out.vt}</dd>
+          </dl>
+          <div style="margin-top:12px"><button class="btn" onclick="showView('graph');openDrawer('${t.out.id}')">Show in graph</button></div>
+        </div>` : ""}
+      </div>
+    </div>`;
+}
+
+/* ---------- Agent runs ---------- */
+const RUNS = [
+  { id: "R1", title: "TRN-017 1/1/2 · traffic down", trigger: "Alarm · #noc-alarms", when: "10:24", status: "answered", total: "6.8 s",
+    calls: [
+      ["resolve_entities", `"Pori node, port 1/1/2"`, "120 ms", `<span class="chip">TRN-017</span><span class="chip">1/1/2</span>`],
+      ["get_entity", `"TRN-017", as_of=now`, "45 ms", `<span class="chip">TNC-1X</span><span class="chip">Gen1</span><span class="chip">fw v1.8.2</span>`],
+      ["get_context", `"TRN-017", topic="sfp", symptoms=[…]`, "310 ms", `3 in scope · <span class="pill ok">ASR-0001</span><span class="pill ok">ASR-0006</span><span class="pill bad">ASR-0020</span>`],
+      ["check_conditions", `"ASR-0001", "TRN-017", "1/1/2"`, "210 ms", `<span class="pill ok">oper_up met</span><span class="pill ok">rx_power met</span><span class="pill ok">counters_zero met</span>`],
+      ["get_history", `"ASR-0020"`, "60 ms", `<span class="subtle">applies to TNC-3X · out of scope here</span>`],
+    ],
+    answer: { do: "Disable and re-enable 1/1/2", avoid: ["Replacing the SFP again", "Rebooting TRN-017"], sources: ["ASR-0001", "ASR-0006"], dropped: "1 step dropped: no citation" },
+    outcome: "Run bounce → counters recovered · network-confirmed · support +1" },
+  { id: "R2", title: "How do I get into the Kemi site?", trigger: "@silentctx · DM", when: "Yesterday", status: "answered", total: "4.1 s",
+    calls: [
+      ["resolve_entities", `"Kemi site"`, "90 ms", `<span class="chip">SEG-042</span>`],
+      ["get_site_access", `"SEG-042", as_of=visit`, "140 ms", `<span class="pill ok">ASR-0024</span><span class="pill mute">ASR-0023 ended</span><span class="pill mute">ASR-0032 ended</span>`],
+    ],
+    answer: { do: "Code lock: get the code from site security (Heikki Lehtonen)", avoid: ["Asking Pekka for a key (superseded 3 Aug 2026)"], sources: ["ASR-0024"], dropped: null },
+    outcome: null },
+  { id: "R3", title: "MTU on the new Oulu microwave hop?", trigger: "@silentctx · #noc-transport", when: "Yesterday", status: "gap", total: "3.2 s",
+    calls: [
+      ["resolve_entities", `"Oulu microwave hop"`, "100 ms", `<span class="chip">KMAX-4K</span>`],
+      ["get_context", `"KMAX-4K", topic="mtu"`, "280 ms", `<span class="subtle">0 in scope</span>`],
+      ["search_context", `"MTU microwave KMAX"`, "350 ms", `<span class="subtle">no match above threshold</span>`],
+      ["open_knowledge_gap", `routed_to="Erkki Expert"`, "70 ms", `<span class="pill warn">gap opened</span>`],
+    ],
+    answer: null, outcome: "Not documented. Asked Erkki in #noc-transport." },
+];
+RUNS.forEach(r => {
+  const el = document.createElement("div"); el.className = "li"; el.dataset.id = r.id;
+  el.innerHTML = `<div class="l1"><span>${esc(r.title)}</span><span class="pill ${r.status === "gap" ? "warn" : "ok"}">${r.status}</span></div><div class="l2">${r.trigger} · ${r.when} · ${r.calls.length} MCP calls</div>`;
+  el.addEventListener("click", () => selectRun(r.id));
+  $("#run-list").appendChild(el);
+});
+function selectRun(id) {
+  const r = RUNS.find(x => x.id === id);
+  $$("#run-list .li").forEach(li => li.classList.toggle("sel", li.dataset.id === id));
+  $("#run-detail").innerHTML = `
+    <div class="detail-head"><h2>${esc(r.title)}</h2><span class="pill ${r.status === "gap" ? "warn" : "ok"}">${r.status}</span><span class="subtle">${r.trigger} · ${r.total}</span>
+      <div class="right"><a class="btn" href="#" onclick="return false">Phoenix ↗</a></div></div>
+    <div class="grid2">
+      <div class="card sect"><h3>MCP calls</h3><div class="calls">
+        ${r.calls.map(([fn, args, ms, res], i) => `<div class="call ${i === r.calls.length - 1 ? "final" : ""}"><div class="fn"><code>${fn}</code><span class="mono args">(${esc(args)})</span><span class="ms">${ms}</span></div><div class="res">${res}</div></div>`).join("")}
+      </div></div>
+      <div>
+        ${r.answer ? `<div class="card sect"><h3>Answer</h3><div class="steps">
+          <div class="step do"><b>Do</b><span>${esc(r.answer.do)}</span></div>
+          ${r.answer.avoid.map(a => `<div class="step avoid"><b>Avoid</b><span>${esc(a)}</span></div>`).join("")}
+        </div>
+        <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="subtle" style="font-size:12px">Cites</span>${r.answer.sources.map(s => `<span class="chip link" onclick="showView('graph');openDrawer('${s}')">${s}</span>`).join("")}</div>
+        ${r.answer.dropped ? `<div class="subtle" style="font-size:12px;margin-top:8px">${r.answer.dropped}</div>` : ""}
+        </div>` : ""}
+        ${r.outcome ? `<div class="card sect"><h3>Outcome</h3><p style="margin:0">${esc(r.outcome)}</p></div>` : ""}
+      </div>
+    </div>`;
+}
+
+/* ---------- Scorecard ---------- */
+const METRICS = [["Assertion recall", .83, .96], ["observed_on F1", .90, 1], ["applies_to F1", .85, .97], ["Action accuracy", .89, .94], ["Citation validity", 1, 1], ["Avoid list honoured", .92, 1]];
+$("#metric-rows").innerHTML = METRICS.map(([k, x, g]) => `<tr><td>${k}</td><td class="mono">${x.toFixed(2)}</td><td class="mono subtle">${g.toFixed(2)}</td><td><div class="bar"><i style="width:${x * 100}%"></i></div></td></tr>`).join("");
+
+/* ---------- Tabs, theme, boot ---------- */
+function showView(v) {
+  $$("nav.tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.view === v));
+  $$(".view").forEach(s => s.classList.toggle("active", s.id === "view-" + v));
+  if (v === "graph") cy.resize();
+}
+$$("nav.tabs button").forEach(b => b.addEventListener("click", () => showView(b.dataset.view)));
+$("#theme").addEventListener("click", () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  cy.style(graphStyle()); drawTicks();
+});
+
+$("#k-assert").textContent = ASSERTIONS.length;
+$("#k-today").textContent = ASSERTIONS.filter(a => a.vf && fmtDay.format(new Date(a.vf)) === fmtDay.format(NOW)).length;
+drawTicks();
+applyTime();
+selectThread("T1");
+selectRun("R1");
+setTimeout(simulateCapture, 5000);
+</script>
+</body>
+</html>

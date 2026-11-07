@@ -80,6 +80,7 @@ class CaptureLoop:
             reason=result.reason,
             seen_up_to=datetime.min.replace(tzinfo=UTC) if retry else thread.last_message_ts,
             assertion_ids=ids,
+            capture_json=result.model_dump_json(),
         )
         log.info(
             "thread_triaged",

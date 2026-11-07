@@ -12,9 +12,14 @@ validity. Prompt `ops_triage`; resource `context://entity/{entity_id}`.
 
 from __future__ import annotations
 
+import asyncio
+import functools
 import hmac
+import json
+import time
+import uuid
 from collections.abc import Awaitable, Callable
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from mcp.server.auth.middleware.auth_context import get_access_token
@@ -142,6 +147,60 @@ class ServiceHolder:
             raise ToolError("the context layer is starting; retry in a few seconds")
         return self.service
 
+    def record(self, call: dict[str, Any]) -> None:
+        """Store a tool call in the background: recording never slows or fails a tool."""
+        if self.service is None:
+            return
+        task = asyncio.create_task(self.service.repo.record_tool_call(call))
+        self._pending.add(task)
+        task.add_done_callback(self._done)
+
+    def _done(self, task: asyncio.Task[None]) -> None:
+        self._pending.discard(task)
+        if not task.cancelled() and (exc := task.exception()) is not None:
+            log.warning("tool_call_record_failed", error=f"{type(exc).__name__}: {exc}")
+
+    @functools.cached_property
+    def _pending(self) -> set[asyncio.Task[None]]:
+        return set()
+
+
+def _recorded[**P](
+    holder: ServiceHolder, fn: Callable[P, Awaitable[CallToolResult]]
+) -> Callable[P, Awaitable[CallToolResult]]:
+    """Wrap a tool so each call is kept for the console (UI-1): which agent, which tool,
+    the arguments, how long it took, and the one-line summary the agent read."""
+
+    @functools.wraps(fn)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> CallToolResult:
+        at, start = datetime.now(UTC), time.perf_counter()
+        ok, summary = True, ""
+        try:
+            result = await fn(*args, **kwargs)
+            first = result.content[0] if result.content else None
+            summary = first.text if isinstance(first, TextContent) else ""
+            ok = not result.isError
+            return result
+        except Exception as exc:
+            ok, summary = False, str(exc)
+            raise
+        finally:
+            given = {k: v for k, v in kwargs.items() if v is not None}
+            holder.record(
+                {
+                    "call_id": uuid.uuid4().hex,
+                    "agent_id": current_agent_id() or holder.stdio_agent_id or "unknown",
+                    "tool": fn.__name__,
+                    "args_json": json.dumps(given, default=str)[:2000],
+                    "ok": ok,
+                    "summary": summary[:500],
+                    "ms": round((time.perf_counter() - start) * 1000),
+                    "at": at,
+                }
+            )
+
+    return wrapper
+
 
 async def _get[T: BaseModel](fn: Callable[[], Awaitable[T]]) -> T:
     try:
@@ -248,6 +307,12 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
     )
 
+    def tool() -> Callable[[Callable[..., Awaitable[CallToolResult]]], Any]:
+        def register(fn: Callable[..., Awaitable[CallToolResult]]) -> Any:
+            return server.tool()(_recorded(holder, fn))
+
+        return register
+
     @server.tool()
     async def ping() -> Annotated[CallToolResult, PingResult]:
         """Check the connection. Returns the server version and your agent id."""
@@ -256,7 +321,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
 
     # --- Read tools -----------------------------------------------------------------------
 
-    @server.tool()
+    @tool()
     async def resolve_entities(
         text: Annotated[str, Field(description="free text, e.g. 'the old Pori node'")],
         as_of: When = None,
@@ -264,7 +329,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         """Find the graph entities a piece of text refers to, with a confidence each."""
         return await _call(lambda: holder.get().resolve_entities(text, as_of))
 
-    @server.tool()
+    @tool()
     async def get_entity(
         entity_id: EntityId, as_of: When = None
     ) -> Annotated[CallToolResult, EntityView]:
@@ -273,7 +338,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         lists its devices in service then (e.g. how many nodes are Gen1)."""
         return await _call(lambda: holder.get().get_entity(entity_id, as_of))
 
-    @server.tool()
+    @tool()
     async def get_context(
         entity_id: EntityId,
         as_of: When = None,
@@ -294,7 +359,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
             lambda: holder.get().get_context(entity_id, as_of, known_at, topic, symptoms, statuses)
         )
 
-    @server.tool()
+    @tool()
     async def search_context(
         query: Annotated[str, Field(description="natural-language question or keywords")],
         as_of: When = None,
@@ -307,7 +372,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         unavailable)."""
         return await _call(lambda: holder.get().search_context(query, as_of, entity_id, limit))
 
-    @server.tool()
+    @tool()
     async def check_conditions(
         assertion_id: str,
         entity_id: EntityId,
@@ -318,7 +383,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         complete 15-minute interval before `at`: each is met, not_met or unknown."""
         return await _call(lambda: holder.get().check_conditions(assertion_id, entity_id, port, at))
 
-    @server.tool()
+    @tool()
     async def get_site_access(
         entity_or_site: EntityId,
         as_of: Annotated[
@@ -330,7 +395,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         (locks, keys, gates, roads) and the access register."""
         return await _call(lambda: holder.get().get_site_access(entity_or_site, as_of, known_at))
 
-    @server.tool()
+    @tool()
     async def get_events(
         entity_id: EntityId,
         start: Annotated[datetime, Field(description="ISO-8601 UTC, inclusive")],
@@ -344,7 +409,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         """The event stream for an entity: alarms, device events and outcomes."""
         return await _call(lambda: holder.get().get_events(entity_id, start, end, types, limit))
 
-    @server.tool()
+    @tool()
     async def get_history(assertion_id: str) -> Annotated[CallToolResult, HistoryResult]:
         """How a piece of knowledge changed: versions (supersession), contradictions,
         corroborations, outcome evidence and flags."""
@@ -352,7 +417,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
 
     # --- Write tools (governed: evidence, gaps, proposals, flags only) ---------------------
 
-    @server.tool()
+    @tool()
     async def report_outcome(
         entity_id: EntityId,
         action: Annotated[str, Field(description="what was done, e.g. bounce_interface")],
@@ -385,7 +450,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
             )
         )
 
-    @server.tool()
+    @tool()
     async def open_knowledge_gap(
         question: Annotated[str, Field(description="the question nobody has documented")],
         entity_ids: Annotated[list[str], Field(min_length=1)],
@@ -407,7 +472,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
             )
         )
 
-    @server.tool()
+    @tool()
     async def propose_assertion(
         statement: str,
         entity_ids: Annotated[list[str], Field(min_length=1)],
@@ -441,7 +506,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
             )
         )
 
-    @server.tool()
+    @tool()
     async def flag_assertion(
         assertion_id: str,
         reason: str,

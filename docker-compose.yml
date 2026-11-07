@@ -17,6 +17,10 @@ x-backend: &backend
     NEO4J_PASSWORD: ${NEO4J_PASSWORD:-silentctx-local-dev}
     DATA_DIR: /data/mock_data
     STATE_DIR: /state
+    # Traces of every LLM call, pipeline step and agent tool call (UI-1).
+    PHOENIX_COLLECTOR_ENDPOINT: http://phoenix:6006/v1/traces
+    PHOENIX_PUBLIC_URL: http://localhost:6006
+    EVAL_RESULTS_DIR: /data/eval/results
 
 services:
   neo4j:
@@ -83,6 +87,30 @@ services:
       retries: 6
       start_period: 20s
 
+  # Traces: Arize Phoenix (OpenTelemetry). UI at http://localhost:6006, kept in a volume.
+  # Auth is off because it binds to 127.0.0.1 only, like every other service here.
+  phoenix:
+    image: arizephoenix/phoenix:version-21.0.0
+    restart: unless-stopped
+    environment:
+      PHOENIX_WORKING_DIR: /mnt/data
+      PHOENIX_ENABLE_AUTH: "false"
+    ports:
+      - "127.0.0.1:6006:6006"
+    volumes:
+      - phoenix-data:/mnt/data
+
+  # The console: live knowledge graph, capture traces, agent runs (UI-1).
+  web:
+    build: ./frontend
+    image: silentctx-web:local
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:80"
+
   sim:
     <<: *backend
     command: ["silentctx-sim"]
@@ -101,3 +129,4 @@ services:
 volumes:
   neo4j-data:
   api-state:
+  phoenix-data:

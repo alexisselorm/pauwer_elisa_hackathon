@@ -1,0 +1,68 @@
+/* Elisa Design System tokens, taken from the public Storybook (storybook.elisa.fi, main.css).
+   Names follow EDS without the `--eds-color-` prefix. Semantic aliases below them. */
+:root {
+  --blue-01: #f3f5fd; --blue-02: #e4eafc; --blue-03: #ccd9ff; --blue-04: #a7bdff; --blue-05: #7a9bff;
+  --blue-06: #4060ff; --brand-blue: #2323ff; --blue-08: #212185; --dark-blue: #101064; --blue-10: #090933;
+  --n-01: #ffffff; --n-02: #fdfdfd; --n-03: #f6f7f8; --n-04: #eceef0; --n-05: #e6eaed; --n-06: #dbe1e6;
+  --n-07: #c7d1d8; --n-08: #b7c3cc; --n-09: #909da5; --n-10: #60686e; --n-11: #494f54; --n-12: #353b40;
+  --n-13: #202426; --n-14: #131517;
+  --success-01: #e9f9f2; --success-04: #00ac6d; --success-05: #008253;
+  --danger-01: #fff3f3; --danger-03: #ff8086; --danger-05: #da0a30;
+  --warning-01: #fff7e9; --warning-04: #ffbe33; --warning-06: #ae7a1f;
+  --orange-04: #f69d57; --orange-05: #f27513; --yellow-05: #eac200;
+
+  --r-base: 4px; --r-double: 8px; --r-4x: 16px;
+  --sp-4xs: 4px; --sp-3xs: 8px; --sp-2xs: 12px; --sp-xs: 16px; --sp-s: 24px; --sp-m: 32px;
+  --font-title: "Jost", system-ui, sans-serif;
+  --font-body: "Open Sans", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --bg: var(--n-02); --bg-2: var(--n-03); --surface: var(--n-01); --hover: var(--n-04);
+  --border: var(--n-06); --border-strong: var(--n-07);
+  --text: var(--blue-10); --text-subtle: var(--n-10);
+  --accent: var(--brand-blue); --accent-soft: var(--blue-02);
+  --ok: var(--success-05); --ok-soft: var(--success-01);
+  --bad: var(--danger-05); --bad-soft: var(--danger-01);
+  --warn: var(--warning-06); --warn-soft: var(--warning-01);
+  --shadow: 0 4px 13px rgba(0, 0, 0, .10);
+
+  /* Graph */
+  --g-device: var(--n-05); --g-device-b: var(--n-08); --g-model: var(--n-07);
+  --g-topic: var(--blue-02); --g-topic-b: var(--blue-04);
+  --g-believed: var(--success-04); --g-unverified: var(--n-09); --g-disputed: var(--danger-05);
+  --g-ended: var(--n-09); --g-chat: var(--blue-05); --g-email: var(--orange-05); --g-record: var(--n-09);
+  --g-supersedes: var(--dark-blue); --g-edge: var(--n-07);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: var(--n-14); --bg-2: var(--n-13); --surface: #1a1d20; --hover: var(--n-12);
+    --border: var(--n-12); --border-strong: var(--n-11);
+    --text: var(--blue-01); --text-subtle: var(--n-08);
+    --accent: var(--blue-05); --accent-soft: rgba(64, 96, 255, .18);
+    --ok: var(--success-04); --ok-soft: rgba(0, 172, 109, .15);
+    --bad: var(--danger-03); --bad-soft: rgba(218, 10, 48, .18);
+    --warn: var(--warning-04); --warn-soft: rgba(255, 190, 51, .14);
+    --shadow: 0 4px 13px rgba(0, 0, 0, .4);
+    --g-device: var(--n-12); --g-device-b: var(--n-10); --g-model: var(--n-11);
+    --g-topic: rgba(64, 96, 255, .25); --g-topic-b: var(--blue-06);
+    --g-supersedes: var(--blue-04); --g-edge: var(--n-11);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: var(--n-14); --bg-2: var(--n-13); --surface: #1a1d20; --hover: var(--n-12);
+  --border: var(--n-12); --border-strong: var(--n-11);
+  --text: var(--blue-01); --text-subtle: var(--n-08);
+  --accent: var(--blue-05); --accent-soft: rgba(64, 96, 255, .18);
+  --ok: var(--success-04); --ok-soft: rgba(0, 172, 109, .15);
+  --bad: var(--danger-03); --bad-soft: rgba(218, 10, 48, .18);
+  --warn: var(--warning-04); --warn-soft: rgba(255, 190, 51, .14);
+  --shadow: 0 4px 13px rgba(0, 0, 0, .4);
+  --g-device: var(--n-12); --g-device-b: var(--n-10); --g-model: var(--n-11);
+  --g-topic: rgba(64, 96, 255, .25); --g-topic-b: var(--blue-06);
+  --g-supersedes: var(--blue-04); --g-edge: var(--n-11);
+  color-scheme: dark;
+}

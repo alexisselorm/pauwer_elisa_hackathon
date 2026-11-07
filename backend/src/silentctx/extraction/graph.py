@@ -18,10 +18,13 @@ an assertion is written whole or not at all.
 from __future__ import annotations
 
 import asyncio
+import time
 from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
 from typing import Any, TypedDict
 
 from langgraph.graph import END, StateGraph
+from opentelemetry import trace
 from pydantic import BaseModel
 
 from silentctx.context.models import AssertionIn, Scope
@@ -34,8 +37,10 @@ from silentctx.graph.repository import ContextRepository
 from silentctx.ingest.store import ThreadView
 from silentctx.logging import get_logger
 from silentctx.telemetry.store import ConditionStatus, TelemetryStore
+from silentctx.tracing import current_trace_id
 
 log = get_logger(__name__)
+tracer = trace.get_tracer(__name__)
 
 CHECKABLE = ("oper_up", "rx_power_normal", "counters_zero")
 
@@ -57,12 +62,23 @@ class Item(BaseModel):
     dropped: str | None = None
 
 
+class Step(BaseModel):
+    """One node run, in order; reconcile and persist repeat once per rule."""
+
+    node: str
+    ms: int
+
+
 class CaptureResult(BaseModel):
     thread_id: str
     status: str  # captured | ignored | extraction_failed
     kind: str
     reason: str
     items: list[Item] = []
+    # What the console shows (UI-1): when it ran, each node's time, and the Phoenix trace.
+    started_at: datetime | None = None
+    steps: list[Step] = []
+    trace_id: str | None = None
 
     @property
     def assertion_ids(self) -> list[str]:
@@ -107,16 +123,45 @@ class Extractor:
         self.graph = g.compile()
 
     async def run(self, thread: ThreadView) -> CaptureResult:
-        try:
-            state: State = await self.graph.ainvoke({"thread": thread})  # type: ignore[assignment]
-        except ExtractionError as exc:
-            log.warning("extraction_failed", thread_id=thread.thread_id, error=str(exc))
-            return CaptureResult(
-                thread_id=thread.thread_id,
-                status="extraction_failed",
-                kind="none",
-                reason=f"the model failed twice: {exc}"[:300],
-            )
+        with tracer.start_as_current_span(
+            "capture",
+            attributes={"openinference.span.kind": "CHAIN", "thread_id": thread.thread_id},
+        ):
+            started_at, trace_id = datetime.now(UTC), current_trace_id()
+            steps: list[Step] = []
+            try:
+                state = await self._stream(thread, steps)
+            except ExtractionError as exc:
+                log.warning("extraction_failed", thread_id=thread.thread_id, error=str(exc))
+                return CaptureResult(
+                    thread_id=thread.thread_id,
+                    status="extraction_failed",
+                    kind="none",
+                    reason=f"the model failed twice: {exc}"[:300],
+                    started_at=started_at,
+                    steps=steps,
+                    trace_id=trace_id,
+                )
+        result = self._result(thread, state)
+        return result.model_copy(
+            update={"started_at": started_at, "steps": steps, "trace_id": trace_id}
+        )
+
+    async def _stream(self, thread: ThreadView, steps: list[Step]) -> State:
+        """Run the graph node by node, timing each one. The state has no reducers, so
+        merging each node's update gives what `ainvoke` would return."""
+        state: dict[str, Any] = {"thread": thread}
+        last = time.perf_counter()
+        async for update in self.graph.astream({"thread": thread}, stream_mode="updates"):
+            for node, delta in update.items():
+                now = time.perf_counter()
+                steps.append(Step(node=node, ms=round((now - last) * 1000)))
+                last = now
+                state.update(delta or {})
+        return state  # type: ignore[return-value]
+
+    @staticmethod
+    def _result(thread: ThreadView, state: State) -> CaptureResult:
         triage = state["triage"]
         items = state.get("items", [])
         kept = [i for i in items if i.assertion_id]

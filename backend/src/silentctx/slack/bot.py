@@ -36,6 +36,7 @@ from silentctx.slack import actions as ops_actions
 from silentctx.slack import capture as cap
 from silentctx.slack.format import format_answer, text_blocks
 from silentctx.telemetry.store import TelemetryStore
+from silentctx.tracing import setup_tracing
 
 # Written once connected; the compose healthcheck looks for it.
 READY_FILE = Path("/tmp/silentctx-slackbot.ready")  # noqa: S108  # container-local marker
@@ -264,4 +265,5 @@ async def run(settings: Settings) -> None:
 def main() -> None:
     settings = get_settings()
     configure_logging(settings.log_level, json=settings.log_json)
+    setup_tracing(settings, "slackbot")
     asyncio.run(run(settings))

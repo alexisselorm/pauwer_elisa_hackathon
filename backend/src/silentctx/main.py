@@ -27,6 +27,11 @@ from silentctx.logging import REQUEST_ID_HEADER, configure_logging, get_logger
 from silentctx.mcp.server import ServiceHolder, create_mcp_server
 from silentctx.state import AppState, EmbeddingState
 from silentctx.telemetry.store import TelemetryStore
+from silentctx.tracing import setup_tracing
+from silentctx.ui.names import SlackNames
+from silentctx.ui.queries import UiQueries
+from silentctx.ui.router import Console
+from silentctx.ui.router import router as console_router
 
 log = get_logger(__name__)
 EMBED_INTERVAL_S = 60.0
@@ -61,6 +66,7 @@ async def _embed_forever(
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(settings.log_level, json=settings.log_json)
+    setup_tracing(settings, "api")
     holder = ServiceHolder()
     mcp_server = create_mcp_server(settings.mcp_tokens, holder)
     mcp_app = mcp_server.streamable_http_app()
@@ -78,6 +84,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             telemetry,
             embedder=embeddings.embedder,
             aliases=_load_aliases(settings),
+        )
+        token = settings.slack_bot_token
+        app.state.console = Console(
+            settings=settings,
+            service=holder.service,
+            queries=UiQueries(driver, settings.neo4j_database),
+            names=SlackNames(token.get_secret_value() if token else None),
         )
         embed_job = asyncio.create_task(
             _embed_forever(graph, embeddings, holder.service), name="embed-assertions"
@@ -117,6 +130,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # Pure ASGI middleware: safe for MCP's streaming responses.
     app.add_middleware(CorrelationIdMiddleware, header_name=REQUEST_ID_HEADER)
     app.include_router(health.router)
+    app.include_router(console_router)
 
     # MCP at /mcp. Added as a route (not a root mount) so that every other unknown path
     # still gets our problem+json 404. The sub-app keeps its own bearer-auth middleware.

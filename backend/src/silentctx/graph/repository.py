@@ -658,6 +658,13 @@ class ContextRepository:
     # Each public method is one transaction: the write, then the V5 checks on every assertion
     # it touched. A violation raises WriteRejectedError (422) and the transaction rolls back.
 
+    async def record_tool_call(self, call: Mapping[str, Any]) -> None:
+        """One MCP tool call, for the console's agent runs (UI-1). Operational, like
+        Thread: never read by temporal queries."""
+        await self._driver.execute_query(
+            "CREATE (c:ToolCall) SET c = $call", {"call": dict(call)}, database_=self._db
+        )
+
     async def _tx[T](self, work: Callable[[AsyncManagedTransaction], Awaitable[T]]) -> T:
         async with self._driver.session(database=self._db) as session:
             try:

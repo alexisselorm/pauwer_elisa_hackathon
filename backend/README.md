@@ -82,6 +82,15 @@ Writes are idempotent per (agent, tool, `idempotency_key`) and each is recorded 
 `AgentAction` event attributed to the token's agent. Prompt `ops_triage`; resource
 `context://entity/{id}`.
 
+## Console API and traces (plan 005)
+
+`/api/ui/*` is read-only and serves the web console (`frontend/`): `graph`, `assertions/{id}`,
+`entities/{id}`, `captures`, `captures/{thread_id}`, `agent-runs`, `eval`, `meta`, and
+`stream` (server-sent events). Each capture's `CaptureResult` (step timings, gates, trace id)
+is kept on its `Thread`. Every MCP tool call is kept as a `(:ToolCall)` node. With
+`PHOENIX_COLLECTOR_ENDPOINT` set, the api and the slackbot send OpenTelemetry traces
+(OpenInference LangChain instrumentation) to Arize Phoenix.
+
 ## Ops agent
 
 `silentctx.agents.ops_agent.OpsAgent`: LangChain `create_agent` on `CHAT_MODEL`

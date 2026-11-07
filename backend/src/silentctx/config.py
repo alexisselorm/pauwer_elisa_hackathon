@@ -102,6 +102,18 @@ class Settings(BaseSettings):
     ops_agent_id: str = "ops-agent"
     ops_agent_timeout_s: float = Field(default=120.0, gt=0)
 
+    # --- Traces and the web console (UI-1) --------------------------------------------
+    # OTLP/HTTP endpoint of Arize Phoenix, e.g. http://phoenix:6006/v1/traces. Unset: no
+    # tracing (the console still works, without trace links).
+    phoenix_collector_endpoint: str | None = None
+    phoenix_project_name: str = "silentctx"
+    # Where a browser opens Phoenix, for the console's trace links.
+    phoenix_public_url: str | None = None
+    # `silentctx eval` output, read by the console's scorecard.
+    eval_results_dir: Path = Path("../eval/results")
+    # How often the console's live stream checks the graph for changes.
+    ui_poll_seconds: float = Field(default=2.0, gt=0)
+
     @field_validator("neo4j_uri")
     @classmethod
     def _check_neo4j_uri(cls, v: str) -> str:

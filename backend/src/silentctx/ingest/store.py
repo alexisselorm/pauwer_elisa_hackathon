@@ -189,9 +189,11 @@ class CaptureStore:
         reason: str,
         seen_up_to: datetime,
         assertion_ids: Sequence[str] | None = None,
+        capture_json: str | None = None,
     ) -> None:
         """The decision, remembered (BE-2.4). `seen_up_to` is the last message the decision
-        read: anything newer re-triages the thread."""
+        read: anything newer re-triages the thread. `capture_json` is the pipeline's full
+        result (steps, gates, decisions), kept for the console (UI-1)."""
         await self._q(
             "MATCH (t:Thread {thread_id: $id}) "
             "SET t.status = $status, t.triage_kind = $kind, t.triage_reason = $reason, "
@@ -199,13 +201,15 @@ class CaptureStore:
             # A message (or ✅) that arrived while triage ran keeps the thread due.
             "  t.resolved = CASE WHEN t.last_message_ts > $seen THEN t.resolved ELSE false END, "
             "  t.forced = CASE WHEN t.last_message_ts > $seen THEN t.forced ELSE false END, "
-            "  t.assertion_ids = CASE WHEN $aids IS NULL THEN t.assertion_ids ELSE $aids END",
+            "  t.assertion_ids = CASE WHEN $aids IS NULL THEN t.assertion_ids ELSE $aids END, "
+            "  t.capture_json = coalesce($capture, t.capture_json)",
             id=thread_id,
             status=status,
             kind=kind,
             reason=reason or "no reason given",
             seen=seen_up_to,
             aids=list(assertion_ids) if assertion_ids is not None else None,
+            capture=capture_json,
         )
 
     async def set_card(self, thread_id: str, card_ts: str) -> None:
