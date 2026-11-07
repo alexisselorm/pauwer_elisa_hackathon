@@ -83,6 +83,13 @@ class Settings(BaseSettings):
     slack_gap_channel: str | None = None
     # How long after a simulated bounce the network is checked for traffic.
     bounce_settle_s: float = Field(default=40.0, ge=0)
+    # Capture loop (BE-2.4): the sweeper period, and how long a quiet thread waits before
+    # it is triaged without a resolution signal.
+    capture_sweep_seconds: float = Field(default=60.0, gt=0)
+    capture_idle_minutes: float = Field(default=10.0, ge=0)
+    # Where capture decisions that must not go to work channels are posted (ignored threads,
+    # email and backfill captures). Unset: a channel named #context-log, else the log only.
+    slack_context_log_channel: str | None = None
 
     # --- MCP (required): agent_id -> bearer token, as JSON ------------------------------
     mcp_tokens: dict[str, SecretStr]

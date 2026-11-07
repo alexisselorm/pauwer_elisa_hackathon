@@ -1,9 +1,11 @@
 """`silentctx-slackbot`: the Bolt app in Socket Mode (no public URL needed).
 
 Answers questions with the ops agent (@mention in a channel, or a DM), posts simulator faults
-with the agent's advice and outcome buttons (SL-2, `slack/actions.py`), and logs that channel
-messages arrive (capture is SL-1). The agent reaches the context layer through the API's
-MCP server only, never by importing it (plan 002).
+with the agent's advice and outcome buttons (SL-2, `slack/actions.py`), and captures what
+people say in every channel it is in (SL-1, `slack/capture.py`): messages become events, the
+capture loop triages and extracts, and one context card is posted per thread. The agent
+reaches the context layer through the API's MCP server only, never by importing it
+(plan 002); capture is the context layer's own ingestion, so it writes to Neo4j directly.
 """
 
 from __future__ import annotations
@@ -20,9 +22,19 @@ from slack_sdk.web.async_client import AsyncWebClient
 
 from silentctx.agents.ops_agent import OpsAgent, OpsAnswer
 from silentctx.config import Settings, get_settings
+from silentctx.extraction.graph import Extractor
+from silentctx.extraction.llm import LlmJudge
+from silentctx.graph.driver import create_driver
+from silentctx.graph.repository import ContextRepository
+from silentctx.ingest.capture import CaptureLoop
+from silentctx.ingest.slack_events import SlackIngest
+from silentctx.ingest.store import CaptureStore
+from silentctx.llm.embeddings import FeatherlessEmbedder, embed_query_or_none
 from silentctx.logging import configure_logging, get_logger
 from silentctx.slack import actions as ops_actions
+from silentctx.slack import capture as cap
 from silentctx.slack.format import format_answer, text_blocks
+from silentctx.telemetry.store import TelemetryStore
 
 # Written once connected; the compose healthcheck looks for it.
 READY_FILE = Path("/tmp/silentctx-slackbot.ready")  # noqa: S108  # container-local marker
@@ -57,8 +69,9 @@ class SlackOps:
     """The ops agent's Slack surface: @mentions in channels and DMs (plan 002 §3.4).
     One bot message per question: a placeholder, edited in place into the answer."""
 
-    def __init__(self, answerer: Answerer) -> None:
+    def __init__(self, answerer: Answerer, capture: cap.CaptureHandlers | None = None) -> None:
         self.answerer = answerer
+        self.capture = capture
 
     async def answer(
         self, client: AsyncWebClient, event: dict[str, Any], *, thread_ts: str | None
@@ -104,21 +117,16 @@ class SlackOps:
         await self.answer(client, event, thread_ts=event.get("thread_ts") or event.get("ts"))
 
     async def handle_message(self, event: dict[str, Any], client: AsyncWebClient) -> None:
-        """A DM to the bot is a question. Channel messages are only logged for now (capture
-        is SL-1); an @mention in a channel is answered by `handle_mention`, not here."""
-        if _is_from_a_bot(event) or event.get("subtype"):  # edits, joins, deletions...
-            return
+        """A DM to the bot is a question. Every channel message (edits and deletes too) is
+        captured; an @mention in a channel is also answered by `handle_mention`."""
         if event.get("channel_type") == "im":
+            if _is_from_a_bot(event) or event.get("subtype"):  # edits, bots...
+                return
             log.info("slack_dm", channel=event.get("channel"), ts=event.get("ts"))
             await self.answer(client, event, thread_ts=event.get("thread_ts"))
             return
-        log.info(
-            "slack_message_seen",
-            channel=event.get("channel"),
-            channel_type=event.get("channel_type"),
-            ts=event.get("ts"),
-            thread_ts=event.get("thread_ts"),
-        )
+        if self.capture is not None:
+            await self.capture.on_message(event)
 
 
 def build_actions(settings: Settings, agent: OpsAgent) -> ops_actions.OpsActions:
@@ -133,12 +141,27 @@ def build_actions(settings: Settings, agent: OpsAgent) -> ops_actions.OpsActions
     )
 
 
-def build_app(settings: Settings, answerer: Answerer, actions: ops_actions.OpsActions) -> AsyncApp:
+def build_app(
+    settings: Settings,
+    answerer: Answerer,
+    actions: ops_actions.OpsActions,
+    capture: cap.CaptureHandlers | None = None,
+    cards: cap.CaptureCards | None = None,
+) -> AsyncApp:
     assert settings.slack_bot_token is not None
     app = AsyncApp(token=settings.slack_bot_token.get_secret_value())
-    ops = SlackOps(answerer)
+    ops = SlackOps(answerer, capture)
     app.event("app_mention")(ops.handle_mention)
     app.event("message")(ops.handle_message)
+    if capture is not None:
+        app.event("reaction_added")(capture.on_reaction)
+        app.shortcut(cap.CAPTURE_SHORTCUT)(capture.on_shortcut)
+    if cards is not None:
+        app.action(cap.CARD_CONFIRM)(cards.on_confirm)
+        app.action(cap.CARD_RETRACT)(cards.on_retract)
+        app.action(cap.CARD_BIND)(cards.on_bind)
+        app.action(cap.CARD_FIX)(cards.on_fix)
+        app.view(cap.CARD_FIX_VIEW)(cards.on_fix_submit)
     for action_id in (ops_actions.RUN_BOUNCE, ops_actions.DONE_MANUALLY, ops_actions.DIDNT_WORK):
         app.action(action_id)(actions.on_outcome)
     for action_id in (ops_actions.GAP_ASK, ops_actions.GAP_DONT_ASK):
@@ -166,10 +189,37 @@ async def run(settings: Settings) -> None:
 
     agent = OpsAgent(settings)
     actions = build_actions(settings, agent)
-    app = build_app(settings, agent, actions)
+    driver = create_driver(settings)
+    repo = ContextRepository(driver, settings.neo4j_database)
+    store = CaptureStore(driver, settings.neo4j_database)
+    embedder = FeatherlessEmbedder.from_settings(settings)
+
+    async def embed(text: str) -> list[float] | None:
+        return await embed_query_or_none(embedder, text)
+
+    extractor = Extractor(
+        repo, LlmJudge(settings), TelemetryStore(settings.data_dir, settings.sim_url), embed
+    )
+    cards = cap.CaptureCards(store, repo, log_channel=settings.slack_context_log_channel)
+    loop = CaptureLoop(
+        store,
+        extractor,
+        cards.announce,
+        idle=timedelta(minutes=settings.capture_idle_minutes),
+        every_s=settings.capture_sweep_seconds,
+    )
+    ingest = SlackIngest(store, channels=settings.slack_capture_channels)
+    capture = cap.CaptureHandlers(ingest, loop)
+    app = build_app(settings, agent, actions, capture, cards)
     identity = await app.client.auth_test()
+    cards.client = app.client
+    ingest.workspace_url = (identity.get("url") or "").rstrip("/") or None
+    if (log_target := await cards.log_target(app.client)) is not None:
+        ingest.skip.add(log_target)  # the audit channel is not a source
     handler = AsyncSocketModeHandler(app, settings.slack_app_token.get_secret_value())
     await handler.connect_async()
+    await ingest.catch_up(app.client)  # Socket Mode does not replay what was missed (ST-08)
+    sweeper = asyncio.create_task(loop.run(), name="capture-loop")
     watcher = None
     if actions.network is not None:
         watcher = asyncio.create_task(actions.watch(app.client), name="fault-watch")
@@ -185,8 +235,10 @@ async def run(settings: Settings) -> None:
     try:
         await asyncio.Event().wait()
     finally:
+        sweeper.cancel()
         if watcher is not None:
             watcher.cancel()
+        await driver.close()
         await asyncio.to_thread(_mark_ready, False)
         await handler.close_async()
 

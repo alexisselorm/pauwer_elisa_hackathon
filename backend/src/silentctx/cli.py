@@ -96,3 +96,39 @@ def seed(
     if result.violations:
         typer.echo(f"{result.violations} temporal violation(s)", err=True)
         raise typer.Exit(code=1)
+
+
+@app.command()
+def backfill(
+    profile: Annotated[
+        Profile | None,
+        typer.Option(help="demo (default when DEMO_PROFILE=true) or full (T1 eval)."),
+    ] = None,
+    elisa_dir: Annotated[
+        Path | None,
+        typer.Option(help="Elisa's example folder (teams_chat.json, email.txt); full only."),
+    ] = None,
+) -> None:
+    """Load historical Teams messages (and Elisa's example) as events with their original
+    times. The capture loop in the slackbot then triages them. Idempotent."""
+    from silentctx.graph.driver import create_driver
+    from silentctx.ingest.backfill import backfill as run_backfill
+    from silentctx.ingest.store import CaptureStore
+    from silentctx.seed.sources import MockData
+
+    settings = get_settings()
+    configure_logging(settings.log_level, json=settings.log_json, stream=sys.stderr)
+    chosen = profile or (Profile.DEMO if settings.demo_profile else Profile.FULL)
+
+    async def go() -> str:
+        driver = create_driver(settings)
+        try:
+            store = CaptureStore(driver, settings.neo4j_database)
+            report = await run_backfill(
+                store, MockData(settings.data_dir), chosen, elisa_dir=elisa_dir
+            )
+            return report.model_dump_json(indent=2)
+        finally:
+            await driver.close()
+
+    typer.echo(asyncio.run(go()))

@@ -92,7 +92,8 @@ def new_id(prefix: str) -> str:
 # Projection of one assertion with everything an agent needs to cite and judge it.
 _ASSERTION_FIELDS: LiteralString = """
   a { .* , embedding: null } AS a,
-  [(a)-[b:ABOUT]->(e:Entity) | {entity_id: e.entity_id, scope: b.scope}] AS bindings,
+  [(a)-[b:ABOUT]->(e:Entity) | {entity_id: e.entity_id, scope: b.scope,
+      candidate: coalesce(b.candidate, false)}] AS bindings,
   [(a)-[:CONTRADICTS]-(x:ContextAssertion) | x.assertion_id] AS contradicts,
   [(a)-[:CORROBORATES]-(x:ContextAssertion) | x.assertion_id] AS corroborates,
   head([(x:ContextAssertion)-[:SUPERSEDES]->(a) WHERE x.retracted_at IS NULL | x.assertion_id]
@@ -168,6 +169,7 @@ def assertion_view(
             "valid_from": a["valid_from"],
             "valid_to": a.get("valid_to"),
             "recorded_at": a["recorded_at"],
+            "retracted_at": a.get("retracted_at"),
             "review_due": bool(a.get("review_due")),
             "support_n": int(a.get("support_n") or 0),
             "refute_n": int(a.get("refute_n") or 0),
@@ -216,6 +218,7 @@ class ContextRepository:
             "MATCH (e:Entity) RETURN e.entity_id AS entity_id, e.entity_type AS entity_type, "
             "e.name AS name, e.city AS city, e.room AS room, e.label AS label, "
             "e.model AS model, e.private_road AS private_road, "
+            "e.generation AS generation, e.commissioned AS commissioned, "
             "e.valid_from AS valid_from, e.valid_to AS valid_to"
         )
         return [py(r) for r in rows]
@@ -740,6 +743,122 @@ class ContextRepository:
 
         return await self._tx(work)
 
+    async def confirm(self, assertion_id: str) -> AssertionOut:
+        """A person's ✅ on the Slack card: unverified -> believed_true. Disputed, superseded
+        and retracted versions keep their status (the click is still an event upstream)."""
+
+        async def work(tx: AsyncManagedTransaction) -> AssertionOut:
+            state = await _state(tx, assertion_id)
+            if state.retracted_at is None and state.status is AssertionStatus.UNVERIFIED:
+                await tx.run(
+                    "MATCH (a:ContextAssertion {assertion_id: $id}) SET a.status = $s",
+                    id=assertion_id,
+                    s=AssertionStatus.BELIEVED_TRUE.value,
+                )
+                await _check_v5(tx, [assertion_id])
+            return await _out(tx, assertion_id, replayed=False)
+
+        return await self._tx(work)
+
+    async def bind_candidate(self, assertion_id: str, entity_id: str) -> None:
+        """The answer to the clarifying question (V3): the chosen candidate becomes a binding,
+        the other candidates of the same scope are dropped."""
+
+        async def work(tx: AsyncManagedTransaction) -> None:
+            row = await _single(
+                tx,
+                "MATCH (a:ContextAssertion {assertion_id: $id})-[b:ABOUT {candidate: true}]->"
+                "(:Entity {entity_id: $entity}) SET b.candidate = false RETURN b.scope AS s",
+                id=assertion_id,
+                entity=entity_id,
+            )
+            if row is None:
+                raise WriteRejectedError(f"{entity_id} is not a candidate of {assertion_id}")
+            await tx.run(
+                "MATCH (:ContextAssertion {assertion_id: $id})-[b:ABOUT {candidate: true}]->() "
+                "WHERE b.scope = $scope DELETE b",
+                id=assertion_id,
+                scope=row,
+            )
+            await _check_v5(tx, [assertion_id])
+
+        await self._tx(work)
+
+    async def sources(self, assertion_id: str) -> list[SourceIn]:
+        """The events an assertion derives from, with their quotes (for a correction)."""
+        rows = await self._read(
+            "MATCH (:ContextAssertion {assertion_id: $id})-[d:DERIVED_FROM]->(e:Event) "
+            "RETURN e.event_id AS event_id, d.quote AS quote ORDER BY e.event_time",
+            id=assertion_id,
+        )
+        return [SourceIn.model_validate(r) for r in rows]
+
+    async def network_check(
+        self,
+        *,
+        assertion_id: str,
+        entity_id: str,
+        port: str | None,
+        observed_at: datetime,
+        agrees: bool,
+        detail: str,
+    ) -> None:
+        """V4: the telemetry check of the symptoms claimed in the thread, as an Outcome event
+        from the network. Agreement adds one SUPPORTS; disagreement is recorded, not counted."""
+        event_id = f"NET-{assertion_id}-{entity_id}"
+
+        async def work(tx: AsyncManagedTransaction) -> None:
+            if await _single(tx, "MATCH (o:Outcome {event_id: $id}) RETURN true", id=event_id):
+                return
+            await tx.run(
+                "MATCH (d:Entity {entity_id: $entity}) "
+                "CREATE (o:Event:Outcome {event_id: $id, event_time: $t, platform: 'network', "
+                "  action: 'telemetry_check', result: $result, port: $port, detail: $detail, "
+                "  agent_id: 'network'}) CREATE (o)-[:ON]->(d)",
+                entity=entity_id,
+                id=event_id,
+                t=rules.ensure_utc(observed_at),
+                result="agrees" if agrees else "disagrees",
+                port=port,
+                detail=detail,
+            )
+            if agrees:
+                await _evidence(tx, event_id, assertion_id, "SUPPORTS", True, False)
+            await _check_v5(tx, [assertion_id])
+
+        await self._tx(work)
+
+    async def reconcile_candidates(
+        self,
+        topic: str | None,
+        entity_ids: Sequence[str],
+        t: datetime,
+        extra_ids: Sequence[str] = (),
+    ) -> list[dict[str, Any]]:
+        """V6 candidates: live assertions on the same topic, bound to one of the entities or
+        found by vector search (`extra_ids`), valid at t, with where they came from."""
+        rows: list[dict[str, Any]] = py(
+            await self._read(
+                "MATCH (a:ContextAssertion) WHERE a.retracted_at IS NULL "
+                "AND a.valid_from <= $t AND $t < coalesce(a.valid_to, " + END_OF_TIME + ") "
+                "AND ((a.topic IS NOT NULL AND a.topic = $topic) OR a.assertion_id IN $extra "
+                "  OR EXISTS { MATCH (a)-[:ABOUT]->(e:Entity) WHERE e.entity_id IN $ids }) "
+                "RETURN a.assertion_id AS assertion_id, a.statement AS statement, "
+                "a.topic AS topic, a.status AS status, a.recorded_at AS recorded_at, "
+                "a.valid_from AS valid_from, a.asserted_by AS author, "
+                "coalesce(a.authority, 1) AS authority, a.qualifiers_json AS qualifiers_json, "
+                "[(a)-[:DERIVED_FROM]->(ev:Event) | ev.thread_id] AS threads, "
+                "head([(a)-[:DERIVED_FROM]->(ev:Event) | ev.author_role]) AS role, "
+                "head([(a)-[:DERIVED_FROM]->(ev:Event) | ev.platform]) AS platform "
+                "ORDER BY a.recorded_at DESC LIMIT 20",
+                topic=topic,
+                ids=list(entity_ids),
+                extra=list(extra_ids),
+                t=t,
+            )
+        )
+        return rows
+
     # --- Writes ---------------------------------------------------------------------------
 
     async def write_once(
@@ -1145,12 +1264,23 @@ async def _create(tx: AsyncManagedTransaction, item: AssertionIn) -> AssertionOu
         raise WriteRejectedError(f"unknown assertions: {', '.join(sorted(missing))}")
 
     recorded = last["t"]
+    # V6: a side that outranks every assertion it contradicts keeps its status.
+    disputed = False
+    if item.contradicts:
+        top = await _single(
+            tx,
+            "MATCH (a:ContextAssertion) WHERE a.assertion_id IN $ids "
+            "RETURN max(coalesce(a.authority, 1)) AS top",
+            ids=item.contradicts,
+        )
+        mine = item.authority if item.authority is not None else 1
+        disputed = mine <= (1 if top is None else top)
     state = _rule(
         rules.TemporalState,
         valid_from=item.valid_from or recorded,
         valid_to=item.valid_to,
         recorded_at=recorded,
-        status=AssertionStatus.DISPUTED if item.contradicts else item.status,
+        status=AssertionStatus.DISPUTED if disputed else item.status,
     )
     assertion_id = new_id("ASR")
     await tx.run(
@@ -1159,10 +1289,10 @@ async def _create(tx: AsyncManagedTransaction, item: AssertionIn) -> AssertionOu
         "  kind: $kind, qualifiers_json: $qualifiers, origin: $origin, status: $status, "
         "  confidence: $confidence, valid_from: $vf, valid_to: $vt, recorded_at: $recorded, "
         "  review_due: false, support_n: 0, refute_n: 0, idempotency_key: $key, "
-        "  asserted_by: last.author}) "
+        "  asserted_by: last.author, authority: $authority}) "
         "WITH a UNWIND $bindings AS b MATCH (e:Entity {entity_id: b.entity_id}) "
         "CREATE (a)-[:ABOUT {scope: b.scope, resolution_confidence: b.resolution_confidence, "
-        "  surface_form: b.surface_form}]->(e)",
+        "  surface_form: b.surface_form, candidate: b.candidate}]->(e)",
         last=last["id"],
         id=assertion_id,
         statement=item.statement,
@@ -1176,6 +1306,7 @@ async def _create(tx: AsyncManagedTransaction, item: AssertionIn) -> AssertionOu
         vt=state.valid_to,
         recorded=state.recorded_at,
         key=key,
+        authority=item.authority,
         bindings=[b.model_dump(mode="json") for b in item.bindings],
     )
     await tx.run(
@@ -1194,6 +1325,7 @@ async def _create(tx: AsyncManagedTransaction, item: AssertionIn) -> AssertionOu
         "CALL (a) { UNWIND $contradicts AS x MATCH (b:ContextAssertion {assertion_id: x}) "
         "  MERGE (a)-[:CONTRADICTS]->(b) "
         "  SET b.status = CASE WHEN b.status IN ['superseded', 'expired'] THEN b.status "
+        "    WHEN coalesce(b.authority, 1) > coalesce(a.authority, 1) THEN b.status "
         "    ELSE 'disputed' END } "
         "CALL (a) { UNWIND $corroborates AS x MATCH (b:ContextAssertion {assertion_id: x}) "
         "  MERGE (a)-[:CORROBORATES]->(b) }",

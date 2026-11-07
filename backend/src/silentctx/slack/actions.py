@@ -139,6 +139,24 @@ def answer_blocks(
     return blocks
 
 
+async def find_channel(client: AsyncWebClient, name: str) -> str | None:
+    """A public channel by name, joined if needed."""
+    cursor = None
+    while True:
+        page = await client.conversations_list(
+            types="public_channel", exclude_archived=True, limit=200, cursor=cursor
+        )
+        channels: list[dict[str, Any]] = page.get("channels", [])
+        for ch in channels:
+            if ch.get("name") == name:
+                if not ch.get("is_member"):
+                    await client.conversations_join(channel=ch["id"])
+                return str(ch["id"])
+        cursor = (page.get("response_metadata") or {}).get("next_cursor")
+        if not cursor:
+            return None
+
+
 class OpsActions:
     def __init__(
         self,
@@ -168,26 +186,10 @@ class OpsActions:
         the channel: SLACK_ALARM_CHANNEL, else a channel named #noc-alarms (joined if
         needed), else the first capture channel."""
         if self._target is None:
-            self._target = self.alarm_channel or await self._find_channel(client, ALARM_NAME)
+            self._target = self.alarm_channel or await find_channel(client, ALARM_NAME)
             if self._target is None and self.capture_channels:
                 self._target = self.capture_channels[0]
         return self._target
-
-    async def _find_channel(self, client: AsyncWebClient, name: str) -> str | None:
-        cursor = None
-        while True:
-            page = await client.conversations_list(
-                types="public_channel", exclude_archived=True, limit=200, cursor=cursor
-            )
-            channels: list[dict[str, Any]] = page.get("channels", [])
-            for ch in channels:
-                if ch.get("name") == name:
-                    if not ch.get("is_member"):
-                        await client.conversations_join(channel=ch["id"])
-                    return str(ch["id"])
-            cursor = (page.get("response_metadata") or {}).get("next_cursor")
-            if not cursor:
-                return None
 
     async def poll_once(self, client: AsyncWebClient) -> int:
         """Post every new fault. The first poll only learns what already happened, so a

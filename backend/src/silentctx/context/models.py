@@ -94,6 +94,7 @@ class Citation(BaseModel):
 class Binding(BaseModel):
     entity_id: str
     scope: Scope
+    candidate: bool = Field(default=False, description="unconfirmed (V3): a person picks")
 
 
 class AssertionView(BaseModel):
@@ -106,6 +107,7 @@ class AssertionView(BaseModel):
     valid_from: UtcDatetime
     valid_to: UtcDatetime | None = None
     recorded_at: UtcDatetime
+    retracted_at: UtcDatetime | None = None
     review_due: bool = False
     support_n: int = 0
     refute_n: int = 0
@@ -267,6 +269,8 @@ class BindingIn(BaseModel):
     scope: Scope
     surface_form: str | None = None
     resolution_confidence: float = Field(default=1.0, ge=0, le=1)
+    # V3: not confirmed (ambiguous, or not alive at valid_from); a person picks in Slack.
+    candidate: bool = False
 
 
 class SourceIn(BaseModel):
@@ -292,6 +296,9 @@ class AssertionIn(BaseModel):
     sources: list[SourceIn] = Field(min_length=1)
     contradicts: list[str] = Field(default_factory=list)
     corroborates: list[str] = Field(default_factory=list)
+    # V6 source authority (channel rank, higher wins). In a contradiction only the side
+    # with lower or equal authority becomes disputed. None counts as 1 (expert chat).
+    authority: int | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def _not_a_validity_status(self) -> AssertionIn:

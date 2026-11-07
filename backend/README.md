@@ -90,6 +90,26 @@ connected with its own token (`OPS_AGENT_ID`). Answers are a structured `OpsAnsw
 then drops any step without a citation the tools actually returned, and any step whose
 conditions are `not_met`. In Slack: @mention the bot or DM it.
 
+## Capture (Slack -> context card)
+
+The slackbot captures every channel it is in (`SLACK_CAPTURE_CHANNELS` narrows that on
+purpose). Messages, edits and deletes become `Message` events at their Slack `ts`
+(`ingest/slack_events.py`). On startup a catch-up sweep reads what was posted while the bot
+was down, from each channel's watermark. Every `CAPTURE_SWEEP_SECONDS` the capture loop
+(`ingest/capture.py`) triages threads that have news and are resolved ("Traffic is back",
+✅/🎉, the "Capture this as knowledge" shortcut) or idle for `CAPTURE_IDLE_MINUTES`. A
+resolution signal triggers a sweep at once. The decision and its reason are remembered on
+the `Thread`, so a thread with no new message costs no LLM call.
+
+Kept threads go through `extraction/graph.py`: triage (FAST_MODEL) -> extract (CHAT_MODEL,
+a verbatim quote per field) -> link (V1/V2 gates, times by code, entities from the
+inventory, V3) -> validate (V4 telemetry) -> reconcile (V6: corroborates, supersedes,
+corrects or contradicts, by source authority) -> persist (one transaction with the V5
+checks). The thread then gets **one** context card, edited in place. Its buttons are
+optional: ✅ confirms, ✏️ saves a correction (R6 ii), 🚫 retracts. Ignore decisions and
+captures from outside Slack go to #context-log (`SLACK_CONTEXT_LOG_CHANNEL`), never to a
+work channel.
+
 ## Seeding the graph
 
 ```bash
@@ -107,6 +127,15 @@ end; the command exits 1 on any violation. The JSON report goes to stdout, logs 
 
 The demo profile (`seed/profiles.py`) also defines what the historical backfill must skip:
 every corpus source about the forwarding stall after an SFP swap (plan 001 §3.5).
+
+```bash
+uv run silentctx backfill                                # Teams history (demo profile)
+uv run silentctx backfill --profile full --elisa-dir ../Elisa_SinceAI2026/ELISA_HIDDEN_KNOWLEDGE_EXAMPLE_2026
+```
+
+The backfill stores historical messages as events with their original times (Elisa's
+example is dated 2025-10-14 Europe/Helsinki, R8). The slackbot's capture loop then triages
+them. A re-run is a no-op.
 
 ## Checks
 
@@ -126,9 +155,11 @@ src/silentctx/
   seed/         mock_data loader, demo/full profiles (silentctx seed)
   llm/          chat-model factory, Featherless embedder
   mcp/          MCP server (auth, tools)
-  slack/        Bolt app (bot.py), fault thread and buttons (actions.py)
+  slack/        Bolt app (bot.py), fault thread and buttons (actions.py), capture + card (capture.py)
+  ingest/       Message events, threads, trigger, Slack + backfill, capture loop
+  extraction/   triage -> extract -> link -> validate -> reconcile -> persist (graph.py)
   sim/          network simulator (network.py state, app.py endpoints)
-  ingest/ extraction/ validation/ agents/ telemetry/ eval/
+  validation/ agents/ telemetry/ eval/
 ```
 
 ## Schema migrations
