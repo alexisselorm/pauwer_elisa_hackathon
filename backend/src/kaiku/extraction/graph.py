@@ -27,7 +27,7 @@ from langgraph.graph import END, StateGraph
 from opentelemetry import trace
 from pydantic import BaseModel
 
-from kaiku.context.models import AssertionIn, Scope
+from kaiku.context.models import AssertionIn, Scope, SourceIn
 from kaiku.errors import WriteRejectedError
 from kaiku.extraction import gates, reconcile
 from kaiku.extraction.link import Linked, link, ports
@@ -43,6 +43,12 @@ log = get_logger(__name__)
 tracer = trace.get_tracer(__name__)
 
 CHECKABLE = ("oper_up", "rx_power_normal", "counters_zero")
+
+
+def _authors(thread: ThreadView, sources: list[SourceIn]) -> set[str]:
+    """Who said the messages a draft is grounded in (`asserted_by` is one of them)."""
+    ids = {s.event_id for s in sources}
+    return {m.author for m in thread.messages if m.event_id in ids and m.author}
 
 
 class Item(BaseModel):
@@ -352,6 +358,7 @@ class Extractor:
                 avoid=[a.value for a in g.draft.avoid],
                 elsewhere=elsewhere,
                 authority=reconcile.channel_authority(thread.platform),
+                authors=_authors(thread, g.sources),
             )
             items.append(item.model_copy(update={"decision": decision}))
         return {"items": items}

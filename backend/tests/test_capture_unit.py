@@ -331,6 +331,27 @@ def _decide(
     )
 
 
+def test_one_persons_sibling_rules_do_not_contradict_each_other() -> None:
+    """Found live: "use the back gate ... don't try the front gate" became two rules from
+    Erkki's one message, and the judge called them contradictory, disputing both."""
+    sibling = _cand("A", thread="t1", author="U-ERKKI")
+
+    def decide(cand: dict[str, Any], authors: set[str]) -> reconcile.Decision:
+        return reconcile.decide(
+            thread_id="t1",
+            valid_from=T1,
+            candidates=[cand],
+            relations=[Relation(assertion_id="A", relation="contradicts")],
+            authors=authors,
+        )
+
+    assert decide(sibling, {"U-ERKKI"}).contradicts == []
+    # Two people in one thread still disagree (KMAX-4K), and so does the same person
+    # in another thread.
+    assert decide(sibling, {"U-VEIKKO"}).contradicts == ["A"]
+    assert decide(_cand("A", author="U-ERKKI"), {"U-ERKKI"}).contradicts == ["A"]
+
+
 def test_reconcile_decisions() -> None:
     assert _decide("duplicate", _cand("A", thread="t1")).skip_as == "A"  # re-triage
     assert _decide("duplicate", _cand("A")).corroborates == ["A"]  # ST-02: not a copy

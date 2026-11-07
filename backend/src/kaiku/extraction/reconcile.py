@@ -6,7 +6,10 @@ The LLM judge names the relation to each candidate. Code decides what is written
 - corrects, same thread -> R6(ii) correction of the earlier extraction (card updated);
   corrects from elsewhere -> a disagreement, so CONTRADICTS;
 - supersedes -> R4b, only if the draft starts later (else it is a disagreement);
-- contradicts -> CONTRADICTS. Only the side with lower or equal channel authority becomes
+- contradicts -> CONTRADICTS, except between two rules one person gave in the same thread:
+  the extractor splits one answer ("use the back gate ... don't try the front gate") into
+  sibling rules, and a person does not disagree with themselves (a self-correction is
+  `corrects`, handled above). Only the side with lower or equal channel authority becomes
   disputed, so a stale ITSM KB does not dispute an expert rule (ST-28), while two experts
   disagreeing are both disputed (KMAX-4K).
 
@@ -107,6 +110,7 @@ def decide(
     avoid: Sequence[str] = (),
     elsewhere: Collection[str] = (),
     authority: int = 1,
+    authors: Collection[str] = (),
 ) -> Decision:
     """`elsewhere`: candidates about other hardware than the new one (`disjoint`). A rule for
     TNC-3X that says "replace the SFP" doesn't contradict a Gen1 rule that says "don't", and
@@ -116,7 +120,10 @@ def decide(
 
     `authority`: the new draft's `channel_authority`. A KB or wiki page never supersedes
     what an expert said in chat or email, however recent its date: it only contradicts, and
-    is the side that becomes disputed."""
+    is the side that becomes disputed.
+
+    `authors`: who said the new draft's sources. A contradiction with a rule the same
+    person gave in the same thread is dropped (sibling rules from one answer)."""
     by_id = {c["assertion_id"]: c for c in candidates}
     d = Decision()
     superseded: list[Mapping[str, Any]] = []
@@ -169,6 +176,8 @@ def decide(
             and authority >= _authority(c)
         ):
             superseded.append(c)
+        elif r.relation is RelationKind.CONTRADICTS and same_thread and c.get("author") in authors:
+            continue  # one person's answer split into sibling rules, not a disagreement
         else:  # contradicts, a correction from elsewhere, or a "supersedes" that starts earlier
             d.contradicts.append(c["assertion_id"])
     if superseded:
