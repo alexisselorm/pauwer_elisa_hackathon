@@ -35,6 +35,7 @@ The only source of truth is `Elisa_SinceAI2026/` (the brief, the example and `re
 | FastAPI + LangGraph + Neo4j, self-hosted LangGraph inside FastAPI, `create_agent` rather than `create_react_agent`, `AsyncSqliteSaver` | Unchanged from v1 (licence and deprecation reasons are in v1's git history, commit 66d7bfe). | v1 |
 | Embeddings: Featherless `Qwen/Qwen3-Embedding-8B` at 1024 dims behind an `Embedder` protocol | Unchanged from v1. Vector search is ranking only; retrieval is scoped by entity and time first. | User, v1 |
 | Telemetry stays in NDJSON and is queried with DuckDB. Live-demo telemetry comes from the network simulator (WS6). | The demo happens "now", but the 2025 corpus is historical (§3.5). | This plan |
+| **Retrieval at t: filter by validity first, then rank; a superseded assertion is never shown alone** ([004](004-temporal-aware-retrieval.md), R11–R12). No age decay, no temporal-type field, no reading the time from the question. | Elisa's model is binary validity ("still believed true"). An external temporal-retrieval design was reviewed, and only the parts that serve Elisa's criteria were kept (004 §4). | User, 2026-11-07 |
 | **The SSE contract from v1 is dropped.** | There's no browser client. Slack handlers call the agent in-process and update one Slack message as it progresses. | This plan |
 
 ## 3. Time model — verified against Elisa's brief (critical)
@@ -71,6 +72,7 @@ The only source of truth is `Elisa_SinceAI2026/` (the brief, the example and `re
 | R8 | Everything is stored in UTC. Elisa's example has local times and no date, so the backfill sets the date to 2025-10-14 and the timezone to Europe/Helsinki (EEST, UTC+3), and adds synthetic seconds to keep messages in the same minute ordered. This is stated in the README. |
 | R9 | The `as_of` query rule: an assertion is in scope at t ⇔ `valid_from ≤ t < coalesce(valid_to, ∞)` **and** a bound entity exists at t **and** its qualifiers (model, generation, firmware) match the as-running snapshot at t. |
 | R10 | (Optional extension, labelled as ours.) `known_at` adds `recorded_at ≤ known_at`. This is still a cross-reference to the event stream, because by R2 `recorded_at` is an event time. It answers "why did the AI dispatch on 08-10 without the code?" |
+| R11–R12 | A superseded assertion is never shown without its successor (R11); filter by validity at t first, then rank (R12). See [plan 004](004-temporal-aware-retrieval.md) §3. |
 
 ### 3.4 Problems found in our data (2026-11-06) and their fixes
 

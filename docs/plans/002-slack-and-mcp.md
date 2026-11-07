@@ -91,7 +91,7 @@ Streamable HTTP at `http://localhost:8000/mcp`, plus stdio (`silentctx mcp --std
 | `resolve_entities(text, as_of?)` | Candidate entities with confidence ("the old Kemi unit" → TRN-042) |
 | `get_entity(entity_id, as_of?)` | As-built + as-running snapshot at t: model, generation, site, segment, firmware, status |
 | `get_context(entity_id, as_of?, known_at?, topic?, symptoms?, statuses?)` | Assertions in scope at t (R9), node → model → generation → site → segment, ranked. Each has validity, status, confidence, support/refute, `review_due`, qualifiers (symptoms/action/avoid) and citations. |
-| `search_context(query, as_of?, entity_id?)` | Semantic search, still filtered by validity at t |
+| `search_context(query, as_of?, entity_id?)` | Semantic search, still filtered by validity at t. Per plan 004 R12: the graph is used when an entity is known; validity at t is applied before ranking; the score is cosine × the structural score. |
 | `check_conditions(assertion_id, entity_id, port?, at?)` | Each symptom: `met`/`not_met`/`unknown`, with the telemetry values |
 | `get_site_access(entity_or_site, as_of?, known_at?)` | Access assertions valid at the visit time |
 | `get_events(entity_id, from, to, types?)` | Alarms, device events and outcomes (event stream) |

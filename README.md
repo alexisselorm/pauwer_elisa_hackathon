@@ -6,7 +6,7 @@ Built for Elisa's challenge in `Elisa_SinceAI2026/` (the only source of truth).
 
 | Where | What |
 |---|---|
-| [`docs/plans/`](docs/plans/) | 001 backend and time model, 002 Slack and MCP, 003 acceptance tests and eval |
+| [`docs/plans/`](docs/plans/) | 001 backend and time model, 002 Slack and MCP, 003 acceptance tests and eval, 004 retrieval at time t |
 | [`backend/`](backend/) | FastAPI + MCP server, Slack bot, network simulator ([README](backend/README.md)) |
 | [`mock_data/`](mock_data/) | Synthetic network, chat, email and gold answers ([README](mock_data/README.md)) |
 | [`eval/heldout/`](eval/heldout/) | Hand-written held-out threads for the eval |

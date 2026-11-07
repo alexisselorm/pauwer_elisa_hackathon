@@ -93,6 +93,10 @@ Every test is automated (pytest, against Neo4j in testcontainers, a fake Slack b
 | ST-62 | Re-running the backfill | No-op (idempotent) |
 | ST-63 | `docker compose up` on a clean machine and the run-book | Demo §6 of plan 002 runs end to end **(live)** |
 
+### 1.8 Temporal-aware retrieval (L, A): plan 004
+
+ST-70…ST-73 are specified in [plan 004 §6](004-temporal-aware-retrieval.md#6-tests-added-to-plan-003-18): a past `as_of` isn't missed, current isn't confused with superseded, disputed ranks below believed, and the successor is always named.
+
 ## 2. Eval (fixed)
 
 ### 2.1 What was wrong with v1
