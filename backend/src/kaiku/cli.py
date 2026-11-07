@@ -64,7 +64,10 @@ def seed(
     network: Annotated[bool, typer.Option("--network", help="Load the network layers.")] = False,
     gold: Annotated[
         bool,
-        typer.Option("--gold", help="Load the gold answers (eval only; needs --profile full)."),
+        typer.Option(
+            "--gold",
+            help="Load the gold knowledge (the demo profile leaves the forwarding-stall gold out).",
+        ),
     ] = False,
     wipe_gold: Annotated[
         bool, typer.Option("--wipe-gold", help="Remove gold nodes before scoring extraction.")

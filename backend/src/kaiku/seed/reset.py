@@ -3,8 +3,10 @@
 Deletes everything that was captured, proposed or recorded since seeding (Slack and email
 threads, messages, extracted assertions, outcomes, gaps, flags, MCP tool calls) and every
 change those made to seeded knowledge (status, support, supersession), then seeds the
-network and the gold knowledge again. The result is what the demo scripts in
-`backend/scripts/` expect: the Kemi code lock is known, Lappeenranta's renovation is not.
+network and the gold knowledge again with the demo profile: the forwarding-stall gold is
+left out so Elisa's chat can be captured live (plan 001 §3.5). The result is what the demo
+scripts in `backend/scripts/` expect: the Kemi code lock is known, Lappeenranta's
+renovation is not, and nothing yet says to bounce the port after an SFP swap.
 
 Kept: the schema migrations (constraints and indexes are schema, not nodes) and the Slack
 channel cursors. Without the cursors, the slackbot's catch-up would re-read every old
@@ -30,6 +32,7 @@ _DELETE_BATCH: LiteralString = (
     "MATCH (n) WHERE NOT (" + _KEEP + ") WITH n LIMIT $batch DETACH DELETE n RETURN count(*) AS n"
 )
 BATCH = 5000
+DEMO_SEED = SeedRequest(network=True, gold=True, profile=Profile.DEMO)
 
 
 class ResetResult(BaseModel):
@@ -52,6 +55,6 @@ async def reset(settings: Settings) -> ResetResult:
     finally:
         await driver.close()
     log.info("graph_reset_wiped", deleted_nodes=deleted)
-    seeded = await seed(settings, SeedRequest(network=True, gold=True, profile=Profile.FULL))
+    seeded = await seed(settings, DEMO_SEED)
     log.info("graph_reset_complete", violations=seeded.violations)
     return ResetResult(deleted_nodes=deleted, seed=seeded)

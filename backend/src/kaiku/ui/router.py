@@ -97,10 +97,9 @@ async def reset(console: ConsoleDep) -> ResetOut:
         raise HTTPException(409, "a reset is already running")
     async with _resetting:
         out = await run_reset(console.settings)
-    gold = out.seed.gold
     return ResetOut(
         deleted_nodes=out.deleted_nodes,
-        assertions=gold.gold_assertions if gold else 0,
+        assertions=out.seed.gold_assertions,
         violations=out.seed.violations,
     )
 

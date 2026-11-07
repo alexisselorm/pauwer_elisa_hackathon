@@ -1,10 +1,11 @@
 """Seed profiles (plan 001 §3.5).
 
-`demo`: what the live demo starts from. The network layers only, never gold, and a
-historical backfill (BE-2.1) WITHOUT any corpus source about the forwarding stall after an
-SFP swap, so the live capture in Slack is the first time that knowledge enters the system.
-The 2019 PDF note (and the email that forwards it) and the stale ITSM KB stay in, as
-corroboration and contradiction.
+`demo`: what the live demo starts from. The network layers, the gold knowledge MINUS every
+assertion about the forwarding stall after an SFP swap (`demo_exclusions`), and a
+historical backfill (BE-2.1) WITHOUT any corpus source about that stall, so the live
+capture in Slack is the first time that knowledge enters the system. The 2019 PDF note
+(and the email that forwards it) and the stale ITSM KB stay in, as corroboration and
+contradiction. `kaiku seed --network --gold` and the console's Reset both produce it.
 
 `full`: everything, for the T1 regression eval.
 """
