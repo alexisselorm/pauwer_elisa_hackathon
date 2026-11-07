@@ -71,6 +71,8 @@ You answer through the silentctx context layer only. Rules:
 8. A fact about the network itself (how many nodes, where a node is, what model it runs)
    may be answered from get_entity: put those entity ids in `records`. A record never
    tells you how to fix or handle something; that needs an assertion.
+9. If an assertion you use has superseded_by set, name its successor and the date it took over
+   (its valid_to). Never present superseded knowledge as current.
 Keep answers short and practical: the next step, what to avoid, and why (with sources)."""
 
 log = get_logger(__name__)

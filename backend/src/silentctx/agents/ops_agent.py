@@ -9,7 +9,8 @@ answered, not only asked for in the prompt (plan 001 WS5):
 - no step without a citation to an assertion the tools actually returned;
 - no step from an assertion whose conditions were checked and are not met;
 - "not documented" carries no steps;
-- three tool errors in a row fail the run (ToolErrorLimit) instead of answering from nothing.
+- three tool errors in a row fail the run (ToolErrorLimit) instead of answering from nothing;
+- a cited assertion that has been superseded is never shown without its successor (R11).
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from collections.abc import Iterable
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from langchain.agents import create_agent
 from langchain.agents.middleware import AgentMiddleware
@@ -230,6 +232,53 @@ def ground_sources(answer: OpsAnswer, messages: Iterable[Any]) -> OpsAnswer:
     return answer.model_copy(update={"sources": sources})
 
 
+_HELSINKI = ZoneInfo("Europe/Helsinki")
+
+
+def _superseded(value: Any, out: dict[str, tuple[str, str | None]]) -> None:
+    if isinstance(value, dict):
+        aid, succ = value.get("assertion_id"), value.get("superseded_by")
+        if isinstance(aid, str) and isinstance(succ, str):
+            valid_to = value.get("valid_to")
+            out.setdefault(aid, (succ, valid_to if isinstance(valid_to, str) else None))
+        for v in value.values():
+            _superseded(v, out)
+    elif isinstance(value, list):
+        for v in value:
+            _superseded(v, out)
+
+
+def _local(iso: str | None) -> str:
+    if not iso:
+        return "a later date"
+    try:
+        t = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+    except ValueError:
+        return iso
+    return f"{t.astimezone(_HELSINKI):%Y-%m-%d %H:%M} Helsinki time"
+
+
+def name_successors(answer: OpsAnswer, messages: Iterable[Any]) -> OpsAnswer:
+    """R11 (plan 004): every cited assertion the tools reported as superseded gets a note
+    naming its successor and when it took over (the predecessor's valid_to, R4b). Elisa's
+    "superseded timestamp", visible in the answer whatever the model wrote."""
+    found: dict[str, tuple[str, str | None]] = {}
+    for m in messages:
+        if isinstance(m, ToolMessage):
+            for payload in _payloads(m):
+                _superseded(payload, found)
+    cited = [s.assertion_id for s in answer.sources]
+    cited += [i for step in answer.steps for i in step.assertion_ids]
+    added = [
+        f"{aid} was superseded by {found[aid][0]} from {_local(found[aid][1])}."
+        for aid in dict.fromkeys(cited)
+        if aid in found
+    ]
+    # First, so Slack (which shows four notes) never cuts them off.
+    notes = added + [n for n in answer.review_notes if n not in added]
+    return answer.model_copy(update={"review_notes": notes})
+
+
 def _gap_fields(value: Any, out: dict[str, Any]) -> None:
     if isinstance(value, dict):
         if isinstance(value.get("gap_id"), str):
@@ -387,6 +436,7 @@ class OpsAgent:
         checked = ground_sources(
             enforce_rules(answer, seen_assertion_ids(messages), seen_records(messages)), messages
         )
+        checked = name_successors(checked, messages)
         gap = opened_gap(messages)
         if gap is not None:
             checked = checked.model_copy(

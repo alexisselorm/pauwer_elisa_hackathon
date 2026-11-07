@@ -17,6 +17,7 @@ from silentctx.agents.ops_agent import (
     Step,
     _from_plain_text,
     enforce_rules,
+    name_successors,
     seen_assertion_ids,
     seen_records,
 )
@@ -121,6 +122,30 @@ def test_seen_ids_come_from_tool_results_only() -> None:
         ToolMessage(content="see ASR-0024", tool_call_id="2"),
     ]
     assert seen_assertion_ids(messages) == {"ASR-0001", "ASR-0030", "ASR-0024"}
+
+
+def test_superseded_source_names_its_successor() -> None:
+    """ST-73 (plan 004 R11): the padlock cited for a past visit names the code lock."""
+    payload = json.dumps(
+        {
+            "assertions": [
+                {
+                    "assertion_id": "ASR-0023",
+                    "status": "superseded",
+                    "superseded_by": "ASR-0024",
+                    "valid_to": "2026-08-02T21:00:00Z",
+                },
+                {"assertion_id": "ASR-0025", "superseded_by": None},
+            ]
+        }
+    )
+    messages = [ToolMessage(content=[{"type": "text", "text": payload}], tool_call_id="1")]
+    a = _answer(sources=[Source(assertion_id="ASR-0023"), Source(assertion_id="ASR-0025")])
+    out = name_successors(a, messages)
+    assert out.review_notes == [
+        "ASR-0023 was superseded by ASR-0024 from 2026-08-03 00:00 Helsinki time."
+    ]
+    assert name_successors(out, messages).review_notes == out.review_notes  # idempotent
 
 
 def test_plain_text_ending_becomes_a_clarification() -> None:
