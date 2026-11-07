@@ -23,6 +23,7 @@ from mcp.server.auth.settings import AuthSettings
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
 from mcp.server.transport_security import TransportSecuritySettings
+from mcp.types import CallToolResult, TextContent
 from pydantic import AnyHttpUrl, BaseModel, Field, SecretStr
 
 from silentctx import __version__
@@ -130,11 +131,78 @@ class ServiceHolder:
         return self.service
 
 
-async def _call[T: BaseModel](fn: Callable[[], Awaitable[T]]) -> T:
+async def _get[T: BaseModel](fn: Callable[[], Awaitable[T]]) -> T:
     try:
         return await fn()
     except ContextError as exc:
         raise ToolError(str(exc)) from exc
+
+
+async def _call(fn: Callable[[], Awaitable[BaseModel]]) -> CallToolResult:
+    """structuredContent plus text: a one-line summary first, then the same data as JSON
+    (models read the text; the JSON keeps every id they may cite)."""
+    result = await _get(fn)
+    return _result(result)
+
+
+def _result(result: BaseModel) -> CallToolResult:
+    return CallToolResult(
+        content=[
+            TextContent(type="text", text=summarize(result)),
+            TextContent(type="text", text=result.model_dump_json()),
+        ],
+        structuredContent=result.model_dump(mode="json"),
+    )
+
+
+def _ids(items: list[Any], key: str = "assertion_id", n: int = 5) -> str:
+    ids = [getattr(i, key) for i in items[:n]]
+    more = f" +{len(items) - n}" if len(items) > n else ""
+    return (", ".join(ids) + more) if ids else "none"
+
+
+def summarize(r: BaseModel) -> str:
+    """One short line per tool result."""
+    replay = " (replayed)" if getattr(r, "replayed", False) else ""
+    match r:
+        case PingResult():
+            return f"{r.server} {r.version}, agent {r.agent_id or 'unknown'}"
+        case ResolveResult():
+            best = r.candidates[0] if r.candidates else None
+            top = f"; best {best.entity_id} ({best.confidence:.2f})" if best else ""
+            return f"{len(r.candidates)} candidate(s) for {r.text!r}{top}"
+        case EntityView():
+            what = " ".join(x for x in (r.model, r.generation, r.firmware) if x)
+            alive = "in service" if r.exists_at else "not in service"
+            return f"{r.entity_id} ({r.entity_type}) {what} at {r.as_of.isoformat()}: {alive}"
+        case ContextResult():
+            note = f"; {r.note}" if r.note else ""
+            return f"{len(r.assertions)} assertion(s) for {r.entity_id}: {_ids(r.assertions)}{note}"
+        case SearchResult():
+            return f"{len(r.assertions)} {r.mode} match(es): {_ids(r.assertions)}"
+        case ConditionsResult():
+            each = ", ".join(f"{c.name} {c.status}" for c in r.conditions) or "no conditions"
+            return f"{r.assertion_id} on {r.entity_id}: {each}; all met: {r.all_met}"
+        case SiteAccessResult():
+            locks = ", ".join(f"{a.lock} ({a.holder})" for a in r.access_register) or "none"
+            return f"{len(r.assertions)} access assertion(s) for {r.entity_id}; register: {locks}"
+        case EventsResult():
+            more = " (truncated)" if r.truncated else ""
+            return f"{len(r.events)} event(s) on {r.entity_id}{more}"
+        case HistoryResult():
+            return (
+                f"{r.assertion_id}: {len(r.versions)} version(s), {len(r.contradicts)} "
+                f"contradiction(s), {len(r.evidence)} evidence, {len(r.flags)} flag(s)"
+            )
+        case OutcomeRecorded():
+            return f"outcome {r.event_id}{replay}: evidence {r.evidence or 'not counted'}"
+        case GapOpened():
+            return f"gap {r.gap_id}{replay} routed to {r.routed_to or 'the channel'}"
+        case ProposalCreated():
+            return f"proposal {r.assertion_id}{replay}: {r.status}"
+        case FlagRecorded():
+            return f"flag {r.flag_id}{replay} on {r.assertion_id}: review due"
+    return type(r).__name__
 
 
 def _agent(holder: ServiceHolder) -> str:
@@ -167,10 +235,10 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
     )
 
     @server.tool()
-    async def ping() -> PingResult:
+    async def ping() -> Annotated[CallToolResult, PingResult]:
         """Check the connection. Returns the server version and your agent id."""
         agent = current_agent_id() or holder.stdio_agent_id
-        return PingResult(server=SERVER_NAME, version=__version__, agent_id=agent)
+        return _result(PingResult(server=SERVER_NAME, version=__version__, agent_id=agent))
 
     # --- Read tools -----------------------------------------------------------------------
 
@@ -178,12 +246,14 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
     async def resolve_entities(
         text: Annotated[str, Field(description="free text, e.g. 'the old Pori node'")],
         as_of: When = None,
-    ) -> ResolveResult:
+    ) -> Annotated[CallToolResult, ResolveResult]:
         """Find the graph entities a piece of text refers to, with a confidence each."""
         return await _call(lambda: holder.get().resolve_entities(text, as_of))
 
     @server.tool()
-    async def get_entity(entity_id: EntityId, as_of: When = None) -> EntityView:
+    async def get_entity(
+        entity_id: EntityId, as_of: When = None
+    ) -> Annotated[CallToolResult, EntityView]:
         """As-built and as-running facts about an entity at a time: model, generation,
         firmware, status, segments and links."""
         return await _call(lambda: holder.get().get_entity(entity_id, as_of))
@@ -201,7 +271,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
             list[str] | None, Field(description="e.g. ['counters_zero', 'oper_up']")
         ] = None,
         statuses: list[AssertionStatus] | None = None,
-    ) -> ContextResult:
+    ) -> Annotated[CallToolResult, ContextResult]:
         """Expert knowledge in scope for an entity at a time (node, its model and generation,
         its segments, and observations on devices of the same model), ranked, with validity,
         status, support/refute counts, qualifiers (symptoms, action, avoid) and citations."""
@@ -217,7 +287,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
             str | None, Field(description="limit the search to this entity's scope")
         ] = None,
         limit: Annotated[int, Field(ge=1, le=50)] = 10,
-    ) -> SearchResult:
+    ) -> Annotated[CallToolResult, SearchResult]:
         """Semantic search over knowledge valid at a time (keyword search if embeddings are
         unavailable)."""
         return await _call(lambda: holder.get().search_context(query, as_of, entity_id, limit))
@@ -228,7 +298,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         entity_id: EntityId,
         port: Annotated[str | None, Field(description="e.g. 1/1/3; optional")] = None,
         at: When = None,
-    ) -> ConditionsResult:
+    ) -> Annotated[CallToolResult, ConditionsResult]:
         """Check an assertion's symptoms against telemetry on an entity, using the last
         complete 15-minute interval before `at`: each is met, not_met or unknown."""
         return await _call(lambda: holder.get().check_conditions(assertion_id, entity_id, port, at))
@@ -240,7 +310,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
             datetime | None, Field(description="the planned visit time; defaults to now")
         ] = None,
         known_at: When = None,
-    ) -> SiteAccessResult:
+    ) -> Annotated[CallToolResult, SiteAccessResult]:
         """How to physically get to a device or segment at the visit time: access knowledge
         (locks, keys, gates, roads) and the access register."""
         return await _call(lambda: holder.get().get_site_access(entity_or_site, as_of, known_at))
@@ -255,12 +325,12 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
             Field(description="kinds (Alarm, DeviceEvent, Outcome) or types (LOS, field_visit)"),
         ] = None,
         limit: Annotated[int, Field(ge=1, le=200)] = 100,
-    ) -> EventsResult:
+    ) -> Annotated[CallToolResult, EventsResult]:
         """The event stream for an entity: alarms, device events and outcomes."""
         return await _call(lambda: holder.get().get_events(entity_id, start, end, types, limit))
 
     @server.tool()
-    async def get_history(assertion_id: str) -> HistoryResult:
+    async def get_history(assertion_id: str) -> Annotated[CallToolResult, HistoryResult]:
         """How a piece of knowledge changed: versions (supersession), contradictions,
         corroborations, outcome evidence and flags."""
         return await _call(lambda: holder.get().get_history(assertion_id))
@@ -282,7 +352,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         on_behalf_of: Annotated[
             str | None, Field(description="the person the agent acted for, e.g. a Slack user")
         ] = None,
-    ) -> OutcomeRecorded:
+    ) -> Annotated[CallToolResult, OutcomeRecorded]:
         """Record what happened after an action. Becomes evidence for the assertion:
         resolved supports it; not_resolved refutes it only if its conditions were met."""
         return await _call(
@@ -306,7 +376,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         entity_ids: Annotated[list[str], Field(min_length=1)],
         idempotency_key: IdempotencyKey,
         context: str | None = None,
-    ) -> GapOpened:
+    ) -> Annotated[CallToolResult, GapOpened]:
         """Record that something isn't documented; it is routed to the most likely expert."""
         return await _call(
             lambda: holder.get().open_knowledge_gap(
@@ -331,7 +401,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         qualifiers: dict[str, Any] | None = None,
         valid_from: When = None,
         valid_to: Annotated[datetime | None, Field(description="exclusive end, if any")] = None,
-    ) -> ProposalCreated:
+    ) -> Annotated[CallToolResult, ProposalCreated]:
         """Propose new knowledge. It is stored as unverified until a person confirms it."""
         return await _call(
             lambda: holder.get().propose_assertion(
@@ -354,7 +424,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         reason: str,
         idempotency_key: IdempotencyKey,
         evidence_event_ids: list[str] | None = None,
-    ) -> FlagRecorded:
+    ) -> Annotated[CallToolResult, FlagRecorded]:
         """Ask for a person to review a piece of knowledge (sets review_due)."""
         return await _call(
             lambda: holder.get().flag_assertion(
@@ -379,7 +449,7 @@ def create_mcp_server(tokens: dict[str, SecretStr], holder: ServiceHolder | None
         mime_type="text/markdown",
     )
     async def entity_context(entity_id: str) -> str:
-        result = await _call(lambda: holder.get().get_context(entity_id))
+        result = await _get(lambda: holder.get().get_context(entity_id))
         return context_markdown(result)
 
     return server

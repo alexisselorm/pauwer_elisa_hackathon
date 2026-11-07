@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -184,3 +185,26 @@ def test_mcp_ping_reports_the_calling_agent(client: TestClient, token: str, agen
     result = _sse_json(r)["result"]
     assert result["isError"] is False
     assert result["structuredContent"]["agent_id"] == agent_id
+    assert result["content"][0]["text"].endswith(f"agent {agent_id}")  # the short summary
+
+
+SNAPSHOT = Path(__file__).parent / "snapshots" / "mcp_tools.json"
+
+
+def test_mcp_tool_schemas_match_the_snapshot(client: TestClient) -> None:
+    """The MCP contract: a changed tool name, input or output schema fails here.
+    Refresh on purpose with UPDATE_SNAPSHOTS=1."""
+    import json
+    import os
+
+    r = _rpc(client, {"jsonrpc": "2.0", "id": 3, "method": "tools/list", "params": {}}, AGENT_TOKEN)
+    assert r.status_code == 200, r.text
+    tools = sorted(_sse_json(r)["result"]["tools"], key=lambda t: t["name"])
+    contract = [
+        {k: t.get(k) for k in ("name", "description", "inputSchema", "outputSchema")} for t in tools
+    ]
+    if os.environ.get("UPDATE_SNAPSHOTS") == "1":
+        SNAPSHOT.parent.mkdir(exist_ok=True)
+        SNAPSHOT.write_text(json.dumps(contract, indent=2, sort_keys=True) + "\n")
+    assert contract == json.loads(SNAPSHOT.read_text())
+    assert all(t["outputSchema"] for t in contract)  # every tool returns structuredContent

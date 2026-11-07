@@ -1,0 +1,3293 @@
+[
+  {
+    "description": "Check an assertion's symptoms against telemetry on an entity, using the last\n        complete 15-minute interval before `at`: each is met, not_met or unknown.",
+    "inputSchema": {
+      "properties": {
+        "assertion_id": {
+          "title": "Assertion Id",
+          "type": "string"
+        },
+        "at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "ISO-8601 UTC instant; defaults to now",
+          "title": "At"
+        },
+        "entity_id": {
+          "description": "graph entity id, e.g. TRN-017, TNC-1X, SEG-042",
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "port": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "e.g. 1/1/3; optional",
+          "title": "Port"
+        }
+      },
+      "required": [
+        "assertion_id",
+        "entity_id"
+      ],
+      "title": "check_conditionsArguments",
+      "type": "object"
+    },
+    "name": "check_conditions",
+    "outputSchema": {
+      "$defs": {
+        "ConditionResult": {
+          "properties": {
+            "detail": {
+              "title": "Detail",
+              "type": "string"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "status": {
+              "$ref": "#/$defs/ConditionStatus"
+            },
+            "values": {
+              "default": [],
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "title": "Values",
+              "type": "array"
+            },
+            "window_end": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Window End"
+            },
+            "window_start": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Window Start"
+            }
+          },
+          "required": [
+            "name",
+            "status",
+            "detail"
+          ],
+          "title": "ConditionResult",
+          "type": "object"
+        },
+        "ConditionStatus": {
+          "enum": [
+            "met",
+            "not_met",
+            "unknown"
+          ],
+          "title": "ConditionStatus",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "all_met": {
+          "title": "All Met",
+          "type": "boolean"
+        },
+        "assertion_id": {
+          "title": "Assertion Id",
+          "type": "string"
+        },
+        "at": {
+          "format": "date-time",
+          "title": "At",
+          "type": "string"
+        },
+        "conditions": {
+          "items": {
+            "$ref": "#/$defs/ConditionResult"
+          },
+          "title": "Conditions",
+          "type": "array"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "port": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Port"
+        }
+      },
+      "required": [
+        "assertion_id",
+        "entity_id",
+        "port",
+        "at",
+        "conditions",
+        "all_met"
+      ],
+      "title": "ConditionsResult",
+      "type": "object"
+    }
+  },
+  {
+    "description": "Ask for a person to review a piece of knowledge (sets review_due).",
+    "inputSchema": {
+      "properties": {
+        "assertion_id": {
+          "title": "Assertion Id",
+          "type": "string"
+        },
+        "evidence_event_ids": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Event Ids"
+        },
+        "idempotency_key": {
+          "description": "unique per intended write; repeating it returns the first result",
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Idempotency Key",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "assertion_id",
+        "reason",
+        "idempotency_key"
+      ],
+      "title": "flag_assertionArguments",
+      "type": "object"
+    },
+    "name": "flag_assertion",
+    "outputSchema": {
+      "properties": {
+        "assertion_id": {
+          "title": "Assertion Id",
+          "type": "string"
+        },
+        "flag_id": {
+          "title": "Flag Id",
+          "type": "string"
+        },
+        "replayed": {
+          "default": false,
+          "title": "Replayed",
+          "type": "boolean"
+        },
+        "review_due": {
+          "title": "Review Due",
+          "type": "boolean"
+        },
+        "routed_to": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Routed To"
+        }
+      },
+      "required": [
+        "flag_id",
+        "assertion_id",
+        "review_due",
+        "routed_to"
+      ],
+      "title": "FlagRecorded",
+      "type": "object"
+    }
+  },
+  {
+    "description": "Expert knowledge in scope for an entity at a time (node, its model and generation,\n        its segments, and observations on devices of the same model), ranked, with validity,\n        status, support/refute counts, qualifiers (symptoms, action, avoid) and citations.",
+    "inputSchema": {
+      "$defs": {
+        "AssertionStatus": {
+          "enum": [
+            "unverified",
+            "believed_true",
+            "disputed",
+            "superseded",
+            "expired"
+          ],
+          "title": "AssertionStatus",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "as_of": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "ISO-8601 UTC instant; defaults to now",
+          "title": "As Of"
+        },
+        "entity_id": {
+          "description": "graph entity id, e.g. TRN-017, TNC-1X, SEG-042",
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "known_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "only knowledge on record at this instant; defaults to now",
+          "title": "Known At"
+        },
+        "statuses": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/AssertionStatus"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Statuses"
+        },
+        "symptoms": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "e.g. ['counters_zero', 'oper_up']",
+          "title": "Symptoms"
+        },
+        "topic": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "filter by topic substring",
+          "title": "Topic"
+        }
+      },
+      "required": [
+        "entity_id"
+      ],
+      "title": "get_contextArguments",
+      "type": "object"
+    },
+    "name": "get_context",
+    "outputSchema": {
+      "$defs": {
+        "AssertionStatus": {
+          "enum": [
+            "unverified",
+            "believed_true",
+            "disputed",
+            "superseded",
+            "expired"
+          ],
+          "title": "AssertionStatus",
+          "type": "string"
+        },
+        "AssertionView": {
+          "properties": {
+            "assertion_id": {
+              "title": "Assertion Id",
+              "type": "string"
+            },
+            "bindings": {
+              "default": [],
+              "items": {
+                "$ref": "#/$defs/Binding"
+              },
+              "title": "Bindings",
+              "type": "array"
+            },
+            "citations": {
+              "default": [],
+              "items": {
+                "$ref": "#/$defs/Citation"
+              },
+              "title": "Citations",
+              "type": "array"
+            },
+            "confidence": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Confidence"
+            },
+            "contradicts": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "title": "Contradicts",
+              "type": "array"
+            },
+            "corroborates": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "title": "Corroborates",
+              "type": "array"
+            },
+            "match": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Match"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "origin": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Origin"
+            },
+            "qualifiers": {
+              "additionalProperties": true,
+              "default": {},
+              "title": "Qualifiers",
+              "type": "object"
+            },
+            "recorded_at": {
+              "format": "date-time",
+              "title": "Recorded At",
+              "type": "string"
+            },
+            "refute_n": {
+              "default": 0,
+              "title": "Refute N",
+              "type": "integer"
+            },
+            "retracted_at": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Retracted At"
+            },
+            "review_due": {
+              "default": false,
+              "title": "Review Due",
+              "type": "boolean"
+            },
+            "score": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Score"
+            },
+            "statement": {
+              "title": "Statement",
+              "type": "string"
+            },
+            "status": {
+              "$ref": "#/$defs/AssertionStatus"
+            },
+            "superseded_by": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Superseded By"
+            },
+            "supersedes": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Supersedes"
+            },
+            "support_n": {
+              "default": 0,
+              "title": "Support N",
+              "type": "integer"
+            },
+            "topic": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Topic"
+            },
+            "valid_from": {
+              "format": "date-time",
+              "title": "Valid From",
+              "type": "string"
+            },
+            "valid_to": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Valid To"
+            }
+          },
+          "required": [
+            "assertion_id",
+            "statement",
+            "status",
+            "valid_from",
+            "recorded_at"
+          ],
+          "title": "AssertionView",
+          "type": "object"
+        },
+        "Binding": {
+          "properties": {
+            "candidate": {
+              "default": false,
+              "description": "unconfirmed (V3): a person picks",
+              "title": "Candidate",
+              "type": "boolean"
+            },
+            "entity_id": {
+              "title": "Entity Id",
+              "type": "string"
+            },
+            "scope": {
+              "$ref": "#/$defs/Scope"
+            }
+          },
+          "required": [
+            "entity_id",
+            "scope"
+          ],
+          "title": "Binding",
+          "type": "object"
+        },
+        "Citation": {
+          "properties": {
+            "author": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Author"
+            },
+            "detail": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Detail"
+            },
+            "recorded_at": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Recorded At"
+            },
+            "source_ref": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Source Ref"
+            },
+            "source_type": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Source Type"
+            }
+          },
+          "title": "Citation",
+          "type": "object"
+        },
+        "Match": {
+          "description": "Why an assertion is in scope for the entity asked about (ranking order).",
+          "enum": [
+            "direct",
+            "model",
+            "site",
+            "segment",
+            "same_model_device"
+          ],
+          "title": "Match",
+          "type": "string"
+        },
+        "Scope": {
+          "description": "How an assertion is bound to an entity (plan 001 \u00a75).",
+          "enum": [
+            "observed_on",
+            "applies_to",
+            "activity"
+          ],
+          "title": "Scope",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "as_of": {
+          "format": "date-time",
+          "title": "As Of",
+          "type": "string"
+        },
+        "assertions": {
+          "items": {
+            "$ref": "#/$defs/AssertionView"
+          },
+          "title": "Assertions",
+          "type": "array"
+        },
+        "entity_exists": {
+          "title": "Entity Exists",
+          "type": "boolean"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "known_at": {
+          "format": "date-time",
+          "title": "Known At",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "scope_entities": {
+          "description": "the entity, its model, generation, segments",
+          "items": {
+            "type": "string"
+          },
+          "title": "Scope Entities",
+          "type": "array"
+        }
+      },
+      "required": [
+        "entity_id",
+        "as_of",
+        "known_at",
+        "entity_exists",
+        "scope_entities",
+        "assertions"
+      ],
+      "title": "ContextResult",
+      "type": "object"
+    }
+  },
+  {
+    "description": "As-built and as-running facts about an entity at a time: model, generation,\n        firmware, status, segments and links.",
+    "inputSchema": {
+      "properties": {
+        "as_of": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "ISO-8601 UTC instant; defaults to now",
+          "title": "As Of"
+        },
+        "entity_id": {
+          "description": "graph entity id, e.g. TRN-017, TNC-1X, SEG-042",
+          "title": "Entity Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id"
+      ],
+      "title": "get_entityArguments",
+      "type": "object"
+    },
+    "name": "get_entity",
+    "outputSchema": {
+      "$defs": {
+        "SegmentRef": {
+          "properties": {
+            "barrier": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Barrier"
+            },
+            "entity_id": {
+              "title": "Entity Id",
+              "type": "string"
+            },
+            "name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Name"
+            },
+            "private_road": {
+              "default": false,
+              "title": "Private Road",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "entity_id"
+          ],
+          "title": "SegmentRef",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "as_of": {
+          "format": "date-time",
+          "title": "As Of",
+          "type": "string"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "entity_type": {
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "exists_at": {
+          "title": "Exists At",
+          "type": "boolean"
+        },
+        "firmware": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "firmware at as_of when known from upgrade events",
+          "title": "Firmware"
+        },
+        "firmware_source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Firmware Source"
+        },
+        "generation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation"
+        },
+        "linked_devices": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Linked Devices",
+          "type": "array"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Location"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "properties": {
+          "additionalProperties": true,
+          "default": {},
+          "title": "Properties",
+          "type": "object"
+        },
+        "running_hw_model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "hardware model in the as-running snapshot at as_of",
+          "title": "Running Hw Model"
+        },
+        "segments": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/SegmentRef"
+          },
+          "title": "Segments",
+          "type": "array"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status"
+        },
+        "valid_from": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid From"
+        },
+        "valid_to": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid To"
+        }
+      },
+      "required": [
+        "entity_id",
+        "entity_type",
+        "as_of",
+        "exists_at"
+      ],
+      "title": "EntityView",
+      "type": "object"
+    }
+  },
+  {
+    "description": "The event stream for an entity: alarms, device events and outcomes.",
+    "inputSchema": {
+      "properties": {
+        "end": {
+          "description": "ISO-8601 UTC, exclusive",
+          "format": "date-time",
+          "title": "End",
+          "type": "string"
+        },
+        "entity_id": {
+          "description": "graph entity id, e.g. TRN-017, TNC-1X, SEG-042",
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "limit": {
+          "default": 100,
+          "maximum": 200,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "start": {
+          "description": "ISO-8601 UTC, inclusive",
+          "format": "date-time",
+          "title": "Start",
+          "type": "string"
+        },
+        "types": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "kinds (Alarm, DeviceEvent, Outcome) or types (LOS, field_visit)",
+          "title": "Types"
+        }
+      },
+      "required": [
+        "entity_id",
+        "start",
+        "end"
+      ],
+      "title": "get_eventsArguments",
+      "type": "object"
+    },
+    "name": "get_events",
+    "outputSchema": {
+      "$defs": {
+        "EventView": {
+          "properties": {
+            "details": {
+              "additionalProperties": true,
+              "default": {},
+              "title": "Details",
+              "type": "object"
+            },
+            "entity_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Entity Id"
+            },
+            "event_id": {
+              "title": "Event Id",
+              "type": "string"
+            },
+            "event_time": {
+              "format": "date-time",
+              "title": "Event Time",
+              "type": "string"
+            },
+            "kind": {
+              "description": "Alarm, DeviceEvent, Outcome, AgentAction, Message, Email",
+              "title": "Kind",
+              "type": "string"
+            },
+            "severity": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Severity"
+            },
+            "text": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Text"
+            },
+            "type": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Type"
+            }
+          },
+          "required": [
+            "event_id",
+            "kind",
+            "event_time"
+          ],
+          "title": "EventView",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "end": {
+          "format": "date-time",
+          "title": "End",
+          "type": "string"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "events": {
+          "items": {
+            "$ref": "#/$defs/EventView"
+          },
+          "title": "Events",
+          "type": "array"
+        },
+        "start": {
+          "format": "date-time",
+          "title": "Start",
+          "type": "string"
+        },
+        "truncated": {
+          "default": false,
+          "title": "Truncated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "entity_id",
+        "start",
+        "end",
+        "events"
+      ],
+      "title": "EventsResult",
+      "type": "object"
+    }
+  },
+  {
+    "description": "How a piece of knowledge changed: versions (supersession), contradictions,\n        corroborations, outcome evidence and flags.",
+    "inputSchema": {
+      "properties": {
+        "assertion_id": {
+          "title": "Assertion Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "assertion_id"
+      ],
+      "title": "get_historyArguments",
+      "type": "object"
+    },
+    "name": "get_history",
+    "outputSchema": {
+      "$defs": {
+        "AssertionStatus": {
+          "enum": [
+            "unverified",
+            "believed_true",
+            "disputed",
+            "superseded",
+            "expired"
+          ],
+          "title": "AssertionStatus",
+          "type": "string"
+        },
+        "AssertionView": {
+          "properties": {
+            "assertion_id": {
+              "title": "Assertion Id",
+              "type": "string"
+            },
+            "bindings": {
+              "default": [],
+              "items": {
+                "$ref": "#/$defs/Binding"
+              },
+              "title": "Bindings",
+              "type": "array"
+            },
+            "citations": {
+              "default": [],
+              "items": {
+                "$ref": "#/$defs/Citation"
+              },
+              "title": "Citations",
+              "type": "array"
+            },
+            "confidence": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Confidence"
+            },
+            "contradicts": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "title": "Contradicts",
+              "type": "array"
+            },
+            "corroborates": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "title": "Corroborates",
+              "type": "array"
+            },
+            "match": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Match"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "origin": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Origin"
+            },
+            "qualifiers": {
+              "additionalProperties": true,
+              "default": {},
+              "title": "Qualifiers",
+              "type": "object"
+            },
+            "recorded_at": {
+              "format": "date-time",
+              "title": "Recorded At",
+              "type": "string"
+            },
+            "refute_n": {
+              "default": 0,
+              "title": "Refute N",
+              "type": "integer"
+            },
+            "retracted_at": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Retracted At"
+            },
+            "review_due": {
+              "default": false,
+              "title": "Review Due",
+              "type": "boolean"
+            },
+            "score": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Score"
+            },
+            "statement": {
+              "title": "Statement",
+              "type": "string"
+            },
+            "status": {
+              "$ref": "#/$defs/AssertionStatus"
+            },
+            "superseded_by": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Superseded By"
+            },
+            "supersedes": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Supersedes"
+            },
+            "support_n": {
+              "default": 0,
+              "title": "Support N",
+              "type": "integer"
+            },
+            "topic": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Topic"
+            },
+            "valid_from": {
+              "format": "date-time",
+              "title": "Valid From",
+              "type": "string"
+            },
+            "valid_to": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Valid To"
+            }
+          },
+          "required": [
+            "assertion_id",
+            "statement",
+            "status",
+            "valid_from",
+            "recorded_at"
+          ],
+          "title": "AssertionView",
+          "type": "object"
+        },
+        "Binding": {
+          "properties": {
+            "candidate": {
+              "default": false,
+              "description": "unconfirmed (V3): a person picks",
+              "title": "Candidate",
+              "type": "boolean"
+            },
+            "entity_id": {
+              "title": "Entity Id",
+              "type": "string"
+            },
+            "scope": {
+              "$ref": "#/$defs/Scope"
+            }
+          },
+          "required": [
+            "entity_id",
+            "scope"
+          ],
+          "title": "Binding",
+          "type": "object"
+        },
+        "Citation": {
+          "properties": {
+            "author": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Author"
+            },
+            "detail": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Detail"
+            },
+            "recorded_at": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Recorded At"
+            },
+            "source_ref": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Source Ref"
+            },
+            "source_type": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Source Type"
+            }
+          },
+          "title": "Citation",
+          "type": "object"
+        },
+        "EvidenceView": {
+          "properties": {
+            "agent_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Agent Id"
+            },
+            "conditions_met": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Conditions Met"
+            },
+            "entity_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Entity Id"
+            },
+            "event_id": {
+              "title": "Event Id",
+              "type": "string"
+            },
+            "event_time": {
+              "format": "date-time",
+              "title": "Event Time",
+              "type": "string"
+            },
+            "relation": {
+              "title": "Relation",
+              "type": "string"
+            },
+            "result": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Result"
+            }
+          },
+          "required": [
+            "event_id",
+            "relation",
+            "event_time"
+          ],
+          "title": "EvidenceView",
+          "type": "object"
+        },
+        "FlagView": {
+          "properties": {
+            "agent_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Agent Id"
+            },
+            "flag_id": {
+              "title": "Flag Id",
+              "type": "string"
+            },
+            "flagged_at": {
+              "format": "date-time",
+              "title": "Flagged At",
+              "type": "string"
+            },
+            "reason": {
+              "title": "Reason",
+              "type": "string"
+            }
+          },
+          "required": [
+            "flag_id",
+            "reason",
+            "flagged_at"
+          ],
+          "title": "FlagView",
+          "type": "object"
+        },
+        "Match": {
+          "description": "Why an assertion is in scope for the entity asked about (ranking order).",
+          "enum": [
+            "direct",
+            "model",
+            "site",
+            "segment",
+            "same_model_device"
+          ],
+          "title": "Match",
+          "type": "string"
+        },
+        "Scope": {
+          "description": "How an assertion is bound to an entity (plan 001 \u00a75).",
+          "enum": [
+            "observed_on",
+            "applies_to",
+            "activity"
+          ],
+          "title": "Scope",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "assertion_id": {
+          "title": "Assertion Id",
+          "type": "string"
+        },
+        "contradicts": {
+          "items": {
+            "$ref": "#/$defs/AssertionView"
+          },
+          "title": "Contradicts",
+          "type": "array"
+        },
+        "corroborates": {
+          "items": {
+            "$ref": "#/$defs/AssertionView"
+          },
+          "title": "Corroborates",
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceView"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "flags": {
+          "items": {
+            "$ref": "#/$defs/FlagView"
+          },
+          "title": "Flags",
+          "type": "array"
+        },
+        "versions": {
+          "description": "the supersession chain, oldest first",
+          "items": {
+            "$ref": "#/$defs/AssertionView"
+          },
+          "title": "Versions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "assertion_id",
+        "versions",
+        "contradicts",
+        "corroborates",
+        "evidence",
+        "flags"
+      ],
+      "title": "HistoryResult",
+      "type": "object"
+    }
+  },
+  {
+    "description": "How to physically get to a device or segment at the visit time: access knowledge\n        (locks, keys, gates, roads) and the access register.",
+    "inputSchema": {
+      "properties": {
+        "as_of": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the planned visit time; defaults to now",
+          "title": "As Of"
+        },
+        "entity_or_site": {
+          "description": "graph entity id, e.g. TRN-017, TNC-1X, SEG-042",
+          "title": "Entity Or Site",
+          "type": "string"
+        },
+        "known_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "ISO-8601 UTC instant; defaults to now",
+          "title": "Known At"
+        }
+      },
+      "required": [
+        "entity_or_site"
+      ],
+      "title": "get_site_accessArguments",
+      "type": "object"
+    },
+    "name": "get_site_access",
+    "outputSchema": {
+      "$defs": {
+        "AccessRecordView": {
+          "properties": {
+            "barrier": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Barrier"
+            },
+            "holder": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Holder"
+            },
+            "lock": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Lock"
+            },
+            "recorded_at": {
+              "format": "date-time",
+              "title": "Recorded At",
+              "type": "string"
+            },
+            "segment_id": {
+              "title": "Segment Id",
+              "type": "string"
+            },
+            "valid_from": {
+              "format": "date-time",
+              "title": "Valid From",
+              "type": "string"
+            },
+            "valid_to": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Valid To"
+            },
+            "where": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Where"
+            }
+          },
+          "required": [
+            "segment_id",
+            "valid_from",
+            "recorded_at"
+          ],
+          "title": "AccessRecordView",
+          "type": "object"
+        },
+        "AssertionStatus": {
+          "enum": [
+            "unverified",
+            "believed_true",
+            "disputed",
+            "superseded",
+            "expired"
+          ],
+          "title": "AssertionStatus",
+          "type": "string"
+        },
+        "AssertionView": {
+          "properties": {
+            "assertion_id": {
+              "title": "Assertion Id",
+              "type": "string"
+            },
+            "bindings": {
+              "default": [],
+              "items": {
+                "$ref": "#/$defs/Binding"
+              },
+              "title": "Bindings",
+              "type": "array"
+            },
+            "citations": {
+              "default": [],
+              "items": {
+                "$ref": "#/$defs/Citation"
+              },
+              "title": "Citations",
+              "type": "array"
+            },
+            "confidence": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Confidence"
+            },
+            "contradicts": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "title": "Contradicts",
+              "type": "array"
+            },
+            "corroborates": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "title": "Corroborates",
+              "type": "array"
+            },
+            "match": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Match"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "origin": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Origin"
+            },
+            "qualifiers": {
+              "additionalProperties": true,
+              "default": {},
+              "title": "Qualifiers",
+              "type": "object"
+            },
+            "recorded_at": {
+              "format": "date-time",
+              "title": "Recorded At",
+              "type": "string"
+            },
+            "refute_n": {
+              "default": 0,
+              "title": "Refute N",
+              "type": "integer"
+            },
+            "retracted_at": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Retracted At"
+            },
+            "review_due": {
+              "default": false,
+              "title": "Review Due",
+              "type": "boolean"
+            },
+            "score": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Score"
+            },
+            "statement": {
+              "title": "Statement",
+              "type": "string"
+            },
+            "status": {
+              "$ref": "#/$defs/AssertionStatus"
+            },
+            "superseded_by": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Superseded By"
+            },
+            "supersedes": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Supersedes"
+            },
+            "support_n": {
+              "default": 0,
+              "title": "Support N",
+              "type": "integer"
+            },
+            "topic": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Topic"
+            },
+            "valid_from": {
+              "format": "date-time",
+              "title": "Valid From",
+              "type": "string"
+            },
+            "valid_to": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Valid To"
+            }
+          },
+          "required": [
+            "assertion_id",
+            "statement",
+            "status",
+            "valid_from",
+            "recorded_at"
+          ],
+          "title": "AssertionView",
+          "type": "object"
+        },
+        "Binding": {
+          "properties": {
+            "candidate": {
+              "default": false,
+              "description": "unconfirmed (V3): a person picks",
+              "title": "Candidate",
+              "type": "boolean"
+            },
+            "entity_id": {
+              "title": "Entity Id",
+              "type": "string"
+            },
+            "scope": {
+              "$ref": "#/$defs/Scope"
+            }
+          },
+          "required": [
+            "entity_id",
+            "scope"
+          ],
+          "title": "Binding",
+          "type": "object"
+        },
+        "Citation": {
+          "properties": {
+            "author": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Author"
+            },
+            "detail": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Detail"
+            },
+            "recorded_at": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Recorded At"
+            },
+            "source_ref": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Source Ref"
+            },
+            "source_type": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Source Type"
+            }
+          },
+          "title": "Citation",
+          "type": "object"
+        },
+        "Match": {
+          "description": "Why an assertion is in scope for the entity asked about (ranking order).",
+          "enum": [
+            "direct",
+            "model",
+            "site",
+            "segment",
+            "same_model_device"
+          ],
+          "title": "Match",
+          "type": "string"
+        },
+        "Scope": {
+          "description": "How an assertion is bound to an entity (plan 001 \u00a75).",
+          "enum": [
+            "observed_on",
+            "applies_to",
+            "activity"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "SegmentRef": {
+          "properties": {
+            "barrier": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Barrier"
+            },
+            "entity_id": {
+              "title": "Entity Id",
+              "type": "string"
+            },
+            "name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Name"
+            },
+            "private_road": {
+              "default": false,
+              "title": "Private Road",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "entity_id"
+          ],
+          "title": "SegmentRef",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "access_register": {
+          "items": {
+            "$ref": "#/$defs/AccessRecordView"
+          },
+          "title": "Access Register",
+          "type": "array"
+        },
+        "as_of": {
+          "format": "date-time",
+          "title": "As Of",
+          "type": "string"
+        },
+        "assertions": {
+          "items": {
+            "$ref": "#/$defs/AssertionView"
+          },
+          "title": "Assertions",
+          "type": "array"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "known_at": {
+          "format": "date-time",
+          "title": "Known At",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "segments": {
+          "items": {
+            "$ref": "#/$defs/SegmentRef"
+          },
+          "title": "Segments",
+          "type": "array"
+        }
+      },
+      "required": [
+        "entity_id",
+        "as_of",
+        "known_at",
+        "segments",
+        "assertions",
+        "access_register"
+      ],
+      "title": "SiteAccessResult",
+      "type": "object"
+    }
+  },
+  {
+    "description": "Record that something isn't documented; it is routed to the most likely expert.",
+    "inputSchema": {
+      "properties": {
+        "context": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Context"
+        },
+        "entity_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Entity Ids",
+          "type": "array"
+        },
+        "idempotency_key": {
+          "description": "unique per intended write; repeating it returns the first result",
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Idempotency Key",
+          "type": "string"
+        },
+        "question": {
+          "description": "the question nobody has documented",
+          "title": "Question",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question",
+        "entity_ids",
+        "idempotency_key"
+      ],
+      "title": "open_knowledge_gapArguments",
+      "type": "object"
+    },
+    "name": "open_knowledge_gap",
+    "outputSchema": {
+      "properties": {
+        "entity_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Entity Ids",
+          "type": "array"
+        },
+        "gap_id": {
+          "title": "Gap Id",
+          "type": "string"
+        },
+        "question": {
+          "title": "Question",
+          "type": "string"
+        },
+        "replayed": {
+          "default": false,
+          "title": "Replayed",
+          "type": "boolean"
+        },
+        "routed_to": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Routed To"
+        }
+      },
+      "required": [
+        "gap_id",
+        "question",
+        "entity_ids",
+        "routed_to"
+      ],
+      "title": "GapOpened",
+      "type": "object"
+    }
+  },
+  {
+    "description": "Check the connection. Returns the server version and your agent id.",
+    "inputSchema": {
+      "properties": {},
+      "title": "pingArguments",
+      "type": "object"
+    },
+    "name": "ping",
+    "outputSchema": {
+      "properties": {
+        "agent_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Agent Id"
+        },
+        "server": {
+          "title": "Server",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "server",
+        "version",
+        "agent_id"
+      ],
+      "title": "PingResult",
+      "type": "object"
+    }
+  },
+  {
+    "description": "Propose new knowledge. It is stored as unverified until a person confirms it.",
+    "inputSchema": {
+      "properties": {
+        "entity_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Entity Ids",
+          "type": "array"
+        },
+        "evidence_event_ids": {
+          "description": "existing events this is based on",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Event Ids",
+          "type": "array"
+        },
+        "idempotency_key": {
+          "description": "unique per intended write; repeating it returns the first result",
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Idempotency Key",
+          "type": "string"
+        },
+        "qualifiers": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Qualifiers"
+        },
+        "rationale": {
+          "title": "Rationale",
+          "type": "string"
+        },
+        "statement": {
+          "title": "Statement",
+          "type": "string"
+        },
+        "topic": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Topic"
+        },
+        "valid_from": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "ISO-8601 UTC instant; defaults to now",
+          "title": "Valid From"
+        },
+        "valid_to": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "exclusive end, if any",
+          "title": "Valid To"
+        }
+      },
+      "required": [
+        "statement",
+        "entity_ids",
+        "evidence_event_ids",
+        "rationale",
+        "idempotency_key"
+      ],
+      "title": "propose_assertionArguments",
+      "type": "object"
+    },
+    "name": "propose_assertion",
+    "outputSchema": {
+      "$defs": {
+        "AssertionStatus": {
+          "enum": [
+            "unverified",
+            "believed_true",
+            "disputed",
+            "superseded",
+            "expired"
+          ],
+          "title": "AssertionStatus",
+          "type": "string"
+        },
+        "Binding": {
+          "properties": {
+            "candidate": {
+              "default": false,
+              "description": "unconfirmed (V3): a person picks",
+              "title": "Candidate",
+              "type": "boolean"
+            },
+            "entity_id": {
+              "title": "Entity Id",
+              "type": "string"
+            },
+            "scope": {
+              "$ref": "#/$defs/Scope"
+            }
+          },
+          "required": [
+            "entity_id",
+            "scope"
+          ],
+          "title": "Binding",
+          "type": "object"
+        },
+        "Scope": {
+          "description": "How an assertion is bound to an entity (plan 001 \u00a75).",
+          "enum": [
+            "observed_on",
+            "applies_to",
+            "activity"
+          ],
+          "title": "Scope",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "assertion_id": {
+          "title": "Assertion Id",
+          "type": "string"
+        },
+        "bindings": {
+          "items": {
+            "$ref": "#/$defs/Binding"
+          },
+          "title": "Bindings",
+          "type": "array"
+        },
+        "recorded_at": {
+          "format": "date-time",
+          "title": "Recorded At",
+          "type": "string"
+        },
+        "replayed": {
+          "default": false,
+          "title": "Replayed",
+          "type": "boolean"
+        },
+        "status": {
+          "$ref": "#/$defs/AssertionStatus"
+        },
+        "valid_from": {
+          "format": "date-time",
+          "title": "Valid From",
+          "type": "string"
+        },
+        "valid_to": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Valid To"
+        }
+      },
+      "required": [
+        "assertion_id",
+        "status",
+        "valid_from",
+        "valid_to",
+        "recorded_at",
+        "bindings"
+      ],
+      "title": "ProposalCreated",
+      "type": "object"
+    }
+  },
+  {
+    "description": "Record what happened after an action. Becomes evidence for the assertion:\n        resolved supports it; not_resolved refutes it only if its conditions were met.",
+    "inputSchema": {
+      "$defs": {
+        "OutcomeResult": {
+          "enum": [
+            "resolved",
+            "not_resolved",
+            "unknown"
+          ],
+          "title": "OutcomeResult",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "action": {
+          "description": "what was done, e.g. bounce_interface",
+          "title": "Action",
+          "type": "string"
+        },
+        "assertion_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the assertion whose advice was followed",
+          "title": "Assertion Id"
+        },
+        "entity_id": {
+          "description": "graph entity id, e.g. TRN-017, TNC-1X, SEG-042",
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "evidence_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Ref"
+        },
+        "idempotency_key": {
+          "description": "unique per intended write; repeating it returns the first result",
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Idempotency Key",
+          "type": "string"
+        },
+        "observed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "ISO-8601 UTC instant; defaults to now",
+          "title": "Observed At"
+        },
+        "on_behalf_of": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the person the agent acted for, e.g. a Slack user",
+          "title": "On Behalf Of"
+        },
+        "port": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Port"
+        },
+        "result": {
+          "$ref": "#/$defs/OutcomeResult"
+        }
+      },
+      "required": [
+        "entity_id",
+        "action",
+        "result",
+        "idempotency_key"
+      ],
+      "title": "report_outcomeArguments",
+      "type": "object"
+    },
+    "name": "report_outcome",
+    "outputSchema": {
+      "properties": {
+        "assertion_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Assertion Id"
+        },
+        "conditions_met": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Conditions Met"
+        },
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "evidence": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "SUPPORTS, REFUTES, or null if not counted",
+          "title": "Evidence"
+        },
+        "refute_n": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Refute N"
+        },
+        "replayed": {
+          "default": false,
+          "description": "true if this idempotency key was seen",
+          "title": "Replayed",
+          "type": "boolean"
+        },
+        "review_due": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Review Due"
+        },
+        "support_n": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Support N"
+        }
+      },
+      "required": [
+        "event_id",
+        "assertion_id",
+        "evidence",
+        "conditions_met"
+      ],
+      "title": "OutcomeRecorded",
+      "type": "object"
+    }
+  },
+  {
+    "description": "Find the graph entities a piece of text refers to, with a confidence each.",
+    "inputSchema": {
+      "properties": {
+        "as_of": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "ISO-8601 UTC instant; defaults to now",
+          "title": "As Of"
+        },
+        "text": {
+          "description": "free text, e.g. 'the old Pori node'",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "resolve_entitiesArguments",
+      "type": "object"
+    },
+    "name": "resolve_entities",
+    "outputSchema": {
+      "$defs": {
+        "EntityCandidate": {
+          "properties": {
+            "confidence": {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "title": "Confidence",
+              "type": "number"
+            },
+            "entity_id": {
+              "title": "Entity Id",
+              "type": "string"
+            },
+            "entity_type": {
+              "title": "Entity Type",
+              "type": "string"
+            },
+            "matched": {
+              "description": "the text that matched",
+              "title": "Matched",
+              "type": "string"
+            },
+            "name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Name"
+            }
+          },
+          "required": [
+            "entity_id",
+            "entity_type",
+            "confidence",
+            "matched"
+          ],
+          "title": "EntityCandidate",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "as_of": {
+          "format": "date-time",
+          "title": "As Of",
+          "type": "string"
+        },
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/EntityCandidate"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "as_of",
+        "candidates"
+      ],
+      "title": "ResolveResult",
+      "type": "object"
+    }
+  },
+  {
+    "description": "Semantic search over knowledge valid at a time (keyword search if embeddings are\n        unavailable).",
+    "inputSchema": {
+      "properties": {
+        "as_of": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "ISO-8601 UTC instant; defaults to now",
+          "title": "As Of"
+        },
+        "entity_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "limit the search to this entity's scope",
+          "title": "Entity Id"
+        },
+        "limit": {
+          "default": 10,
+          "maximum": 50,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "query": {
+          "description": "natural-language question or keywords",
+          "title": "Query",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "title": "search_contextArguments",
+      "type": "object"
+    },
+    "name": "search_context",
+    "outputSchema": {
+      "$defs": {
+        "AssertionStatus": {
+          "enum": [
+            "unverified",
+            "believed_true",
+            "disputed",
+            "superseded",
+            "expired"
+          ],
+          "title": "AssertionStatus",
+          "type": "string"
+        },
+        "AssertionView": {
+          "properties": {
+            "assertion_id": {
+              "title": "Assertion Id",
+              "type": "string"
+            },
+            "bindings": {
+              "default": [],
+              "items": {
+                "$ref": "#/$defs/Binding"
+              },
+              "title": "Bindings",
+              "type": "array"
+            },
+            "citations": {
+              "default": [],
+              "items": {
+                "$ref": "#/$defs/Citation"
+              },
+              "title": "Citations",
+              "type": "array"
+            },
+            "confidence": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Confidence"
+            },
+            "contradicts": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "title": "Contradicts",
+              "type": "array"
+            },
+            "corroborates": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "title": "Corroborates",
+              "type": "array"
+            },
+            "match": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Match"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "origin": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Origin"
+            },
+            "qualifiers": {
+              "additionalProperties": true,
+              "default": {},
+              "title": "Qualifiers",
+              "type": "object"
+            },
+            "recorded_at": {
+              "format": "date-time",
+              "title": "Recorded At",
+              "type": "string"
+            },
+            "refute_n": {
+              "default": 0,
+              "title": "Refute N",
+              "type": "integer"
+            },
+            "retracted_at": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Retracted At"
+            },
+            "review_due": {
+              "default": false,
+              "title": "Review Due",
+              "type": "boolean"
+            },
+            "score": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Score"
+            },
+            "statement": {
+              "title": "Statement",
+              "type": "string"
+            },
+            "status": {
+              "$ref": "#/$defs/AssertionStatus"
+            },
+            "superseded_by": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Superseded By"
+            },
+            "supersedes": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Supersedes"
+            },
+            "support_n": {
+              "default": 0,
+              "title": "Support N",
+              "type": "integer"
+            },
+            "topic": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Topic"
+            },
+            "valid_from": {
+              "format": "date-time",
+              "title": "Valid From",
+              "type": "string"
+            },
+            "valid_to": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Valid To"
+            }
+          },
+          "required": [
+            "assertion_id",
+            "statement",
+            "status",
+            "valid_from",
+            "recorded_at"
+          ],
+          "title": "AssertionView",
+          "type": "object"
+        },
+        "Binding": {
+          "properties": {
+            "candidate": {
+              "default": false,
+              "description": "unconfirmed (V3): a person picks",
+              "title": "Candidate",
+              "type": "boolean"
+            },
+            "entity_id": {
+              "title": "Entity Id",
+              "type": "string"
+            },
+            "scope": {
+              "$ref": "#/$defs/Scope"
+            }
+          },
+          "required": [
+            "entity_id",
+            "scope"
+          ],
+          "title": "Binding",
+          "type": "object"
+        },
+        "Citation": {
+          "properties": {
+            "author": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Author"
+            },
+            "detail": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Detail"
+            },
+            "recorded_at": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Recorded At"
+            },
+            "source_ref": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Source Ref"
+            },
+            "source_type": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Source Type"
+            }
+          },
+          "title": "Citation",
+          "type": "object"
+        },
+        "Match": {
+          "description": "Why an assertion is in scope for the entity asked about (ranking order).",
+          "enum": [
+            "direct",
+            "model",
+            "site",
+            "segment",
+            "same_model_device"
+          ],
+          "title": "Match",
+          "type": "string"
+        },
+        "Scope": {
+          "description": "How an assertion is bound to an entity (plan 001 \u00a75).",
+          "enum": [
+            "observed_on",
+            "applies_to",
+            "activity"
+          ],
+          "title": "Scope",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "as_of": {
+          "format": "date-time",
+          "title": "As Of",
+          "type": "string"
+        },
+        "assertions": {
+          "items": {
+            "$ref": "#/$defs/AssertionView"
+          },
+          "title": "Assertions",
+          "type": "array"
+        },
+        "mode": {
+          "description": "'semantic' or 'keyword' (when embeddings are unavailable)",
+          "title": "Mode",
+          "type": "string"
+        },
+        "query": {
+          "title": "Query",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query",
+        "as_of",
+        "mode",
+        "assertions"
+      ],
+      "title": "SearchResult",
+      "type": "object"
+    }
+  }
+]
