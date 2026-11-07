@@ -8,10 +8,12 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from collections.abc import Callable
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
 from pydantic import BaseModel
+from tenacity import AsyncRetrying, RetryCallState, stop_after_attempt, wait_exponential_jitter
 
 from silentctx.config import Settings
 from silentctx.extraction.models import (
@@ -29,6 +31,8 @@ from silentctx.logging import get_logger
 log = get_logger(__name__)
 
 TIMEOUT_S = 90.0
+ATTEMPTS = 3  # on the role's own model, before a FAST call falls back to CHAT
+BACKOFF_S = 0.5
 
 TRIAGE_PROMPT = """You read conversations between telecom network operations people and decide
 whether a thread holds operational knowledge worth keeping for the next engineer.
@@ -100,6 +104,24 @@ class Resolved(BaseModel):
     resolved: bool
 
 
+class ProviderEmptyResponseError(RuntimeError):
+    """The provider answered without a completion (HTTP 200, `choices: null`)."""
+
+
+def _log_retry(schema: str, role: ModelRole) -> Callable[[RetryCallState], None]:
+    def before_sleep(state: RetryCallState) -> None:
+        exc = state.outcome.exception() if state.outcome else None
+        log.warning(
+            "llm_call_retry",
+            schema=schema,
+            role=role.value,
+            attempt=state.attempt_number,
+            error=repr(exc),
+        )
+
+    return before_sleep
+
+
 class ExtractionError(RuntimeError):
     """The LLM failed twice (timeout or invalid output)."""
 
@@ -150,33 +172,60 @@ class LlmJudge:
         self._chat = self._chat or get_chat_model(self._settings, ModelRole.CHAT)
         return self._chat
 
-    async def _call[T: BaseModel](
+    async def _once[T: BaseModel](
         self, role: ModelRole, schema: type[T], system: str, user: str
     ) -> T:
+        """One call. Raises on timeout, provider error, empty response or bad JSON."""
         # A dict schema, not the class: the OpenAI client would otherwise validate inside the
         # call and reject Kimi's bare-list answers before `_unwrap` sees them.
         runnable = self._model(role).with_structured_output(
             schema.model_json_schema() | {"title": schema.__name__}, include_raw=True
         )
-        last: Exception | None = None
-        for attempt in (1, 2):
+        try:
+            out = await asyncio.wait_for(
+                runnable.ainvoke([("system", system), ("user", user)]), TIMEOUT_S
+            )
+        except TypeError as exc:
+            # Featherless sometimes answers HTTP 200 with `choices: null`; the OpenAI client
+            # then fails with "'NoneType' object is not iterable". Name it, then retry.
+            raise ProviderEmptyResponseError(f"{role.value} model: {exc}") from exc
+        return schema.model_validate(_unwrap(schema, _parsed(out)))
+
+    async def _call[T: BaseModel](
+        self, role: ModelRole, schema: type[T], system: str, user: str
+    ) -> T:
+        """Retry with jittered exponential backoff (tenacity); a FAST call that keeps failing
+        falls back to the CHAT model once, so a flaky small model doesn't silence the
+        resolution check or triage (the card would otherwise wait for the idle sweep)."""
+        roles = [role, ModelRole.CHAT] if role is ModelRole.FAST else [role]
+        last: BaseException | None = None
+        for i, current in enumerate(roles):
+            attempts = AsyncRetrying(
+                stop=stop_after_attempt(ATTEMPTS if i == 0 else 1),
+                wait=wait_exponential_jitter(multiplier=BACKOFF_S, max=8, jitter=BACKOFF_S),
+                reraise=True,
+                before_sleep=_log_retry(schema.__name__, current),
+            )
             start = time.monotonic()
             try:
-                out = await asyncio.wait_for(
-                    runnable.ainvoke([("system", system), ("user", user)]), TIMEOUT_S
-                )
-                result = schema.model_validate(_unwrap(schema, _parsed(out)))
-            except Exception as exc:  # noqa: BLE001  # timeout, provider error, bad JSON: retry
+                async for attempt in attempts:
+                    with attempt:
+                        result = await self._once(current, schema, system, user)
+            except Exception as exc:  # noqa: BLE001  # timeout, provider error, bad JSON
                 last = exc
                 log.warning(
-                    "llm_call_failed", schema=schema.__name__, attempt=attempt, error=repr(exc)
+                    "llm_call_failed",
+                    schema=schema.__name__,
+                    role=current.value,
+                    error=repr(exc),
+                    fallback=i + 1 < len(roles),
                 )
                 continue
             log.info(
                 "llm_call",
                 schema=schema.__name__,
-                role=role.value,
-                attempt=attempt,
+                role=current.value,
+                fallback=i > 0,
                 seconds=round(time.monotonic() - start, 2),
             )
             return result

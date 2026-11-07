@@ -476,7 +476,11 @@ def test_card_shows_scope_rule_avoid_validity_source_and_optional_buttons() -> N
     assert "+1 source (email)" in rendered  # ST-02
     assert "unverified, in use" in rendered  # ST-07
     buttons = [e["action_id"] for b in blocks if b["type"] == "actions" for e in b["elements"]]
-    assert buttons == [cap.CARD_CONFIRM, cap.CARD_FIX, cap.CARD_RETRACT]
+    assert [cap.action_kind(b) for b in buttons] == [
+        cap.CARD_CONFIRM,
+        cap.CARD_FIX,
+        cap.CARD_RETRACT,
+    ]
     assert "Captured:" in text
 
 
@@ -494,7 +498,7 @@ def test_card_asks_its_one_question_inside_the_card() -> None:
         for b in blocks
         if b["type"] == "actions"
         for e in b["elements"]
-        if e["action_id"] == cap.CARD_BIND
+        if cap.action_kind(e["action_id"]) == cap.CARD_BIND
     ]
     assert [json.loads(e["value"])["e"] for e in binds] == ["TRN-042", "TRN-142"]
     confirmed = cap.card_blocks([_view(status=AssertionStatus.BELIEVED_TRUE)], THREAD, {})[1]
@@ -505,6 +509,34 @@ def test_card_asks_its_one_question_inside_the_card() -> None:
     assert cap.CARD_RETRACT in json.dumps(disputed)
     removed = cap.card_blocks([_view(retracted_at=MSG8)], THREAD, {})[1]
     assert "Not knowledge: removed" in json.dumps(removed)
+
+
+def test_a_card_with_two_assertions_has_unique_action_ids() -> None:
+    """Found live (G-01): two assertions in one thread made Slack reject the card with
+    invalid_blocks, `action_id "card_bind" already exists`."""
+    question = {"question": "Which one?"}
+    two_nodes = [
+        Binding(entity_id="TRN-003", scope=Scope.OBSERVED_ON, candidate=True),
+        Binding(entity_id="TRN-008", scope=Scope.OBSERVED_ON, candidate=True),
+    ]
+    views = [
+        _view(assertion_id=aid, bindings=two_nodes, qualifiers=question)
+        for aid in ("ASR-A", "ASR-B")
+    ]
+    _, blocks = cap.card_blocks(views, THREAD, {})
+    ids = [e["action_id"] for b in blocks if b["type"] == "actions" for e in b["elements"]]
+    assert len(ids) == len(set(ids)) == 10  # 2 x (2 bind + confirm, fix, retract)
+    block_ids = [b["block_id"] for b in blocks if "block_id" in b]
+    assert len(block_ids) == len(set(block_ids))
+    # Each button still reaches its handler, and the handler reads the assertion from the value.
+    for kind in cap.CARD_ACTIONS:
+        pattern = cap.card_action_pattern(kind)
+        assert sum(bool(pattern.match(i)) for i in ids) == (4 if kind == cap.CARD_BIND else 2)
+    assert not cap.card_action_pattern(cap.CARD_FIX).match(cap.CARD_FIX_VIEW)
+    values = {
+        json.loads(e["value"])["a"] for b in blocks if b["type"] == "actions" for e in b["elements"]
+    }
+    assert values == {"ASR-A", "ASR-B"}
 
 
 def test_st15_entity_linking_precision_and_recall_on_the_alias_table() -> None:

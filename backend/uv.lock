@@ -2827,6 +2827,7 @@ dependencies = [
     { name = "rapidfuzz" },
     { name = "slack-bolt" },
     { name = "structlog" },
+    { name = "tenacity" },
     { name = "typer" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -2865,6 +2866,7 @@ requires-dist = [
     { name = "rapidfuzz", specifier = ">=3.14.6" },
     { name = "slack-bolt", specifier = "==1.30.0" },
     { name = "structlog", specifier = ">=26.1.0" },
+    { name = "tenacity", specifier = ">=9.2.1" },
     { name = "typer", specifier = ">=0.28.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.54.0" },
 ]

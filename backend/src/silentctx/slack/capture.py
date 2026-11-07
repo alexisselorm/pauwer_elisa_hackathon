@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from collections import Counter
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
@@ -39,8 +40,26 @@ CARD_FIX = "card_fix"
 CARD_RETRACT = "card_retract"
 CARD_BIND = "card_bind"
 CARD_FIX_VIEW = "card_fix_modal"
+CARD_ACTIONS = (CARD_CONFIRM, CARD_FIX, CARD_RETRACT, CARD_BIND)
 CAPTURE_SHORTCUT = "capture_message"  # slack/manifest.yaml
 LOG_CHANNEL_NAME = "context-log"
+
+
+def card_action(kind: str, assertion_id: str, n: int = 0) -> str:
+    """Slack wants every action_id unique within a message, and a card can carry several
+    assertions (and several bind buttons each): `card_bind:ASR-1:0`. The click's assertion
+    is read from the button's value; the id only has to be unique and name its kind."""
+    return f"{kind}:{assertion_id}:{n}"
+
+
+def action_kind(action_id: str) -> str:
+    return action_id.split(":", 1)[0]
+
+
+def card_action_pattern(kind: str) -> re.Pattern[str]:
+    """What the Bolt handler for one kind of card button listens to."""
+    return re.compile(rf"^{re.escape(kind)}(:.*)?$")
+
 
 _AVOID_WORDS = {
     "replace_sfp": "replacing the SFP again",
@@ -153,8 +172,12 @@ def card_blocks(
                 actions(
                     f"bind:{v.assertion_id}",
                     *[
-                        button(e, CARD_BIND, _value(v.assertion_id, thread.thread_id, e=e))
-                        for e in candidates[:5]
+                        button(
+                            e,
+                            card_action(CARD_BIND, v.assertion_id, n),
+                            _value(v.assertion_id, thread.thread_id, e=e),
+                        )
+                        for n, e in enumerate(candidates[:5])
                     ],
                 )
             )
@@ -167,11 +190,23 @@ def card_blocks(
         buttons = []
         if v.status is AssertionStatus.UNVERIFIED:
             buttons.append(
-                button("✅ Correct", CARD_CONFIRM, _value(v.assertion_id, thread.thread_id))
+                button(
+                    "✅ Correct",
+                    card_action(CARD_CONFIRM, v.assertion_id),
+                    _value(v.assertion_id, thread.thread_id),
+                )
             )
         buttons += [
-            button("✏️ Fix", CARD_FIX, _value(v.assertion_id, thread.thread_id)),
-            button("🚫 Not knowledge", CARD_RETRACT, _value(v.assertion_id, thread.thread_id)),
+            button(
+                "✏️ Fix",
+                card_action(CARD_FIX, v.assertion_id),
+                _value(v.assertion_id, thread.thread_id),
+            ),
+            button(
+                "🚫 Not knowledge",
+                card_action(CARD_RETRACT, v.assertion_id),
+                _value(v.assertion_id, thread.thread_id),
+            ),
         ]
         blocks.append(actions(f"card:{v.assertion_id}", *buttons))
     return "\n".join(texts) or "Context card", blocks

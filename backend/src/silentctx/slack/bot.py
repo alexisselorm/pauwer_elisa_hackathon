@@ -167,10 +167,10 @@ def build_app(
         app.event("reaction_added")(capture.on_reaction)
         app.shortcut(cap.CAPTURE_SHORTCUT)(capture.on_shortcut)
     if cards is not None:
-        app.action(cap.CARD_CONFIRM)(cards.on_confirm)
-        app.action(cap.CARD_RETRACT)(cards.on_retract)
-        app.action(cap.CARD_BIND)(cards.on_bind)
-        app.action(cap.CARD_FIX)(cards.on_fix)
+        app.action(cap.card_action_pattern(cap.CARD_CONFIRM))(cards.on_confirm)
+        app.action(cap.card_action_pattern(cap.CARD_RETRACT))(cards.on_retract)
+        app.action(cap.card_action_pattern(cap.CARD_BIND))(cards.on_bind)
+        app.action(cap.card_action_pattern(cap.CARD_FIX))(cards.on_fix)
         app.view(cap.CARD_FIX_VIEW)(cards.on_fix_submit)
     for action_id in (ops_actions.RUN_BOUNCE, ops_actions.DONE_MANUALLY, ops_actions.DIDNT_WORK):
         app.action(action_id)(actions.on_outcome)
